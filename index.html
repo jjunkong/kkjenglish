@@ -850,16 +850,21 @@ async function pChart(){
       const v=lessonCache[d].vocab;
       const pass=v.pass==='pass';
       const fail=v.pass==='fail';
-      const color=pass?'#16a34a':fail?'#dc2626':'#93c5fd';
+      const barColor=pass?'#16a34a':fail?'#dc2626':'#93c5fd';
       const row=mk('div','chart-bar-row');
       row.style.marginBottom='5px';
       row.appendChild(mks('div','font-size:10px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-      const bg=mks('div','flex:1;background:#f0f0ee;border-radius:3px;height:16px;position:relative;overflow:hidden;margin-left:8px;');
+      const bg=mks('div','flex:1;background:#f0f0ee;border-radius:3px;height:16px;overflow:hidden;margin-left:8px;');
       const pct=v.score?Math.min(Number(v.score),100):100;
-      const fill=mks('div',`height:100%;border-radius:3px;background:${color};width:${pct}%;display:flex;align-items:center;justify-content:center;min-width:36px;`,'');
-      if(v.pass)fill.appendChild(mks('span','font-size:9px;font-weight:700;color:#fff;white-space:nowrap;',pass?'통과':'불통'));
+      const fill=mks('div',`height:100%;border-radius:3px;background:${barColor};width:${pct}%;`,'');
       bg.appendChild(fill);row.appendChild(bg);
+      // 점수
       if(v.score)row.appendChild(mks('div','font-size:10px;color:#555;font-weight:700;margin-left:6px;min-width:28px;',v.score+'점'));
+      // 통과/불통 배지
+      if(v.pass){
+        const badge=mks('span',`font-size:9px;font-weight:700;color:#fff;background:${barColor};padding:2px 7px;border-radius:20px;margin-left:4px;white-space:nowrap;flex-shrink:0;`,pass?'통과':'불통');
+        row.appendChild(badge);
+      }
       vw.appendChild(row);
     });
   }
