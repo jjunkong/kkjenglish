@@ -4,12 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('https://raw.githubusercontent.com/jjunkong/kkjenglish/main/GmarketSansTTFBold.ttf') format('truetype');
+  font-weight: 700;
+}
+</style>
 <title>김기준영어학원 수업 관리</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
+  body{font-family:'Nanum Gothic',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
   #app{width:100%;max-width:480px;min-height:100vh;background:#f0f0ee;padding-top:40px;}
-  input,select,textarea,button{font-family:inherit;}
+  .gm{font-family:'GmarketSans','Nanum Gothic',sans-serif;font-weight:700;}
+  input,select,textarea,button{font-family:'Nanum Gothic',-apple-system,sans-serif;}
   /* 네이비 상단 헤더 */
   .page-header{background:#1a2f6e;padding:20px 20px 24px;position:relative;border-radius:20px;margin:12px 12px 0;}
   .page-header-sub{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.08em;margin-bottom:4px;}
@@ -287,7 +296,7 @@ function home(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mks('div','background:#1a2f6e;padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
   hdr.appendChild(mks('div','font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:.1em;margin-bottom:6px;','KIM GIJUN ENGLISH ACADEMY'));
-  hdr.appendChild(mks('div','font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;','김기준영어학원'));
+  hdr.appendChild(mks('div','font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;font-family:GmarketSans,Nanum Gothic,sans-serif;','김기준영어학원'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
   w.appendChild(hdr);
 
@@ -304,7 +313,7 @@ function home(){
     const p=document.createElementNS(svgNS2,'path');p.setAttribute('d',d);nsvg.appendChild(p);
   });
   nhdr.appendChild(nsvg);
-  nhdr.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;flex:1;','학원 공지사항'));
+  nhdr.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;flex:1;font-family:GmarketSans,Nanum Gothic,sans-serif;','학원 공지사항'));
   const nowMs=Date.now();const twoDays=2*24*60*60*1000;
   const hasNew=Q.notices&&Q.notices.some(n=>(nowMs-n.createdAt)<twoDays);
   if(hasNew)nhdr.appendChild(mks('span','font-size:9px;font-weight:700;background:#dc2626;color:#fff;padding:1px 5px;border-radius:20px;','NEW'));
@@ -340,7 +349,7 @@ function home(){
   const ic1=mks('div','width:36px;height:36px;background:#eef2ff;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;');
   ic1.appendChild(mkIcon(['M7 11V7a5 5 0 0 1 10 0v4','M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z','M12 16a1 1 0 1 0 0-2 1 1 0 0 0 0 2z']));
   c1card.appendChild(ic1);
-  c1card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;','학원관리자'));
+  c1card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;font-family:GmarketSans,Nanum Gothic,sans-serif;','학원관리자'));
   c1card.appendChild(mks('div','font-size:10px;color:#aaa;','수업 계획 · 완성도 입력'));
   c1card.onclick=()=>{Q.scr='aLogin';render();};g.appendChild(c1card);
 
@@ -348,7 +357,7 @@ function home(){
   const ic2=mks('div','width:36px;height:36px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;');
   ic2.appendChild(mkIcon(['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2','M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z']));
   c2card.appendChild(ic2);
-  c2card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;','학부모 조회'));
+  c2card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;font-family:GmarketSans,Nanum Gothic,sans-serif;','학부모 조회'));
   c2card.appendChild(mks('div','font-size:10px;color:#aaa;','수업 내용 · 결과 확인'));
   c2card.onclick=()=>{Q.scr='pLogin';render();};g.appendChild(c2card);
 
@@ -362,7 +371,7 @@ function home(){
   const poly=document.createElementNS(svgNS,'polygon');poly.setAttribute('points','5 3 19 12 5 21 5 3');
   playsvg.appendChild(poly);ic3.appendChild(playsvg);
   const vtxt=mks('div','');
-  vtxt.appendChild(mks('div','font-size:13px;font-weight:700;color:#fff;','수업 영상'));
+  vtxt.appendChild(mks('div','font-size:13px;font-weight:700;color:#fff;font-family:GmarketSans,Nanum Gothic,sans-serif;','수업 영상'));
   vtxt.appendChild(mks('div','font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px;','강의 영상 시청'));
   vicRow.appendChild(ic3);vicRow.appendChild(vtxt);vccard.appendChild(vicRow);
   vccard.onclick=()=>{Q.scr='vLogin';render();};g.appendChild(vccard);
@@ -372,7 +381,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학원관리자'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
@@ -709,7 +718,7 @@ async function pLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학부모 조회'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학부모 조회'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 내용 및 결과 확인'));
   w.appendChild(hdr);
   if(Q.pStu){Q.pLesson=await getLesson(Q.pStu.id,Q.pDate);Q.pDates=await getDates(Q.pStu.id);Q.scr='pView';render();return;}
@@ -892,7 +901,7 @@ function vLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','수업 영상'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','수업 영상'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','강의 영상 시청'));
   w.appendChild(hdr);
   if(Q.vStu){Q.scr='vList';render();return;}
@@ -921,7 +930,7 @@ function vList(){
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';render();};hdr.appendChild(bb);
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
-  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','수업 영상'));
+  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','수업 영상'));
   const lo=mk('button','logout-btn','로그아웃');
   lo.onclick=()=>{Q.vStu=null;Q.scr='vLogin';render();};ph.appendChild(lo);
   hdr.appendChild(ph);w.appendChild(hdr);
@@ -974,7 +983,7 @@ function noticeList(){
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr=isAdmin?'aList':'home';Q._fromAdmin=false;render();};hdr.appendChild(bb);
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
-  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학원 공지사항'));
+  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원 공지사항'));
   if(isAdmin){
     const writeBtn=mk('button','btn-ghost-inv','+ 작성');writeBtn.onclick=()=>{Q._editNotice=null;Q.scr='noticeWrite';render();};ph.appendChild(writeBtn);
   }
