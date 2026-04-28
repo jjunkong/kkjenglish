@@ -366,7 +366,10 @@ function pView(){
   pl.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;',Q.pStu.name));
   pl.appendChild(mks('div','font-size:12px;color:#888;margin-top:2px;','수업 기록'));
   ph.appendChild(pl);
-  const lo=mk('button','logout-btn','← 로그아웃');
+  const bb2=mk('button','btn-back','← 뒤로');
+  bb2.onclick=()=>{Q.scr='home';render();};
+  w.insertBefore(bb2, ph);
+  const lo=mk('button','logout-btn','로그아웃');
   lo.onclick=()=>{Q.pStu=null;Q.pDate=TODAY;Q.pLesson=null;Q.pDates=[];Q.scr='pLogin';render();};
   ph.appendChild(lo);
 
