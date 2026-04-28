@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>김기준영어학원 수업 관리</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f5f5f3;min-height:100vh;display:flex;justify-content:center;padding:1rem;}
+  #app{width:100%;max-width:480px;padding-top:1rem;}
+  input,select,textarea,button{font-family:inherit;}
+  .card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px;}
+  .btn-primary{background:#1e3a8a;color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;font-size:14px;font-weight:500;width:100%;margin-top:6px;}
+  .btn-primary:hover{background:#1e40af;}
+  .btn-primary:disabled{opacity:0.6;cursor:not-allowed;}
+  .btn-back{background:transparent;border:none;color:#888;font-size:13px;cursor:pointer;padding:0 0 14px;}
+  .btn-ghost{background:transparent;border:1px solid #ddd;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:#333;}
+  .btn-ghost:hover{background:#f5f5f3;}
+  .inp{width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 12px;font-size:14px;background:#fff;color:#333;margin-bottom:10px;display:block;}
+  .inp:focus{outline:none;border-color:#1e3a8a;}
+  .lbl{font-size:12px;color:#888;margin-bottom:5px;}
+  .err{color:#dc2626;font-size:12px;margin-bottom:8px;padding:8px;background:#fef2f2;border-radius:8px;}
+  .section-block{margin-bottom:10px;background:#f9f9f7;border-radius:8px;padding:12px 14px;}
+  .section-title{font-weight:500;font-size:13px;color:#222;margin-bottom:8px;}
+  .section-body{font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;}
+  .section-ta{width:100%;border:1px solid #ddd;border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;background:#fff;color:#333;display:block;}
+  .section-ta:focus{outline:none;border-color:#1e3a8a;}
+  .divider{border-top:1px solid #eee;margin:10px 0 8px;}
+  .badge{font-size:11px;font-weight:500;background:#f5f5f3;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+  .ok-msg{color:#16a34a;font-size:13px;text-align:center;padding:10px;margin-top:6px;}
+  .empty-box{color:#888;font-size:13px;text-align:center;padding:2rem;background:#f9f9f7;border-radius:12px;}
+  .stu-card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;}
+  .stu-card:hover{border-color:#999;}
+  .tab-wrap{display:flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;margin-bottom:16px;}
+  .tab-btn{flex:1;padding:9px;border:none;cursor:pointer;font-size:13px;font-weight:400;background:#fff;color:#888;}
+  .tab-btn.active{background:#1e3a8a;color:#fff;font-weight:500;}
+  .day-btn{width:36px;height:36px;border-radius:50%;border:1px solid #ddd;cursor:pointer;font-size:13px;font-weight:500;background:#fff;color:#888;}
+  .day-btn.on{background:#1e3a8a;color:#fff;border-color:#1e3a8a;}
+  .days-wrap{display:flex;gap:6px;margin-bottom:12px;}
+  .rate-btn{padding:4px 16px;border-radius:20px;cursor:pointer;font-size:13px;border:1px solid #ddd;background:transparent;color:#888;}
+  .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+  .home-card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:1.25rem 1rem;cursor:pointer;}
+  .home-card:hover{border-color:#999;}
+  .tog-btn{width:100%;padding:9px;border:1px solid #e5e5e3;border-radius:8px;background:transparent;color:#888;font-size:12px;cursor:pointer;margin-top:4px;}
+  .date-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .date-inp{border:1px solid #ddd;border-radius:8px;padding:7px 12px;font-size:13px;background:#fff;color:#333;flex:1;}
+  .hdr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .add-form{background:#f9f9f7;border-radius:12px;padding:1rem;margin-bottom:14px;}
+  .sub-info{font-size:11px;color:#aaa;margin-top:3px;display:flex;align-items:center;gap:6px;}
+  .rate-row{display:flex;gap:8px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(()=>{
+const DAYS=['일','월','화','수','목','금','토'];
+const localDate=()=>{const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
+const TODAY=localDate();
+const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);return`${m}월 ${d}일 (${DAYS[dt.getDay()]}요일)`;};
+const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
+const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},status:'none'});
+
+// localStorage 기반 저장
+const lsGet=k=>{try{return localStorage.getItem(k);}catch{return null;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch{}};
+const KEYS_PRE='kgj_v1_';
+
+const MEM={stu:[],pw:'admin1234',lessons:{}};
+const rawStu=lsGet(KEYS_PRE+'stu');
+if(rawStu)MEM.stu=JSON.parse(rawStu);
+const rawPw=lsGet(KEYS_PRE+'pw');
+if(rawPw)MEM.pw=rawPw;
+
+const saveStu=()=>{lsSet(KEYS_PRE+'stu',JSON.stringify(MEM.stu));};
+const lKey=(sid,date)=>`${sid}__${date}`;
+
+const getLesson=(sid,date)=>{
+  const k=lKey(sid,date);
+  if(MEM.lessons[k])return JSON.parse(JSON.stringify(MEM.lessons[k]));
+  const r=lsGet(KEYS_PRE+'l_'+sid+'_'+date);
+  if(r){const p=JSON.parse(r);MEM.lessons[k]=p;return JSON.parse(JSON.stringify(p));}
+  return emL();
+};
+const setLesson=(sid,date,l)=>{
+  const k=lKey(sid,date);
+  const copy=JSON.parse(JSON.stringify(l));
+  MEM.lessons[k]=copy;
+  lsSet(KEYS_PRE+'l_'+sid+'_'+date,JSON.stringify(copy));
+  const rd=lsGet(KEYS_PRE+'d_'+sid);
+  const ds=rd?JSON.parse(rd):[];
+  if(!ds.includes(date)){ds.unshift(date);ds.sort((a,b)=>b.localeCompare(a));}
+  lsSet(KEYS_PRE+'d_'+sid,JSON.stringify(ds.slice(0,60)));
+};
+const getDates=sid=>{
+  const r=lsGet(KEYS_PRE+'d_'+sid);
+  const mem=Object.keys(MEM.lessons).filter(k=>k.startsWith(sid+'__')).map(k=>k.split('__')[1]);
+  const stored=r?JSON.parse(r):[];
+  return[...new Set([...stored,...mem])].sort((a,b)=>b.localeCompare(a));
+};
+
+let Q={scr:'home',students:MEM.stu,pw:MEM.pw,aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',pStu:null,pDate:TODAY,pLesson:null,pDates:[],err:'',showAdd:false,showAllStu:false};
+
+const A=document.getElementById('app');
+const gid=id=>document.getElementById(id);
+const RC={상:'#16a34a',중:'#d97706',하:'#dc2626'};
+const SL={none:'미입력',planned:'계획 입력됨',completed:'완성도 기록됨'};
+const SC={none:'#9ca3af',planned:'#2563eb',completed:'#16a34a'};
+const LESSON_KEYS=['check','core','fix'];
+const LABELS=['CHECK — 확인 및 복습','CORE — 핵심 내용','FIX — 교정 및 정착'];
+
+const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
+const mks=(tag,css,html)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(html!==undefined)e.innerHTML=html;return e;};
+
+function dayTags(days){
+  if(!days||!days.length)return mks('span','font-size:11px;color:#aaa;','요일 미설정');
+  const w=mks('span','');
+  [...days].sort((a,b)=>a-b).forEach((d,i)=>{
+    if(i)w.appendChild(mks('span','font-size:11px;color:#ccc;','·'));
+    w.appendChild(mks('span','font-size:11px;font-weight:500;color:#888;',DAYS[d]+'요일'));
+  });
+  return w;
+}
+
+function dayPicker(selected,onChange){
+  const w=mk('div','days-wrap');
+  [1,2,3,4,5,6,0].forEach(d=>{
+    const b=mk('button','day-btn'+(selected.includes(d)?' on':''),DAYS[d]);
+    b.onclick=()=>{const ns=selected.includes(d)?selected.filter(x=>x!==d):[...selected,d];onChange(ns);};
+    w.appendChild(b);
+  });
+  return w;
+}
+
+function sectionBlock(label,L,key,roplan,showRes){
+  const w=mk('div','section-block');
+  w.appendChild(mks('div','font-weight:500;font-size:13px;color:#222;margin-bottom:8px;',label));
+  if(!roplan){
+    const ta=document.createElement('textarea');
+    ta.className='section-ta';ta.rows=3;ta.value=L.plan[key];
+    ta.placeholder=label.split('—')[0].trim()+' 수업 내용...';
+    ta.oninput=()=>{L.plan[key]=ta.value;};
+    w.appendChild(ta);
+  } else {
+    w.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;',L.plan[key]||'<span style="color:#bbb">—</span>'));
+  }
+  if(showRes){
+    w.appendChild(mk('div','divider'));
+    w.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:6px;','완성도'));
+    const bd=mk('div','rate-row');
+    const btns=[];
+    const upd=sel=>btns.forEach((b,i)=>{const r=['상','중','하'][i];const s=r===sel;b.style.background=s?RC[r]:'transparent';b.style.color=s?'#fff':'#888';b.style.border=s?'none':'1px solid #ddd';});
+    ['상','중','하'].forEach(r=>{
+      const sel=L.res[key].r===r;
+      const b=mk('button','rate-btn',r);
+      if(sel){b.style.background=RC[r];b.style.color='#fff';b.style.border='none';}
+      b.onclick=()=>{L.res[key].r=r;upd(r);};
+      btns.push(b);bd.appendChild(b);
+    });
+    w.appendChild(bd);
+    const mi=document.createElement('input');mi.className='inp';
+    mi.placeholder='피드백 메모 (선택사항)';mi.value=L.res[key].m||'';
+    mi.style.marginBottom='0';mi.oninput=()=>L.res[key].m=mi.value;w.appendChild(mi);
+  }
+  return w;
+}
+
+function sectionBlockRO(label,plan,res,showRes){
+  const w=mk('div','section-block');
+  w.appendChild(mks('div','font-weight:500;font-size:13px;color:#222;margin-bottom:8px;',label));
+  w.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;',plan||'<span style="color:#bbb">—</span>'));
+  if(showRes&&res){
+    w.appendChild(mk('div','divider'));
+    if(res.r){
+      const row=mks('div','display:flex;align-items:center;gap:8px;');
+      row.appendChild(mks('span',`display:inline-block;font-size:13px;font-weight:500;color:#fff;background:${RC[res.r]};padding:3px 14px;border-radius:20px;`,res.r));
+      if(res.m)row.appendChild(mks('span','font-size:12px;color:#888;',res.m));
+      w.appendChild(row);
+    } else {
+      w.appendChild(mks('div','font-size:12px;color:#bbb;','완성도 미입력'));
+    }
+  }
+  return w;
+}
+
+function render(){A.innerHTML='';({home,aLogin,aList,aLessonView,pLogin,pView})[Q.scr]();}
+
+function home(){
+  const w=mks('div','padding:2rem 1rem;');A.appendChild(w);
+  w.innerHTML=`<div style="font-size:11px;color:#aaa;letter-spacing:.07em;margin-bottom:6px;">KIM GIJUN ENGLISH ACADEMY</div><div style="font-size:22px;font-weight:600;color:#111;margin-bottom:4px;">김기준영어학원</div><div style="font-size:13px;color:#888;margin-bottom:0;">수업 관리 시스템</div>`;
+  const g=mk('div','home-grid');w.appendChild(g);
+  [['원장 로그인','수업 계획 · 완성도 입력','aLogin'],['학부모 조회','수업 내용 · 결과 확인','pLogin']].forEach(([t,s,sc])=>{
+    const c=mk('div','home-card');
+    c.innerHTML=`<div style="font-size:15px;font-weight:500;color:#111;margin-bottom:4px;">${t}</div><div style="font-size:12px;color:#888;">${s}</div>`;
+    c.onclick=()=>{Q.scr=sc;render();};g.appendChild(c);
+  });
+}
+
+function aLogin(){
+  const w=mks('div','padding:1.5rem 1rem;');A.appendChild(w);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};w.appendChild(bb);
+  const c=mk('div','card');w.appendChild(c);
+  c.innerHTML='<div style="font-size:16px;font-weight:500;margin:0 0 16px;color:#111;">원장 로그인</div>';
+  const ll=mk('div','lbl','비밀번호');c.appendChild(ll);
+  const pi=document.createElement('input');pi.className='inp';pi.type='password';pi.placeholder='비밀번호 입력';c.appendChild(pi);
+  if(Q.err){const e=mk('div','err',Q.err);c.appendChild(e);}
+  const doL=()=>{if(pi.value===Q.pw){Q.scr='aList';Q.err='';render();}else{Q.err='비밀번호가 맞지 않습니다.';render();}};
+  pi.onkeydown=e=>{if(e.key==='Enter')doL();};
+  const btn=mk('button','btn-primary','로그인');btn.onclick=doL;c.appendChild(btn);
+}
+
+function aList(){
+  const w=mks('div','padding:1rem;');A.appendChild(w);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};w.appendChild(bb);
+
+  const dr=mk('div','date-row');w.appendChild(dr);
+  const di=document.createElement('input');di.className='date-inp';di.type='date';di.value=Q.aDate;
+  di.onchange=()=>{Q.aDate=di.value;Q.showAllStu=false;render();};dr.appendChild(di);
+  const tb=mk('button','btn-ghost','오늘');tb.onclick=()=>{Q.aDate=TODAY;Q.showAllStu=false;render();};dr.appendChild(tb);
+
+  const selDow=dowOf(Q.aDate);
+  const todayStu=Q.students.filter(s=>s.days&&s.days.includes(selDow));
+  const otherStu=Q.students.filter(s=>!s.days||!s.days.includes(selDow));
+
+  const hdr=mk('div','hdr-row');w.appendChild(hdr);
+  const hl=mks('div','');
+  hl.appendChild(mks('div','font-size:15px;font-weight:500;color:#111;',fd(Q.aDate)));
+  hl.appendChild(mks('div','font-size:12px;color:#888;margin-top:2px;',`${DAYS[selDow]}요일 수업 학생 ${todayStu.length}명`));
+  hdr.appendChild(hl);
+  const ab=mk('button','btn-ghost',Q.showAdd?'닫기':'+ 학생 추가');
+  ab.onclick=()=>{Q.showAdd=!Q.showAdd;Q.err='';render();};hdr.appendChild(ab);
+
+  if(Q.showAdd){
+    const af=mk('div','add-form');w.appendChild(af);
+    af.innerHTML='<div style="font-weight:500;font-size:13px;margin-bottom:12px;color:#111;">새 학생 추가</div>';
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
+    const nn=document.createElement('input');nn.id='an';nn.className='inp';nn.placeholder='홍길동';af.appendChild(nn);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드 (숫자 4자리 권장)'));
+    const nc=document.createElement('input');nc.id='ac';nc.className='inp';nc.placeholder='예: 1234';af.appendChild(nc);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일 선택'));
+    let selDays2=[];
+    const dpWrap=mks('div','');af.appendChild(dpWrap);
+    const reRenderDp=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(selDays2,ns=>{selDays2=ns;reRenderDp();}));};
+    reRenderDp();
+    if(Q.err){af.appendChild(mk('div','err',Q.err));}
+    const addBtn=mk('button','btn-primary','추가 완료');
+    addBtn.onclick=()=>{
+      const n=(gid('an')?.value||'').trim(),c2=(gid('ac')?.value||'').trim();
+      if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
+      if(Q.students.find(s=>s.name===n)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
+      Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2});
+      MEM.stu=Q.students;saveStu();Q.showAdd=false;Q.err='';render();
+    };af.appendChild(addBtn);
+  }
+
+  if(!Q.students.length){w.appendChild(mk('div','empty-box','등록된 학생이 없습니다.'));return;}
+
+  const list=mks('div','');w.appendChild(list);
+  const renderCard=(stu,dimmed)=>{
+    const l=getLesson(stu.id,Q.aDate);
+    const sc=mk('div','stu-card');if(dimmed)sc.style.opacity='0.45';
+    const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
+    const left=mks('div','');
+    left.appendChild(mks('div','font-weight:500;font-size:14px;color:#111;',stu.name));
+    const sub=mk('div','sub-info');
+    sub.appendChild(dayTags(stu.days||[]));
+    sub.appendChild(mks('span','color:#ddd;','·'));
+    sub.appendChild(mks('span','',`코드 ${stu.code}`));
+    left.appendChild(sub);row.appendChild(left);
+    const badge=mk('div','badge',SL[l.status]);badge.style.color=SC[l.status];row.appendChild(badge);
+    sc.appendChild(row);
+    sc.onclick=()=>{Q.aStu=stu;Q.aLesson=getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
+    list.appendChild(sc);
+  };
+
+  if(todayStu.length){todayStu.forEach(s=>renderCard(s,false));}
+  else list.appendChild(mk('div','empty-box',`${DAYS[selDow]}요일 수업 학생이 없습니다.`));
+  if(otherStu.length){
+    const tog=mk('button','tog-btn',Q.showAllStu?'▲ 다른 요일 학생 접기':`▼ 다른 요일 학생도 보기 (${otherStu.length}명)`);
+    tog.onclick=()=>{Q.showAllStu=!Q.showAllStu;render();};list.appendChild(tog);
+    if(Q.showAllStu){
+      list.appendChild(mks('div','font-size:11px;color:#aaa;padding:8px 2px 4px;','다른 요일 학생'));
+      otherStu.forEach(s=>renderCard(s,true));
+    }
+  }
+}
+
+function aLessonView(){
+  const w=mks('div','padding:1rem;');A.appendChild(w);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};w.appendChild(bb);
+  w.appendChild(mks('div','margin-bottom:14px;',`<div style="font-size:16px;font-weight:500;color:#111;">${Q.aStu.name}</div><div style="font-size:12px;color:#888;margin-top:2px;">${fd(Q.aDate)}</div>`));
+  const tabs=mk('div','tab-wrap');w.appendChild(tabs);
+  ['plan','result'].forEach(t=>{
+    const tb=mk('button','tab-btn'+(Q.aTab===t?' active':''),t==='plan'?'수업 계획 입력':'완성도 체크');
+    tb.onclick=()=>{Q.aTab=t;render();};tabs.appendChild(tb);
+  });
+  const L=Q.aLesson;
+  const msg=mks('div','');
+  if(Q.aTab==='plan'){
+    LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
+    w.appendChild(msg);
+    const btn=mk('button','btn-primary','수업 계획 저장');
+    btn.onclick=()=>{
+      btn.textContent='저장 중...';btn.disabled=true;
+      if(L.status==='none')L.status='planned';
+      setLesson(Q.aStu.id,Q.aDate,L);
+      msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+      setTimeout(()=>{Q.scr='aList';render();},700);
+    };w.appendChild(btn);
+  } else {
+    LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
+    w.appendChild(msg);
+    const btn=mk('button','btn-primary','완성도 저장');
+    btn.onclick=()=>{
+      btn.textContent='저장 중...';btn.disabled=true;
+      L.status='completed';
+      setLesson(Q.aStu.id,Q.aDate,L);
+      msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+      setTimeout(()=>{Q.scr='aList';render();},700);
+    };w.appendChild(btn);
+  }
+}
+
+function pLogin(){
+  const w=mks('div','padding:1.5rem 1rem;');A.appendChild(w);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};w.appendChild(bb);
+  const c=mk('div','card');w.appendChild(c);
+  c.innerHTML='<div style="font-size:16px;font-weight:500;margin:0 0 6px;color:#111;">학부모 조회</div><div style="font-size:12px;color:#888;margin-bottom:16px;">자녀 이름과 원장님께 받은 코드를 입력해주세요.</div>';
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
+  const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
+  const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
+  if(Q.err)c.appendChild(mk('div','err',Q.err));
+  const doP=()=>{
+    const n=(gid('pn')?.value||'').trim(),code=(gid('pc')?.value||'').trim();
+    const stu=Q.students.find(s=>s.name===n&&s.code===code);
+    if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
+    Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=getLesson(stu.id,TODAY);Q.pDates=getDates(stu.id);Q.err='';Q.scr='pView';render();
+  };
+  ci.onkeydown=e=>{if(e.key==='Enter')doP();};
+  const btn=mk('button','btn-primary','조회하기');btn.onclick=doP;c.appendChild(btn);
+}
+
+function pView(){
+  const w=mks('div','padding:1rem;');A.appendChild(w);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pLogin';render();};w.appendChild(bb);
+  w.appendChild(mks('div','margin-bottom:14px;',`<div style="font-size:16px;font-weight:500;color:#111;">${Q.pStu.name}</div><div style="font-size:12px;color:#888;margin-top:2px;">수업 기록</div>`));
+  const allDates=[...new Set([TODAY,...(Q.pDates||[])])].sort((a,b)=>b.localeCompare(a)).slice(0,20);
+  if(allDates.length){
+    const ds=document.createElement('select');ds.className='inp';
+    allDates.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=fd(d)+(d===TODAY?' (오늘)':'');if(d===Q.pDate)o.selected=true;ds.appendChild(o);});
+    ds.onchange=()=>{Q.pDate=ds.value;Q.pLesson=getLesson(Q.pStu.id,Q.pDate);render();};
+    w.appendChild(ds);
+  }
+  const L=Q.pLesson;
+  const badge=mk('div','badge',SL[L.status]);badge.style.color=SC[L.status];badge.style.marginBottom='14px';badge.style.display='inline-block';w.appendChild(badge);
+  if(L.status==='none'){w.appendChild(mk('div','empty-box','아직 수업 기록이 없습니다.'));return;}
+  LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],L.status==='completed')));
+}
+
+render();
+})();
+</script>
+</body>
+</html>
