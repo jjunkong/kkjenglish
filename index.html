@@ -110,52 +110,70 @@ const fdShort=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);return`${
 const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},status:'none'});
 
-const lsGet=k=>{try{return localStorage.getItem(k);}catch{return null;}};
-const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch{}};
-const lsDel=k=>{try{localStorage.removeItem(k);}catch{}};
-const PRE='kgj_v1_';
+// Firebase REST API
+const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
+const fbGet=async path=>{try{const r=await fetch(`${FB}/${path}.json`);if(!r.ok)return null;const d=await r.json();return d;}catch{return null;}};
+const fbSet=async(path,val)=>{try{await fetch(`${FB}/${path}.json`,{method:'PUT',body:JSON.stringify(val)});return true;}catch{return false;}};
+const fbDel=async path=>{try{await fetch(`${FB}/${path}.json`,{method:'DELETE'});return true;}catch{return false;}};
 
+// 메모리 캐시
 const MEM={stu:[],pw:'admin1234',lessons:{},videos:[]};
-const rawStu=lsGet(PRE+'stu');if(rawStu)MEM.stu=JSON.parse(rawStu);
-const rawPw=lsGet(PRE+'pw');if(rawPw)MEM.pw=rawPw;
-const rawVid=lsGet(PRE+'videos');if(rawVid)MEM.videos=JSON.parse(rawVid);
 
-const saveStu=()=>{MEM.stu=Q.students;lsSet(PRE+'stu',JSON.stringify(Q.students));};
-const savePw=pw=>{MEM.pw=pw;Q.pw=pw;lsSet(PRE+'pw',pw);};
-const saveVideos=()=>{MEM.videos=Q.videos;lsSet(PRE+'videos',JSON.stringify(Q.videos));};
+// 초기 로딩
+const initData=async()=>{
+  const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);
+  const pw=await fbGet('pw');if(pw)MEM.pw=pw;
+  const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);
+};
 
-const getLesson=(sid,date)=>{
+const saveStu=async()=>{
+  MEM.stu=Q.students;
+  const obj={};Q.students.forEach(s=>{obj[s.id]=s;});
+  await fbSet('students',obj);
+};
+const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
+const saveVideos=async()=>{MEM.videos=Q.videos;await fbSet('videos',Q.videos);};
+
+const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
   if(MEM.lessons[k])return JSON.parse(JSON.stringify(MEM.lessons[k]));
-  const r=lsGet(PRE+'l_'+sid+'_'+date);
-  if(r){const p=JSON.parse(r);MEM.lessons[k]=p;return JSON.parse(JSON.stringify(p));}
+  const r=await fbGet(`lessons/${sid}/${date.replace(/-/g,'_')}`);
+  if(r){MEM.lessons[k]=r;return JSON.parse(JSON.stringify(r));}
   return emL();
 };
-const setLesson=(sid,date,l)=>{
+const setLesson=async(sid,date,l)=>{
   const k=`${sid}__${date}`;
   const copy=JSON.parse(JSON.stringify(l));
   MEM.lessons[k]=copy;
-  lsSet(PRE+'l_'+sid+'_'+date,JSON.stringify(copy));
-  const rd=lsGet(PRE+'d_'+sid);
-  const ds=rd?JSON.parse(rd):[];
-  if(!ds.includes(date)){ds.unshift(date);ds.sort((a,b)=>b.localeCompare(a));}
-  lsSet(PRE+'d_'+sid,JSON.stringify(ds.slice(0,60)));
+  await fbSet(`lessons/${sid}/${date.replace(/-/g,'_')}`,copy);
+  const rd=MEM.dates?.[sid]||[];
+  if(!rd.includes(date)){rd.unshift(date);rd.sort((a,b)=>b.localeCompare(a));}
+  if(!MEM.dates)MEM.dates={};
+  MEM.dates[sid]=rd.slice(0,60);
+  await fbSet(`dates/${sid}`,MEM.dates[sid]);
 };
-const getDates=sid=>{
-  const r=lsGet(PRE+'d_'+sid);
-  const mem=Object.keys(MEM.lessons).filter(k=>k.startsWith(sid+'__')).map(k=>k.split('__')[1]);
-  return[...new Set([...(r?JSON.parse(r):[]),...mem])].sort((a,b)=>b.localeCompare(a));
+const getDates=async sid=>{
+  if(MEM.dates?.[sid])return MEM.dates[sid];
+  const r=await fbGet(`dates/${sid}`);
+  if(!MEM.dates)MEM.dates={};
+  MEM.dates[sid]=r||[];
+  return MEM.dates[sid];
 };
-const deleteStu=sid=>{
-  getDates(sid).forEach(d=>{lsDel(PRE+'l_'+sid+'_'+d);delete MEM.lessons[`${sid}__${d}`];});
-  lsDel(PRE+'d_'+sid);
+const deleteStu=async sid=>{
+  const dates=await getDates(sid);
+  for(const d of dates){
+    await fbDel(`lessons/${sid}/${d.replace(/-/g,'_')}`);
+    delete MEM.lessons[`${sid}__${d}`];
+  }
+  await fbDel(`dates/${sid}`);
+  if(MEM.dates)delete MEM.dates[sid];
 };
 
 let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,
   aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',editStu:null,
   pStu:null,pDate:TODAY,pLesson:null,pDates:[],pTab:'plan',
   vStu:null,vVideo:null,
-  err:'',showAdd:false,showAllStu:false,showVidAdd:false};
+  err:'',showAdd:false,showAllStu:false,showVidAdd:false,loading:true};
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
@@ -261,7 +279,7 @@ function showModal(title,msg,onOk){
   bg.appendChild(box);document.body.appendChild(bg);
 }
 
-function render(){A.innerHTML='';({home,aLogin,aList,aLessonView,aStuEdit,aSettings,pLogin,pView,pChart,vLogin,vList,vPlay})[Q.scr]();}
+function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,pLogin,pView,pChart,vLogin,vList,vPlay})[Q.scr];if(fn)fn();}
 
 function home(){
   const w=mks('div','');A.appendChild(w);
@@ -333,7 +351,7 @@ function aLogin(){
   const btn=mk('button','btn-primary','로그인');btn.onclick=doL;c.appendChild(btn);
 }
 
-function aList(){
+async function aList(){
   const w=mks('div','');A.appendChild(w);
   // 네이비 헤더
   const hdr=mk('div','page-header');
@@ -378,12 +396,12 @@ function aList(){
     const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(selDays2,ns=>{selDays2=ns;reRDP();}));};reRDP();
     if(Q.err)af.appendChild(mk('div','err',Q.err));
     const addBtn=mk('button','btn-primary','추가 완료');
-    addBtn.onclick=()=>{
+    addBtn.onclick=async()=>{
       const n=(gid('an')?.value||'').trim(),c2=(gid('ac')?.value||'').trim();
       if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
       if(Q.students.find(s=>s.name===n)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
       Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2});
-      saveStu();Q.showAdd=false;Q.err='';render();
+      await saveStu();Q.showAdd=false;Q.err='';render();
     };af.appendChild(addBtn);
   }
 
@@ -391,8 +409,8 @@ function aList(){
 
   const list=mks('div','');body.appendChild(list);
   const SL_BADGE={none:'badge badge-none',planned:'badge badge-plan',completed:'badge badge-done'};
-  const renderCard=(stu,dimmed)=>{
-    const l=getLesson(stu.id,Q.aDate);
+  const renderCard=async(stu,dimmed)=>{
+    const l=await getLesson(stu.id,Q.aDate);
     const sc=mk('div','stu-card');if(dimmed)sc.style.opacity='0.4';
     const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
     const left=mks('div','flex:1;cursor:pointer;');
@@ -402,7 +420,7 @@ function aList(){
     sub.appendChild(mks('span','color:#ddd;','·'));
     sub.appendChild(mks('span','',`코드 ${stu.code}`));
     left.appendChild(sub);
-    left.onclick=()=>{Q.aStu=stu;Q.aLesson=getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
+    left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
     row.appendChild(left);
     const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
     const badge=mk('span',SL_BADGE[l.status],SL[l.status]);right.appendChild(badge);
@@ -410,19 +428,19 @@ function aList(){
     editBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
     right.appendChild(editBtn);row.appendChild(right);sc.appendChild(row);list.appendChild(sc);
   };
-  if(todayStu.length)todayStu.forEach(s=>renderCard(s,false));
+  if(todayStu.length)for(const s of todayStu)await renderCard(s,false);
   else list.appendChild(mk('div','empty-box',`${DAYS[selDow]}요일 수업 학생이 없습니다.`));
   if(otherStu.length){
     const tog=mk('button','tog-btn',Q.showAllStu?'▲ 다른 요일 학생 접기':`▼ 다른 요일 학생도 보기 (${otherStu.length}명)`);
     tog.onclick=()=>{Q.showAllStu=!Q.showAllStu;render();};list.appendChild(tog);
     if(Q.showAllStu){
       list.appendChild(mks('div','font-size:11px;color:#aaa;padding:8px 2px 4px;','다른 요일 학생'));
-      otherStu.forEach(s=>renderCard(s,true));
+      for(const s of otherStu)await renderCard(s,true);
     }
   }
 }
 
-function aStuEdit(){
+async function aStuEdit(){
   const stu=Q.editStu;
   const w=mks('div','padding:1rem;');A.appendChild(w);
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};w.appendChild(bb);
@@ -462,13 +480,13 @@ function aStuEdit(){
   if(Q.err)w.appendChild(mk('div','err',Q.err));
   const msg=mks('div','');w.appendChild(msg);
   const saveBtn=mk('button','btn-primary','저장');
-  saveBtn.onclick=()=>{
+  saveBtn.onclick=async()=>{
     const n=ni.value.trim(),c2=ci.value.trim();
     if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
     if(Q.students.find(s=>s.name===n&&s.id!==stu.id)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
     const idx=Q.students.findIndex(s=>s.id===stu.id);
     if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,days:stu.days,videos:stu.videos||[]};
-    saveStu();
+    await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
   };w.appendChild(saveBtn);
@@ -478,15 +496,15 @@ function aStuEdit(){
   const delBtn=mk('button','btn-danger','이 학생 삭제');
   delBtn.onclick=()=>{
     const name=Q.students.find(s=>s.id===stu.id)?.name||'';
-    showModal('학생 삭제',`${name} 학생과 모든 수업 기록이 삭제됩니다. 복구할 수 없습니다.`,()=>{
-      deleteStu(stu.id);
+    showModal('학생 삭제',`${name} 학생과 모든 수업 기록이 삭제됩니다. 복구할 수 없습니다.`,async()=>{
+      await deleteStu(stu.id);
       Q.students=Q.students.filter(s=>s.id!==stu.id);
-      saveStu();Q.scr='aList';render();
+      await saveStu();Q.scr='aList';render();
     });
   };w.appendChild(delBtn);
 }
 
-function aLessonView(){
+async function aLessonView(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
@@ -505,10 +523,10 @@ function aLessonView(){
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
     body.appendChild(msg);
     const btn=mk('button','btn-primary','수업 계획 저장');
-    btn.onclick=()=>{
+    btn.onclick=async()=>{
       btn.textContent='저장 중...';btn.disabled=true;
       if(L.status==='none')L.status='planned';
-      setLesson(Q.aStu.id,Q.aDate,L);
+      await setLesson(Q.aStu.id,Q.aDate,L);
       msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
       setTimeout(()=>{Q.scr='aList';render();},700);
     };body.appendChild(btn);
@@ -516,17 +534,17 @@ function aLessonView(){
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
     body.appendChild(msg);
     const btn=mk('button','btn-primary','완성도 저장');
-    btn.onclick=()=>{
+    btn.onclick=async()=>{
       btn.textContent='저장 중...';btn.disabled=true;
       L.status='completed';
-      setLesson(Q.aStu.id,Q.aDate,L);
+      await setLesson(Q.aStu.id,Q.aDate,L);
       msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
       setTimeout(()=>{Q.scr='aList';render();},700);
     };body.appendChild(btn);
   }
 }
 
-function aSettings(){
+async function aSettings(){
   const w=mks('div','padding:1rem;');A.appendChild(w);
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};w.appendChild(bb);
   w.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;margin-bottom:20px;','설정'));
@@ -547,7 +565,7 @@ function aSettings(){
     if(p1.value!==Q.pw){Q.err='현재 비밀번호가 맞지 않습니다.';render();return;}
     if(!p2.value){Q.err='새 비밀번호를 입력하세요.';render();return;}
     if(p2.value!==p3.value){Q.err='새 비밀번호가 일치하지 않습니다.';render();return;}
-    savePw(p2.value);Q.err='';
+    await savePw(p2.value);Q.err='';
     pmsg.innerHTML='<div class="ok-msg">✓ 비밀번호가 변경되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},1000);
   };c.appendChild(pbtn);
@@ -570,7 +588,7 @@ function aSettings(){
     const vd=document.createElement('input');vd.id='vd';vd.className='inp';vd.placeholder='예: 관계대명사 who, which 핵심 정리';af.appendChild(vd);
     const vmsg=mks('div','');af.appendChild(vmsg);
     const vAddBtn=mk('button','btn-primary','영상 추가');
-    vAddBtn.onclick=()=>{
+    vAddBtn.onclick=async()=>{
       const title=(document.getElementById('vt')?.value||'').trim();
       const url=(document.getElementById('vu')?.value||'').trim();
       const desc=(document.getElementById('vd')?.value||'').trim();
@@ -578,7 +596,7 @@ function aSettings(){
       if(!title){vmsg.innerHTML='<div class="err">제목을 입력하세요.</div>';return;}
       if(!id){vmsg.innerHTML='<div class="err">올바른 유튜브 URL을 입력하세요.</div>';return;}
       Q.videos.unshift({id:Date.now().toString(),title,ytId:id,desc});
-      saveVideos();Q.showVidAdd=false;render();
+      await saveVideos();Q.showVidAdd=false;render();
     };af.appendChild(vAddBtn);
   }
 
@@ -595,7 +613,7 @@ function aSettings(){
       delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
       delBtn.onclick=()=>{
         showModal('영상 삭제',`"${v.title}" 영상을 삭제합니다.`,()=>{
-          Q.videos=Q.videos.filter(x=>x.id!==v.id);saveVideos();render();
+          Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();render();
         });
       };
       row.appendChild(delBtn);vc.appendChild(row);
@@ -603,14 +621,14 @@ function aSettings(){
   }
 }
 
-function pLogin(){
+async function pLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학부모 조회'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 내용 및 결과 확인'));
   w.appendChild(hdr);
-  if(Q.pStu){Q.pLesson=getLesson(Q.pStu.id,Q.pDate);Q.pDates=getDates(Q.pStu.id);Q.scr='pView';render();return;}
+  if(Q.pStu){Q.pLesson=await getLesson(Q.pStu.id,Q.pDate);Q.pDates=await getDates(Q.pStu.id);Q.scr='pView';render();return;}
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','자녀 이름과 원장님께 받은 코드를 입력해주세요.'));
@@ -619,17 +637,17 @@ function pLogin(){
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
   const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
   if(Q.err)c.appendChild(mk('div','err',Q.err));
-  const doP=()=>{
+  const doP=async()=>{
     const n=(gid('pn')?.value||'').trim(),code=(gid('pc')?.value||'').trim();
     const stu=Q.students.find(s=>s.name===n&&s.code===code);
     if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
-    Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=getLesson(stu.id,TODAY);Q.pDates=getDates(stu.id);Q.err='';Q.scr='pView';render();
+    Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=await getLesson(stu.id,TODAY);Q.pDates=await getDates(stu.id);Q.err='';Q.scr='pView';render();
   };
   ci.onkeydown=e=>{if(e.key==='Enter')doP();};
   const btn=mk('button','btn-primary','조회하기');btn.onclick=doP;c.appendChild(btn);
 }
 
-function pView(){
+async function pView(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';render();};hdr.appendChild(bb);
@@ -648,7 +666,7 @@ function pView(){
   if(allDates.length){
     const ds=document.createElement('select');ds.className='inp';
     allDates.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=fd(d)+(d===TODAY?' (오늘)':'');if(d===Q.pDate)o.selected=true;ds.appendChild(o);});
-    ds.onchange=()=>{Q.pDate=ds.value;Q.pLesson=getLesson(Q.pStu.id,Q.pDate);Q.pTab='plan';render();};
+    ds.onchange=async()=>{Q.pDate=ds.value;Q.pLesson=await getLesson(Q.pStu.id,Q.pDate);Q.pTab='plan';render();};
     body.appendChild(ds);
   }
   const L=Q.pLesson;
@@ -671,7 +689,7 @@ function pView(){
   }
 }
 
-function pChart(){
+async function pChart(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pView';render();};hdr.appendChild(bb);
@@ -680,7 +698,10 @@ function pChart(){
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
 
-  const dates=getDates(Q.pStu.id).filter(d=>getLesson(Q.pStu.id,d).status==='completed').slice(0,10).reverse();
+  const allDates=await getDates(Q.pStu.id);
+  const lessonCache={};
+  for(const d of allDates){lessonCache[d]=await getLesson(Q.pStu.id,d);}
+  const dates=allDates.filter(d=>lessonCache[d]?.status==='completed').slice(0,10).reverse();
 
   if(!dates.length){body.appendChild(mk('div','empty-box','아직 완성도 기록이 없습니다.'));return;}
 
@@ -688,7 +709,7 @@ function pChart(){
   const cw=mk('div','chart-wrap');body.appendChild(cw);
   cw.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','날짜별 평균 완성도'));
   dates.forEach(d=>{
-    const l=getLesson(Q.pStu.id,d);
+    const l=lessonCache[d];
     const scores=LK.map(k=>RV[l.res[k].r]||0).filter(v=>v>0);
     if(!scores.length)return;
     const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
@@ -708,7 +729,7 @@ function pChart(){
   const cw2=mk('div','chart-wrap');body.appendChild(cw2);
   cw2.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','항목별 평균 완성도'));
   LK.forEach((k,i)=>{
-    const scores=dates.map(d=>{const l=getLesson(Q.pStu.id,d);return RV[l.res[k].r]||0;}).filter(v=>v>0);
+    const scores=dates.map(d=>{return RV[lessonCache[d]?.res[k]?.r]||0;}).filter(v=>v>0);
     if(!scores.length)return;
     const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
     const pct=Math.round((avg/3)*100);
@@ -804,7 +825,13 @@ function vPlay(){
   body.appendChild(mks('div','font-size:11px;color:#ccc;text-align:center;margin-top:8px;','© 김기준영어학원 — 무단 배포 금지'));
 }
 
-render();
+// Firebase 데이터 로드 후 시작
+(async()=>{
+  A.innerHTML='<div style="text-align:center;padding:5rem 1rem;"><div style="font-size:13px;color:#aaa;">불러오는 중...</div></div>';
+  await initData();
+  Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;
+  render();
+})();
 })();
 </script>
 </body>
