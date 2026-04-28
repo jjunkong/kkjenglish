@@ -11,14 +11,24 @@
   src: url('https://raw.githubusercontent.com/jjunkong/kkjenglish/main/GmarketSansTTFBold.ttf') format('truetype');
   font-weight: 700;
 }
+@font-face {
+  font-family: 'NanumGothic';
+  src: url('https://raw.githubusercontent.com/jjunkong/kkjenglish/main/NanumGothic.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'NanumBarunpen';
+  src: url('https://raw.githubusercontent.com/jjunkong/kkjenglish/main/NanumBarunpen.ttf') format('truetype');
+  font-weight: 400;
+}
 </style>
 <title>김기준영어학원 수업 관리</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Nanum Gothic',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
+  body{font-family:'NanumGothic','Nanum Gothic',-apple-system,sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
   #app{width:100%;max-width:480px;min-height:100vh;background:#f0f0ee;padding-top:40px;}
-  .gm{font-family:'GmarketSans','Nanum Gothic',sans-serif;font-weight:700;}
-  input,select,textarea,button{font-family:'Nanum Gothic',-apple-system,sans-serif;}
+  .gm{font-family:'GmarketSans','NanumGothic',sans-serif;font-weight:700;}
+  input,select,textarea,button{font-family:'NanumGothic','Nanum Gothic',-apple-system,sans-serif;}
   /* 네이비 상단 헤더 */
   .page-header{background:#1a2f6e;padding:20px 20px 24px;position:relative;border-radius:20px;margin:12px 12px 0;}
   .page-header-sub{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.08em;margin-bottom:4px;}
