@@ -360,30 +360,56 @@ function pLogin(){
 function pView(){
   const w=mks('div','padding:1rem;');A.appendChild(w);
 
-  // 헤더: 이름 + 로그아웃
+  // 헤더: 뒤로 + 이름 + 로그아웃
+  const bb2=mk('button','btn-back','← 뒤로');
+  bb2.onclick=()=>{Q.scr='home';render();};
+  w.appendChild(bb2);
   const ph=mk('div','p-header');w.appendChild(ph);
   const pl=mks('div','');
   pl.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;',Q.pStu.name));
   pl.appendChild(mks('div','font-size:12px;color:#888;margin-top:2px;','수업 기록'));
   ph.appendChild(pl);
-  const bb2=mk('button','btn-back','← 뒤로');
-  bb2.onclick=()=>{Q.scr='home';render();};
-  w.insertBefore(bb2, ph);
   const lo=mk('button','logout-btn','로그아웃');
   lo.onclick=()=>{Q.pStu=null;Q.pDate=TODAY;Q.pLesson=null;Q.pDates=[];Q.scr='pLogin';render();};
   ph.appendChild(lo);
 
+  // 날짜 선택
   const allDates=[...new Set([TODAY,...(Q.pDates||[])])].sort((a,b)=>b.localeCompare(a)).slice(0,20);
   if(allDates.length){
     const ds=document.createElement('select');ds.className='inp';
     allDates.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=fd(d)+(d===TODAY?' (오늘)':'');if(d===Q.pDate)o.selected=true;ds.appendChild(o);});
-    ds.onchange=()=>{Q.pDate=ds.value;Q.pLesson=getLesson(Q.pStu.id,Q.pDate);render();};
+    ds.onchange=()=>{Q.pDate=ds.value;Q.pLesson=getLesson(Q.pStu.id,Q.pDate);Q.pTab='plan';render();};
     w.appendChild(ds);
   }
+
   const L=Q.pLesson;
-  const badge=mk('div','badge',SL[L.status]);badge.style.color=SC[L.status];badge.style.marginBottom='14px';badge.style.display='inline-block';w.appendChild(badge);
-  if(L.status==='none'){w.appendChild(mk('div','empty-box','아직 수업 기록이 없습니다.'));return;}
-  LK.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],L.status==='completed')));
+
+  // 수업 기록 없음
+  if(L.status==='none'){
+    w.appendChild(mk('div','empty-box','아직 오늘의 수업 계획이 없습니다.'));
+    return;
+  }
+
+  // 탭: 수업 전(계획) / 수업 후(결과) — 완성도 있을 때만 탭 표시
+  if(!Q.pTab)Q.pTab='plan';
+  if(L.status==='completed'){
+    const tabs=mk('div','tab-wrap');w.appendChild(tabs);
+    ['plan','result'].forEach(t=>{
+      const tb=mk('button','tab-btn'+(Q.pTab===t?' active':''),t==='plan'?'오늘 배울 내용':'수업 결과');
+      tb.onclick=()=>{Q.pTab=t;render();};tabs.appendChild(tb);
+    });
+  } else {
+    // 계획만 있을 때 — 라벨만 표시
+    w.appendChild(mks('div','font-size:13px;font-weight:500;color:#1e3a8a;margin-bottom:12px;padding:8px 12px;background:#eff6ff;border-radius:8px;','📚 오늘 배울 내용'));
+  }
+
+  if(Q.pTab==='plan'||L.status==='planned'){
+    LK.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],null,false)));
+  } else {
+    // 수업 결과 탭
+    w.appendChild(mks('div','font-size:13px;font-weight:500;color:#16a34a;margin-bottom:12px;padding:8px 12px;background:#f0fdf4;border-radius:8px;','✅ 수업 결과'));
+    LK.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],true)));
+  }
 }
 
 render();
