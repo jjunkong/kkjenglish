@@ -314,7 +314,12 @@ function home(){
   // 최신 공지 1개 미리보기
   if(Q.notices&&Q.notices.length){
     const latest=Q.notices[0];
-    nb.appendChild(mks('div','font-size:11px;color:#888;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',latest.title));
+    const d=new Date(latest.createdAt);
+    const dateStr=`${String(d.getFullYear()).slice(2)}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    const row=mks('div','display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0ee;');
+    row.appendChild(mks('div','font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',latest.title));
+    row.appendChild(mks('div','font-size:10px;color:#bbb;flex-shrink:0;',dateStr));
+    nb.appendChild(row);
   }
   nb.onclick=()=>{Q.scr='noticeList';render();};
   w.appendChild(nb);
