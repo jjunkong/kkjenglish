@@ -544,17 +544,30 @@ async function aLessonView(){
   } else {
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
 
-    // 단어시험 점수 입력
+    // 단어시험 점수 + 통과/불통 입력
     const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-bottom:10px;');
     vb.appendChild(mk('div','section-tag','단어시험'));
-    vb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:8px;','단어 시험 점수 및 피드백'));
-    const vrow=mks('div','display:flex;gap:8px;margin-bottom:8px;');
+    vb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:10px;','단어 시험 점수 및 결과'));
+    const vrow=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:10px;');
     const vsi=document.createElement('input');vsi.className='inp';
-    vsi.style.cssText='margin-bottom:0;width:100px;';
+    vsi.style.cssText='margin-bottom:0;width:90px;flex-shrink:0;';
     vsi.type='number';vsi.placeholder='점수';vsi.value=L.vocab.score||'';
     vsi.oninput=()=>L.vocab.score=vsi.value;
-    const vunit=mks('div','font-size:13px;color:#888;padding-top:10px;','점');
-    vrow.appendChild(vsi);vrow.appendChild(vunit);vb.appendChild(vrow);
+    vrow.appendChild(vsi);
+    vrow.appendChild(mks('div','font-size:13px;color:#888;flex-shrink:0;','점'));
+    // 통과/불통 버튼
+    const passBtn=mks('button','padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;flex-shrink:0;','통과');
+    const failBtn=mks('button','padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;flex-shrink:0;','불통');
+    const updPF=v=>{
+      L.vocab.pass=v;
+      passBtn.style.cssText=`padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;flex-shrink:0;background:${v==='pass'?'#16a34a':'transparent'};color:${v==='pass'?'#fff':'#888'};border:${v==='pass'?'none':'1.5px solid #e8e8e6'};`;
+      failBtn.style.cssText=`padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;flex-shrink:0;background:${v==='fail'?'#dc2626':'transparent'};color:${v==='fail'?'#fff':'#888'};border:${v==='fail'?'none':'1.5px solid #e8e8e6'};`;
+    };
+    passBtn.onclick=()=>updPF('pass');
+    failBtn.onclick=()=>updPF('fail');
+    updPF(L.vocab.pass||'');
+    vrow.appendChild(passBtn);vrow.appendChild(failBtn);
+    vb.appendChild(vrow);
     const vci=document.createElement('input');vci.className='inp';
     vci.style.marginBottom='0';vci.placeholder='코멘트 (예: 잘했어요!)';
     vci.value=L.vocab.comment||'';vci.oninput=()=>L.vocab.comment=vci.value;
@@ -710,16 +723,6 @@ async function pView(){
 
   const L=Q.pLesson;
 
-  // 단어시험 점수 표시 (있을 때만)
-  if(L.vocab&&L.vocab.score){
-    const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;');
-    vb.appendChild(mks('div','font-size:11px;font-weight:700;background:#1a2f6e;color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.04em;white-space:nowrap;','단어시험'));
-    const vs=mks('div','');
-    vs.appendChild(mks('div','font-size:16px;font-weight:700;color:#1a2f6e;',L.vocab.score+'점'));
-    if(L.vocab.comment)vs.appendChild(mks('div','font-size:11px;color:#888;margin-top:2px;',L.vocab.comment));
-    vb.appendChild(vs);body.appendChild(vb);
-  }
-
   if(L.status==='none'){body.appendChild(mk('div','empty-box','이 날의 수업 기록이 없습니다.'));return;}
   if(!Q.pTab)Q.pTab='plan';
   if(L.status==='completed'){
@@ -736,6 +739,20 @@ async function pView(){
   } else {
     body.appendChild(mks('div','font-size:12px;font-weight:700;color:#059669;margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:10px;','✅ 수업 결과'));
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],true)));
+    // 단어시험 결과 (수업 결과 탭 안)
+    if(L.vocab&&(L.vocab.score||L.vocab.pass)){
+      const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px 14px;margin-top:4px;');
+      const vhdr=mks('div','display:flex;align-items:center;gap:10px;margin-bottom:6px;');
+      vhdr.appendChild(mks('div','font-size:11px;font-weight:700;background:#1a2f6e;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap;','단어시험'));
+      if(L.vocab.score)vhdr.appendChild(mks('div','font-size:16px;font-weight:700;color:#1a2f6e;',L.vocab.score+'점'));
+      if(L.vocab.pass){
+        const pass=L.vocab.pass==='pass';
+        vhdr.appendChild(mks('span',`font-size:12px;font-weight:700;color:#fff;background:${pass?'#16a34a':'#dc2626'};padding:3px 12px;border-radius:20px;`,pass?'통과':'불통'));
+      }
+      vb.appendChild(vhdr);
+      if(L.vocab.comment)vb.appendChild(mks('div','font-size:12px;color:#888;',L.vocab.comment));
+      body.appendChild(vb);
+    }
   }
 }
 
@@ -744,55 +761,87 @@ async function pChart(){
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pView';render();};hdr.appendChild(bb);
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',Q.pStu.name+' 수업 현황'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','완성도가 기록된 최근 수업 기준'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','누적 학습 기록'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
 
-  const allDates=await getDates(Q.pStu.id);
+  // 이번 달 전체 날짜 로드
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const allMonthDates=[];
+  for(let d=1;d<=daysInMonth;d++){
+    const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
+    allMonthDates.push(`${year}-${mm}-${dd}`);
+  }
   const lessonCache={};
-  for(const d of allDates){lessonCache[d]=await getLesson(Q.pStu.id,d);}
-  const dates=allDates.filter(d=>lessonCache[d]?.status==='completed').slice(0,10).reverse();
+  for(const d of allMonthDates){lessonCache[d]=await getLesson(Q.pStu.id,d);}
 
-  if(!dates.length){body.appendChild(mk('div','empty-box','아직 완성도 기록이 없습니다.'));return;}
+  // ① 단어시험 그래프 (통과/불통 있는 날만)
+  const vocabDates=allMonthDates.filter(d=>lessonCache[d]?.vocab?.pass);
+  if(vocabDates.length){
+    const vw=mk('div','chart-wrap');body.appendChild(vw);
+    vw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','단어시험 추이'));
+    vocabDates.forEach(d=>{
+      const v=lessonCache[d].vocab;
+      const pass=v.pass==='pass';
+      const color=pass?'#16a34a':'#dc2626';
+      const row=mk('div','chart-bar-row');
+      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
+      const bg=mk('div','chart-bar-bg');
+      const fill=mk('div','chart-bar-fill');
+      fill.style.background=color;fill.style.width='100%';
+      bg.appendChild(fill);row.appendChild(bg);
+      const badge=mks('span',`font-size:11px;font-weight:700;color:#fff;background:${color};padding:2px 10px;border-radius:20px;margin-left:6px;white-space:nowrap;`,pass?'통과':'불통');
+      if(v.score)row.appendChild(mks('div','font-size:11px;color:#888;margin-left:6px;min-width:30px;',v.score+'점'));
+      row.appendChild(badge);
+      vw.appendChild(row);
+    });
+  }
 
-  // 날짜별 막대 그래프
-  const cw=mk('div','chart-wrap');body.appendChild(cw);
-  cw.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','날짜별 평균 완성도'));
-  dates.forEach(d=>{
-    const l=lessonCache[d];
-    const scores=LK.map(k=>RV[l.res[k].r]||0).filter(v=>v>0);
-    if(!scores.length)return;
-    const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
-    const pct=Math.round((avg/3)*100);
-    const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
-    const label=avg>=2.5?'상':avg>=1.5?'중':'하';
-    const row=mk('div','chart-bar-row');
-    row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-    const bg=mk('div','chart-bar-bg');
-    const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
-    bg.appendChild(fill);row.appendChild(bg);
-    row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
-    cw.appendChild(row);
-  });
+  // ② 완성도 그래프
+  const dates=allMonthDates.filter(d=>lessonCache[d]?.status==='completed');
+  if(!dates.length&&!vocabDates.length){body.appendChild(mk('div','empty-box','아직 기록이 없습니다.'));return;}
 
-  // 항목별 평균
-  const cw2=mk('div','chart-wrap');body.appendChild(cw2);
-  cw2.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','항목별 평균 완성도'));
-  LK.forEach((k,i)=>{
-    const scores=dates.map(d=>{return RV[lessonCache[d]?.res[k]?.r]||0;}).filter(v=>v>0);
-    if(!scores.length)return;
-    const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
-    const pct=Math.round((avg/3)*100);
-    const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
-    const label=avg>=2.5?'상':avg>=1.5?'중':'하';
-    const row=mk('div','chart-bar-row');
-    row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',['CHECK','CORE','FIX'][i]));
-    const bg=mk('div','chart-bar-bg');
-    const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
-    bg.appendChild(fill);row.appendChild(bg);
-    row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
-    cw2.appendChild(row);
-  });
+  if(dates.length){
+    const cw=mk('div','chart-wrap');body.appendChild(cw);
+    cw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','날짜별 평균 완성도'));
+    dates.forEach(d=>{
+      const l=lessonCache[d];
+      const scores=LK.map(k=>RV[l.res[k].r]||0).filter(v=>v>0);
+      if(!scores.length)return;
+      const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
+      const pct=Math.round((avg/3)*100);
+      const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
+      const label=avg>=2.5?'상':avg>=1.5?'중':'하';
+      const row=mk('div','chart-bar-row');
+      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
+      const bg=mk('div','chart-bar-bg');
+      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
+      bg.appendChild(fill);row.appendChild(bg);
+      row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
+      cw.appendChild(row);
+    });
+
+    // ③ 항목별 평균
+    const cw2=mk('div','chart-wrap');body.appendChild(cw2);
+    cw2.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','항목별 평균 완성도'));
+    LK.forEach((k,i)=>{
+      const scores=dates.map(d=>RV[lessonCache[d]?.res[k]?.r]||0).filter(v=>v>0);
+      if(!scores.length)return;
+      const avg=scores.reduce((a,b)=>a+b,0)/scores.length;
+      const pct=Math.round((avg/3)*100);
+      const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
+      const label=avg>=2.5?'상':avg>=1.5?'중':'하';
+      const row=mk('div','chart-bar-row');
+      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',['CHECK','CORE','FIX'][i]));
+      const bg=mk('div','chart-bar-bg');
+      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
+      bg.appendChild(fill);row.appendChild(bg);
+      row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
+      cw2.appendChild(row);
+    });
+  }
 }
 
 // 영상 — 학생 로그인
