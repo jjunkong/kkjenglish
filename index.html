@@ -108,7 +108,7 @@ const TODAY=localDate();
 const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);return`${m}월 ${d}일 (${DAYS[dt.getDay()]}요일)`;};
 const fdShort=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);return`${m}/${d}`;};
 const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
-const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},status:'none'});
+const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},vocab:{score:'',comment:''},status:'none'});
 
 // Firebase REST API
 const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
@@ -518,6 +518,7 @@ async function aLessonView(){
     tb.onclick=()=>{Q.aTab=t;render();};tabs.appendChild(tb);
   });
   const L=Q.aLesson;
+  if(!L.vocab)L.vocab={score:'',comment:''};
   const msg=mks('div','');
   if(Q.aTab==='plan'){
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
@@ -532,6 +533,23 @@ async function aLessonView(){
     };body.appendChild(btn);
   } else {
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
+
+    // 단어시험 점수 입력
+    const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-bottom:10px;');
+    vb.appendChild(mk('div','section-tag','단어시험'));
+    vb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:8px;','단어 시험 점수 및 피드백'));
+    const vrow=mks('div','display:flex;gap:8px;margin-bottom:8px;');
+    const vsi=document.createElement('input');vsi.className='inp';
+    vsi.style.cssText='margin-bottom:0;width:100px;';
+    vsi.type='number';vsi.placeholder='점수';vsi.value=L.vocab.score||'';
+    vsi.oninput=()=>L.vocab.score=vsi.value;
+    const vunit=mks('div','font-size:13px;color:#888;padding-top:10px;','점');
+    vrow.appendChild(vsi);vrow.appendChild(vunit);vb.appendChild(vrow);
+    const vci=document.createElement('input');vci.className='inp';
+    vci.style.marginBottom='0';vci.placeholder='코멘트 (예: 잘했어요!)';
+    vci.value=L.vocab.comment||'';vci.oninput=()=>L.vocab.comment=vci.value;
+    vb.appendChild(vci);body.appendChild(vb);
+
     body.appendChild(msg);
     const btn=mk('button','btn-primary','완성도 저장');
     btn.onclick=async()=>{
@@ -662,15 +680,37 @@ async function pView(){
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
 
-  const allDates=[...new Set([TODAY,...(Q.pDates||[])])].sort((a,b)=>b.localeCompare(a)).slice(0,20);
-  if(allDates.length){
-    const ds=document.createElement('select');ds.className='inp';
-    allDates.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=fd(d)+(d===TODAY?' (오늘)':'');if(d===Q.pDate)o.selected=true;ds.appendChild(o);});
-    ds.onchange=async()=>{Q.pDate=ds.value;Q.pLesson=await getLesson(Q.pStu.id,Q.pDate);Q.pTab='plan';render();};
-    body.appendChild(ds);
+  // 이번 달 전체 날짜 생성
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const monthDates=[];
+  for(let d=daysInMonth;d>=1;d--){
+    const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
+    monthDates.push(`${year}-${mm}-${dd}`);
   }
+  const ds=document.createElement('select');ds.className='inp';
+  monthDates.forEach(d=>{
+    const o=document.createElement('option');o.value=d;
+    o.textContent=fd(d)+(d===TODAY?' (오늘)':'');
+    if(d===Q.pDate)o.selected=true;ds.appendChild(o);
+  });
+  ds.onchange=async()=>{Q.pDate=ds.value;Q.pLesson=await getLesson(Q.pStu.id,Q.pDate);Q.pTab='plan';render();};
+  body.appendChild(ds);
+
   const L=Q.pLesson;
-  if(L.status==='none'){body.appendChild(mk('div','empty-box','아직 오늘의 수업 계획이 없습니다.'));return;}
+
+  // 단어시험 점수 표시 (있을 때만)
+  if(L.vocab&&L.vocab.score){
+    const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;');
+    vb.appendChild(mks('div','font-size:11px;font-weight:700;background:#1a2f6e;color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.04em;white-space:nowrap;','단어시험'));
+    const vs=mks('div','');
+    vs.appendChild(mks('div','font-size:16px;font-weight:700;color:#1a2f6e;',L.vocab.score+'점'));
+    if(L.vocab.comment)vs.appendChild(mks('div','font-size:11px;color:#888;margin-top:2px;',L.vocab.comment));
+    vb.appendChild(vs);body.appendChild(vb);
+  }
+
+  if(L.status==='none'){body.appendChild(mk('div','empty-box','이 날의 수업 기록이 없습니다.'));return;}
   if(!Q.pTab)Q.pTab='plan';
   if(L.status==='completed'){
     const tabs=mk('div','tab-wrap');body.appendChild(tabs);
