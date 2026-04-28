@@ -6,11 +6,11 @@
 <title>김기준영어학원 수업 관리</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;padding:0;}
-  #app{width:100%;max-width:480px;min-height:100vh;background:#f0f0ee;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
+  #app{width:100%;max-width:480px;min-height:100vh;background:#f0f0ee;padding-top:40px;}
   input,select,textarea,button{font-family:inherit;}
   /* 네이비 상단 헤더 */
-  .page-header{background:#1a2f6e;padding:20px 20px 24px;position:relative;border-radius:0 0 20px 20px;}
+  .page-header{background:#1a2f6e;padding:20px 20px 24px;position:relative;border-radius:20px;margin:12px 12px 0;}
   .page-header-sub{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.08em;margin-bottom:4px;}
   .page-header-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;}
   .page-header-desc{font-size:11px;color:rgba(255,255,255,0.5);}
@@ -264,7 +264,7 @@ function render(){A.innerHTML='';({home,aLogin,aList,aLessonView,aStuEdit,aSetti
 
 function home(){
   const w=mks('div','');A.appendChild(w);
-  const hdr=mks('div','background:#1a2f6e;padding:28px 20px 24px;border-radius:0 0 20px 20px;');
+  const hdr=mks('div','background:#1a2f6e;padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
   hdr.appendChild(mks('div','font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:.1em;margin-bottom:6px;','KIM GIJUN ENGLISH ACADEMY'));
   hdr.appendChild(mks('div','font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;','김기준영어학원'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
