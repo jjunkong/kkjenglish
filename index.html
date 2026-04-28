@@ -48,6 +48,9 @@
   .add-form{background:#f9f9f7;border-radius:12px;padding:1rem;margin-bottom:14px;}
   .sub-info{font-size:11px;color:#aaa;margin-top:3px;display:flex;align-items:center;gap:6px;}
   .rate-row{display:flex;gap:8px;margin-bottom:8px;}
+  .p-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .logout-btn{font-size:12px;color:#aaa;background:transparent;border:none;cursor:pointer;padding:0;}
+  .logout-btn:hover{color:#666;}
 </style>
 </head>
 <body>
@@ -61,24 +64,21 @@ const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new D
 const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},status:'none'});
 
-// localStorage 기반 저장
 const lsGet=k=>{try{return localStorage.getItem(k);}catch{return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch{}};
-const KEYS_PRE='kgj_v1_';
+const PRE='kgj_v1_';
 
 const MEM={stu:[],pw:'admin1234',lessons:{}};
-const rawStu=lsGet(KEYS_PRE+'stu');
-if(rawStu)MEM.stu=JSON.parse(rawStu);
-const rawPw=lsGet(KEYS_PRE+'pw');
-if(rawPw)MEM.pw=rawPw;
+const rawStu=lsGet(PRE+'stu');if(rawStu)MEM.stu=JSON.parse(rawStu);
+const rawPw=lsGet(PRE+'pw');if(rawPw)MEM.pw=rawPw;
 
-const saveStu=()=>{lsSet(KEYS_PRE+'stu',JSON.stringify(MEM.stu));};
+const saveStu=()=>lsSet(PRE+'stu',JSON.stringify(MEM.stu));
 const lKey=(sid,date)=>`${sid}__${date}`;
 
 const getLesson=(sid,date)=>{
   const k=lKey(sid,date);
   if(MEM.lessons[k])return JSON.parse(JSON.stringify(MEM.lessons[k]));
-  const r=lsGet(KEYS_PRE+'l_'+sid+'_'+date);
+  const r=lsGet(PRE+'l_'+sid+'_'+date);
   if(r){const p=JSON.parse(r);MEM.lessons[k]=p;return JSON.parse(JSON.stringify(p));}
   return emL();
 };
@@ -86,27 +86,34 @@ const setLesson=(sid,date,l)=>{
   const k=lKey(sid,date);
   const copy=JSON.parse(JSON.stringify(l));
   MEM.lessons[k]=copy;
-  lsSet(KEYS_PRE+'l_'+sid+'_'+date,JSON.stringify(copy));
-  const rd=lsGet(KEYS_PRE+'d_'+sid);
+  lsSet(PRE+'l_'+sid+'_'+date,JSON.stringify(copy));
+  const rd=lsGet(PRE+'d_'+sid);
   const ds=rd?JSON.parse(rd):[];
   if(!ds.includes(date)){ds.unshift(date);ds.sort((a,b)=>b.localeCompare(a));}
-  lsSet(KEYS_PRE+'d_'+sid,JSON.stringify(ds.slice(0,60)));
+  lsSet(PRE+'d_'+sid,JSON.stringify(ds.slice(0,60)));
 };
 const getDates=sid=>{
-  const r=lsGet(KEYS_PRE+'d_'+sid);
+  const r=lsGet(PRE+'d_'+sid);
   const mem=Object.keys(MEM.lessons).filter(k=>k.startsWith(sid+'__')).map(k=>k.split('__')[1]);
-  const stored=r?JSON.parse(r):[];
-  return[...new Set([...stored,...mem])].sort((a,b)=>b.localeCompare(a));
+  return[...new Set([...(r?JSON.parse(r):[]),...mem])].sort((a,b)=>b.localeCompare(a));
 };
 
-let Q={scr:'home',students:MEM.stu,pw:MEM.pw,aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',pStu:null,pDate:TODAY,pLesson:null,pDates:[],err:'',showAdd:false,showAllStu:false};
+// 세션 상태 — 학부모 로그인 유지
+let Q={
+  scr:'home',
+  students:MEM.stu,pw:MEM.pw,
+  aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',
+  // 학부모: 세션 동안 유지
+  pStu:null,pDate:TODAY,pLesson:null,pDates:[],
+  err:'',showAdd:false,showAllStu:false
+};
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
 const RC={상:'#16a34a',중:'#d97706',하:'#dc2626'};
 const SL={none:'미입력',planned:'계획 입력됨',completed:'완성도 기록됨'};
 const SC={none:'#9ca3af',planned:'#2563eb',completed:'#16a34a'};
-const LESSON_KEYS=['check','core','fix'];
+const LK=['check','core','fix'];
 const LABELS=['CHECK — 확인 및 복습','CORE — 핵심 내용','FIX — 교정 및 정착'];
 
 const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
@@ -139,8 +146,7 @@ function sectionBlock(label,L,key,roplan,showRes){
     const ta=document.createElement('textarea');
     ta.className='section-ta';ta.rows=3;ta.value=L.plan[key];
     ta.placeholder=label.split('—')[0].trim()+' 수업 내용...';
-    ta.oninput=()=>{L.plan[key]=ta.value;};
-    w.appendChild(ta);
+    ta.oninput=()=>{L.plan[key]=ta.value;};w.appendChild(ta);
   } else {
     w.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;',L.plan[key]||'<span style="color:#bbb">—</span>'));
   }
@@ -154,8 +160,7 @@ function sectionBlock(label,L,key,roplan,showRes){
       const sel=L.res[key].r===r;
       const b=mk('button','rate-btn',r);
       if(sel){b.style.background=RC[r];b.style.color='#fff';b.style.border='none';}
-      b.onclick=()=>{L.res[key].r=r;upd(r);};
-      btns.push(b);bd.appendChild(b);
+      b.onclick=()=>{L.res[key].r=r;upd(r);};btns.push(b);bd.appendChild(b);
     });
     w.appendChild(bd);
     const mi=document.createElement('input');mi.className='inp';
@@ -201,9 +206,9 @@ function aLogin(){
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};w.appendChild(bb);
   const c=mk('div','card');w.appendChild(c);
   c.innerHTML='<div style="font-size:16px;font-weight:500;margin:0 0 16px;color:#111;">원장 로그인</div>';
-  const ll=mk('div','lbl','비밀번호');c.appendChild(ll);
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','비밀번호'));
   const pi=document.createElement('input');pi.className='inp';pi.type='password';pi.placeholder='비밀번호 입력';c.appendChild(pi);
-  if(Q.err){const e=mk('div','err',Q.err);c.appendChild(e);}
+  if(Q.err)c.appendChild(mk('div','err',Q.err));
   const doL=()=>{if(pi.value===Q.pw){Q.scr='aList';Q.err='';render();}else{Q.err='비밀번호가 맞지 않습니다.';render();}};
   pi.onkeydown=e=>{if(e.key==='Enter')doL();};
   const btn=mk('button','btn-primary','로그인');btn.onclick=doL;c.appendChild(btn);
@@ -212,7 +217,6 @@ function aLogin(){
 function aList(){
   const w=mks('div','padding:1rem;');A.appendChild(w);
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};w.appendChild(bb);
-
   const dr=mk('div','date-row');w.appendChild(dr);
   const di=document.createElement('input');di.className='date-inp';di.type='date';di.value=Q.aDate;
   di.onchange=()=>{Q.aDate=di.value;Q.showAllStu=false;render();};dr.appendChild(di);
@@ -240,9 +244,8 @@ function aList(){
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일 선택'));
     let selDays2=[];
     const dpWrap=mks('div','');af.appendChild(dpWrap);
-    const reRenderDp=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(selDays2,ns=>{selDays2=ns;reRenderDp();}));};
-    reRenderDp();
-    if(Q.err){af.appendChild(mk('div','err',Q.err));}
+    const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(selDays2,ns=>{selDays2=ns;reRDP();}));};reRDP();
+    if(Q.err)af.appendChild(mk('div','err',Q.err));
     const addBtn=mk('button','btn-primary','추가 완료');
     addBtn.onclick=()=>{
       const n=(gid('an')?.value||'').trim(),c2=(gid('ac')?.value||'').trim();
@@ -272,8 +275,7 @@ function aList(){
     sc.onclick=()=>{Q.aStu=stu;Q.aLesson=getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
     list.appendChild(sc);
   };
-
-  if(todayStu.length){todayStu.forEach(s=>renderCard(s,false));}
+  if(todayStu.length)todayStu.forEach(s=>renderCard(s,false));
   else list.appendChild(mk('div','empty-box',`${DAYS[selDow]}요일 수업 학생이 없습니다.`));
   if(otherStu.length){
     const tog=mk('button','tog-btn',Q.showAllStu?'▲ 다른 요일 학생 접기':`▼ 다른 요일 학생도 보기 (${otherStu.length}명)`);
@@ -297,7 +299,7 @@ function aLessonView(){
   const L=Q.aLesson;
   const msg=mks('div','');
   if(Q.aTab==='plan'){
-    LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
+    LK.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
     w.appendChild(msg);
     const btn=mk('button','btn-primary','수업 계획 저장');
     btn.onclick=()=>{
@@ -308,7 +310,7 @@ function aLessonView(){
       setTimeout(()=>{Q.scr='aList';render();},700);
     };w.appendChild(btn);
   } else {
-    LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
+    LK.forEach((k,i)=>w.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
     w.appendChild(msg);
     const btn=mk('button','btn-primary','완성도 저장');
     btn.onclick=()=>{
@@ -327,24 +329,47 @@ function pLogin(){
   const c=mk('div','card');w.appendChild(c);
   c.innerHTML='<div style="font-size:16px;font-weight:500;margin:0 0 6px;color:#111;">학부모 조회</div><div style="font-size:12px;color:#888;margin-bottom:16px;">자녀 이름과 원장님께 받은 코드를 입력해주세요.</div>';
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
-  const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
+  const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';
+  // 이전에 로그인한 학생 이름 자동 채우기
+  if(Q.pStu)ni.value=Q.pStu.name;
+  c.appendChild(ni);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
-  const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
+  const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';
+  if(Q.pStu)ci.value=Q.pStu.code;
+  c.appendChild(ci);
   if(Q.err)c.appendChild(mk('div','err',Q.err));
   const doP=()=>{
     const n=(gid('pn')?.value||'').trim(),code=(gid('pc')?.value||'').trim();
     const stu=Q.students.find(s=>s.name===n&&s.code===code);
     if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
-    Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=getLesson(stu.id,TODAY);Q.pDates=getDates(stu.id);Q.err='';Q.scr='pView';render();
+    Q.pStu=stu;Q.pDate=TODAY;
+    Q.pLesson=getLesson(stu.id,TODAY);
+    Q.pDates=getDates(stu.id);
+    Q.err='';Q.scr='pView';render();
   };
+  // 이미 로그인된 상태면 바로 조회 화면으로
+  if(Q.pStu){
+    Q.pLesson=getLesson(Q.pStu.id,Q.pDate);
+    Q.pDates=getDates(Q.pStu.id);
+    Q.scr='pView';render();return;
+  }
   ci.onkeydown=e=>{if(e.key==='Enter')doP();};
   const btn=mk('button','btn-primary','조회하기');btn.onclick=doP;c.appendChild(btn);
 }
 
 function pView(){
   const w=mks('div','padding:1rem;');A.appendChild(w);
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pLogin';render();};w.appendChild(bb);
-  w.appendChild(mks('div','margin-bottom:14px;',`<div style="font-size:16px;font-weight:500;color:#111;">${Q.pStu.name}</div><div style="font-size:12px;color:#888;margin-top:2px;">수업 기록</div>`));
+
+  // 헤더: 이름 + 로그아웃
+  const ph=mk('div','p-header');w.appendChild(ph);
+  const pl=mks('div','');
+  pl.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;',Q.pStu.name));
+  pl.appendChild(mks('div','font-size:12px;color:#888;margin-top:2px;','수업 기록'));
+  ph.appendChild(pl);
+  const lo=mk('button','logout-btn','← 로그아웃');
+  lo.onclick=()=>{Q.pStu=null;Q.pDate=TODAY;Q.pLesson=null;Q.pDates=[];Q.scr='pLogin';render();};
+  ph.appendChild(lo);
+
   const allDates=[...new Set([TODAY,...(Q.pDates||[])])].sort((a,b)=>b.localeCompare(a)).slice(0,20);
   if(allDates.length){
     const ds=document.createElement('select');ds.className='inp';
@@ -355,7 +380,7 @@ function pView(){
   const L=Q.pLesson;
   const badge=mk('div','badge',SL[L.status]);badge.style.color=SC[L.status];badge.style.marginBottom='14px';badge.style.display='inline-block';w.appendChild(badge);
   if(L.status==='none'){w.appendChild(mk('div','empty-box','아직 수업 기록이 없습니다.'));return;}
-  LESSON_KEYS.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],L.status==='completed')));
+  LK.forEach((k,i)=>w.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],L.status==='completed')));
 }
 
 render();
