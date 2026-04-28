@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>김기준영어학원 수업 관리</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -791,7 +792,8 @@ function vPlay(){
   wrap.style.position='relative';
   wrap.oncontextmenu=e=>e.preventDefault();
   const iframe=document.createElement('iframe');
-  iframe.src=`https://www.youtube.com/embed/${v.ytId}?rel=0&modestbranding=1`;
+  iframe.src=`https://www.youtube-nocookie.com/embed/${v.ytId}?rel=0&modestbranding=1`;
+  iframe.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
   iframe.allow='accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
   iframe.allowFullscreen=true;
   wrap.appendChild(iframe);
