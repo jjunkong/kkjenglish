@@ -672,17 +672,20 @@ function pView(){
 }
 
 function pChart(){
-  const w=mks('div','padding:1rem;');A.appendChild(w);
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pView';render();};w.appendChild(bb);
-  w.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;margin-bottom:4px;',Q.pStu.name+' 수업 현황'));
-  w.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','완성도가 기록된 최근 수업 기준'));
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pView';render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',Q.pStu.name+' 수업 현황'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','완성도가 기록된 최근 수업 기준'));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
 
   const dates=getDates(Q.pStu.id).filter(d=>getLesson(Q.pStu.id,d).status==='completed').slice(0,10).reverse();
 
-  if(!dates.length){w.appendChild(mk('div','empty-box','아직 완성도 기록이 없습니다.'));return;}
+  if(!dates.length){body.appendChild(mk('div','empty-box','아직 완성도 기록이 없습니다.'));return;}
 
   // 날짜별 막대 그래프
-  const cw=mk('div','chart-wrap');w.appendChild(cw);
+  const cw=mk('div','chart-wrap');body.appendChild(cw);
   cw.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','날짜별 평균 완성도'));
   dates.forEach(d=>{
     const l=getLesson(Q.pStu.id,d);
@@ -702,7 +705,7 @@ function pChart(){
   });
 
   // 항목별 평균
-  const cw2=mk('div','chart-wrap');w.appendChild(cw2);
+  const cw2=mk('div','chart-wrap');body.appendChild(cw2);
   cw2.appendChild(mks('div','font-size:12px;font-weight:500;color:#555;margin-bottom:12px;','항목별 평균 완성도'));
   LK.forEach((k,i)=>{
     const scores=dates.map(d=>{const l=getLesson(Q.pStu.id,d);return RV[l.res[k].r]||0;}).filter(v=>v>0);
