@@ -795,7 +795,7 @@ function vPlay(){
   wrap.style.position='relative';
   wrap.oncontextmenu=e=>e.preventDefault();
   const iframe=document.createElement('iframe');
-  iframe.src=`https://www.youtube-nocookie.com/embed/${v.ytId}?rel=0&modestbranding=1`;
+  iframe.src=`https://www.youtube-nocookie.com/embed/${v.ytId}?rel=0&modestbranding=1&disablekb=1&fs=0&iv_load_policy=3&color=white`;
   iframe.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
   iframe.allow='accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
   iframe.allowFullscreen=true;
