@@ -962,7 +962,7 @@ function vPlay(){
   body.appendChild(mks('div','font-size:11px;color:#ccc;text-align:center;margin-top:8px;','© 김기준영어학원 — 무단 배포 금지'));
 }
 
-// 공지사항 목록 (누구나 볼 수 있음)
+// 공지사항 목록
 function noticeList(){
   const isAdmin=Q._fromAdmin;
   const w=mks('div','');A.appendChild(w);
@@ -971,7 +971,7 @@ function noticeList(){
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
   ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학원 공지사항'));
   if(isAdmin){
-    const writeBtn=mk('button','btn-ghost-inv','+ 작성');writeBtn.onclick=()=>{Q.scr='noticeWrite';render();};ph.appendChild(writeBtn);
+    const writeBtn=mk('button','btn-ghost-inv','+ 작성');writeBtn.onclick=()=>{Q._editNotice=null;Q.scr='noticeWrite';render();};ph.appendChild(writeBtn);
   }
   hdr.appendChild(ph);w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
@@ -979,51 +979,68 @@ function noticeList(){
   if(!Q.notices||!Q.notices.length){
     body.appendChild(mk('div','empty-box','등록된 공지사항이 없습니다.'));return;
   }
-  Q.notices.forEach(n=>{
+  // 최대 3개
+  Q.notices.slice(0,3).forEach(n=>{
     const card=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-bottom:8px;');
-    const top=mks('div','display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;');
-    const title=mks('div','font-size:14px;font-weight:600;color:#111;flex:1;',n.title);
-    top.appendChild(title);
+    // 제목 + 날짜 한 줄
+    const top=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:6px;');
     const isNew=(nowMs-n.createdAt)<twoDays;
-    if(isNew)top.appendChild(mks('span','font-size:9px;font-weight:700;background:#dc2626;color:#fff;padding:2px 6px;border-radius:20px;flex-shrink:0;','NEW'));
+    if(isNew)top.appendChild(mks('span','font-size:9px;font-weight:700;background:#dc2626;color:#fff;padding:2px 5px;border-radius:20px;flex-shrink:0;','NEW'));
+    top.appendChild(mks('div','font-size:14px;font-weight:600;color:#111;flex:1;',n.title));
+    const d=new Date(n.createdAt);
+    const dateStr=`${String(d.getFullYear()).slice(2)}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    top.appendChild(mks('div','font-size:11px;color:#bbb;flex-shrink:0;',dateStr));
     card.appendChild(top);
     if(n.content)card.appendChild(mks('div','font-size:13px;color:#555;line-height:1.6;',n.content));
-    const dateStr=new Date(n.createdAt).toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
-    card.appendChild(mks('div','font-size:11px;color:#bbb;margin-top:8px;',dateStr));
     if(isAdmin){
-      const delBtn=mk('button','btn-sm','삭제');delBtn.style.cssText='color:#dc2626;border-color:#fca5a5;margin-top:8px;';
+      const btnRow=mks('div','display:flex;gap:6px;margin-top:10px;');
+      const editBtn=mk('button','btn-sm','수정');
+      editBtn.onclick=()=>{Q._editNotice=JSON.parse(JSON.stringify(n));Q.scr='noticeWrite';render();};
+      btnRow.appendChild(editBtn);
+      const delBtn=mk('button','btn-sm','삭제');delBtn.style.cssText='color:#dc2626;border-color:#fca5a5;';
       delBtn.onclick=()=>showModal('공지 삭제',`"${n.title}" 공지를 삭제합니다.`,async()=>{
         Q.notices=Q.notices.filter(x=>x.id!==n.id);await saveNotices();render();
       });
-      card.appendChild(delBtn);
+      btnRow.appendChild(delBtn);card.appendChild(btnRow);
     }
     body.appendChild(card);
   });
+  if(Q.notices.length>3){
+    body.appendChild(mks('div','font-size:12px;color:#bbb;text-align:center;padding:8px;',`외 ${Q.notices.length-3}개의 공지가 있습니다.`));
+  }
 }
 
-// 공지 작성 (관리자 전용)
+// 공지 작성/수정 (관리자 전용)
 async function noticeWrite(){
+  const editing=Q._editNotice;
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='noticeList';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','공지 작성'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',editing?'공지 수정':'공지 작성'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','제목'));
-  const ti=document.createElement('input');ti.className='inp';ti.placeholder='공지 제목을 입력하세요';c.appendChild(ti);
+  const ti=document.createElement('input');ti.className='inp';ti.placeholder='공지 제목을 입력하세요';
+  if(editing)ti.value=editing.title;c.appendChild(ti);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','내용'));
-  const ta=document.createElement('textarea');ta.className='section-ta';ta.rows=5;ta.placeholder='공지 내용을 입력하세요 (선택사항)';ta.style.marginBottom='10px';c.appendChild(ta);
+  const ta=document.createElement('textarea');ta.className='section-ta';ta.rows=5;ta.placeholder='공지 내용을 입력하세요 (선택사항)';ta.style.marginBottom='10px';
+  if(editing)ta.value=editing.content||'';c.appendChild(ta);
   const msg=mks('div','');c.appendChild(msg);
-  const btn=mk('button','btn-primary','공지 등록');
+  const btn=mk('button','btn-primary',editing?'수정 완료':'공지 등록');
   btn.onclick=async()=>{
     const title=ti.value.trim();
     if(!title){msg.innerHTML='<div class="err">제목을 입력하세요.</div>';return;}
-    btn.textContent='등록 중...';btn.disabled=true;
+    btn.textContent='저장 중...';btn.disabled=true;
     if(!Q.notices)Q.notices=[];
-    Q.notices.unshift({id:Date.now().toString(),title,content:ta.value.trim(),createdAt:Date.now()});
+    if(editing){
+      const idx=Q.notices.findIndex(x=>x.id===editing.id);
+      if(idx>=0){Q.notices[idx].title=title;Q.notices[idx].content=ta.value.trim();}
+    } else {
+      Q.notices.unshift({id:Date.now().toString(),title,content:ta.value.trim(),createdAt:Date.now()});
+    }
     await saveNotices();
-    msg.innerHTML='<div class="ok-msg">✓ 공지가 등록되었습니다!</div>';
+    msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='noticeList';render();},700);
   };c.appendChild(btn);
 }
