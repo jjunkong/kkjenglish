@@ -117,13 +117,14 @@ const fbSet=async(path,val)=>{try{await fetch(`${FB}/${path}.json`,{method:'PUT'
 const fbDel=async path=>{try{await fetch(`${FB}/${path}.json`,{method:'DELETE'});return true;}catch{return false;}};
 
 // 메모리 캐시
-const MEM={stu:[],pw:'admin1234',lessons:{},videos:[]};
+const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[]};
 
 // 초기 로딩
 const initData=async()=>{
   const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);
   const pw=await fbGet('pw');if(pw)MEM.pw=pw;
   const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);
+  const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);
 };
 
 const saveStu=async()=>{
@@ -133,6 +134,7 @@ const saveStu=async()=>{
 };
 const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
 const saveVideos=async()=>{MEM.videos=Q.videos;await fbSet('videos',Q.videos);};
+const saveNotices=async()=>{MEM.notices=Q.notices;await fbSet('notices',Q.notices);};
 
 const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
@@ -173,7 +175,7 @@ let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,
   aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',editStu:null,
   pStu:null,pDate:TODAY,pLesson:null,pDates:[],pTab:'plan',
   vStu:null,vVideo:null,
-  err:'',showAdd:false,showAllStu:false,showVidAdd:false,loading:true};
+  err:'',showAdd:false,showAllStu:false,showVidAdd:false,showNoticeAdd:false,loading:true};
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
@@ -289,6 +291,49 @@ function home(){
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
   w.appendChild(hdr);
 
+  // 공지사항 섹션 (컴팩트)
+  const nb=mks('div','margin:10px 12px 0;background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:10px 14px;');
+  const nhdr=mks('div','display:flex;align-items:center;gap:8px;cursor:pointer;');
+  const svgNS2='http://www.w3.org/2000/svg';
+  const nsvg=document.createElementNS(svgNS2,'svg');
+  nsvg.setAttribute('viewBox','0 0 24 24');nsvg.setAttribute('width','14');nsvg.setAttribute('height','14');
+  nsvg.setAttribute('fill','none');nsvg.setAttribute('stroke','#1a2f6e');nsvg.setAttribute('stroke-width','2');
+  nsvg.setAttribute('stroke-linecap','round');nsvg.setAttribute('stroke-linejoin','round');
+  ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9','M13.73 21a2 2 0 0 1-3.46 0'].forEach(d=>{
+    const p=document.createElementNS(svgNS2,'path');p.setAttribute('d',d);nsvg.appendChild(p);
+  });
+  nhdr.appendChild(nsvg);
+  nhdr.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;flex:1;','학원 공지사항'));
+  const nowMs=Date.now();const twoDays=2*24*60*60*1000;
+  const hasNew=Q.notices&&Q.notices.some(n=>(nowMs-n.createdAt)<twoDays);
+  if(hasNew)nhdr.appendChild(mks('span','font-size:9px;font-weight:700;background:#dc2626;color:#fff;padding:1px 5px;border-radius:20px;','NEW'));
+  const noticeCount=Q.notices&&Q.notices.length?`${Q.notices.length}건`:'없음';
+  nhdr.appendChild(mks('span','font-size:11px;color:#bbb;',noticeCount+' ▾'));
+  nb.appendChild(nhdr);
+
+  // 펼침 영역
+  const nBody=mks('div','display:none;');
+  let expanded=false;
+  nhdr.onclick=()=>{
+    expanded=!expanded;
+    nBody.style.display=expanded?'block':'none';
+    nhdr.querySelector('span:last-child').textContent=noticeCount+(expanded?' ▴':' ▾');
+  };
+  if(Q.notices&&Q.notices.length){
+    Q.notices.slice(0,5).forEach(n=>{
+      const row=mks('div','display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #f0f0ee;');
+      const isNew=(nowMs-n.createdAt)<twoDays;
+      const left=mks('div','flex:1;font-size:12px;color:#333;',n.title);
+      row.appendChild(left);
+      if(isNew)row.appendChild(mks('span','font-size:9px;font-weight:700;background:#dc2626;color:#fff;padding:1px 5px;border-radius:20px;flex-shrink:0;','NEW'));
+      nBody.appendChild(row);
+    });
+  } else {
+    nBody.appendChild(mks('div','font-size:12px;color:#bbb;text-align:center;padding:8px 0;border-top:1px solid #f0f0ee;','등록된 공지사항이 없습니다.'));
+  }
+  nb.appendChild(nBody);
+  w.appendChild(nb);
+
   const svgNS='http://www.w3.org/2000/svg';
   const mkIcon=(paths,vb)=>{
     const s=document.createElementNS(svgNS,'svg');
@@ -301,12 +346,11 @@ function home(){
   };
 
   const g=mk('div','home-grid-3');w.appendChild(g);
-
   const c1card=mk('div','home-card');
   const ic1=mks('div','width:36px;height:36px;background:#eef2ff;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;');
   ic1.appendChild(mkIcon(['M7 11V7a5 5 0 0 1 10 0v4','M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z','M12 16a1 1 0 1 0 0-2 1 1 0 0 0 0 2z']));
   c1card.appendChild(ic1);
-  c1card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;','원장 로그인'));
+  c1card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:2px;','학원관리자'));
   c1card.appendChild(mks('div','font-size:10px;color:#aaa;','수업 계획 · 완성도 입력'));
   c1card.onclick=()=>{Q.scr='aLogin';render();};g.appendChild(c1card);
 
@@ -338,7 +382,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','원장 로그인'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학원관리자'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
@@ -452,21 +496,24 @@ async function aList(){
 
 async function aStuEdit(){
   const stu=Q.editStu;
-  const w=mks('div','padding:1rem;');A.appendChild(w);
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};w.appendChild(bb);
-  w.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;margin-bottom:16px;','학생 정보 수정'));
-  w.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
-  const ni=document.createElement('input');ni.className='inp';ni.value=stu.name;w.appendChild(ni);
-  w.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드'));
-  const ci=document.createElement('input');ci.className='inp';ci.value=stu.code;w.appendChild(ci);
-  w.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일'));
-  const dpWrap=mks('div','');w.appendChild(dpWrap);
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학생 정보 수정'));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
+  const ni=document.createElement('input');ni.className='inp';ni.value=stu.name;body.appendChild(ni);
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드'));
+  const ci=document.createElement('input');ci.className='inp';ci.value=stu.code;body.appendChild(ci);
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일'));
+  const dpWrap=mks('div','');body.appendChild(dpWrap);
   const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(stu.days||[],ns=>{stu.days=ns;reRDP();}));};reRDP();
 
   // 영상 배정
   if(Q.videos.length){
-    w.appendChild(mks('div','margin-top:4px;border-top:1px solid #eee;padding-top:14px;margin-bottom:8px;'));
-    w.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;margin-bottom:10px;','시청 가능 영상 설정'));
+    body.appendChild(mks('div','margin-top:4px;border-top:1px solid #eee;padding-top:14px;margin-bottom:8px;'));
+    body.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;margin-bottom:10px;','시청 가능 영상 설정'));
     const assignedVids=stu.videos||[];
     Q.videos.forEach(v=>{
       const row=mks('div','display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f9f9f7;border-radius:8px;margin-bottom:6px;cursor:pointer;');
@@ -479,16 +526,16 @@ async function aStuEdit(){
       const label=mks('div','flex:1;');
       label.appendChild(mks('div','font-size:13px;color:#111;',v.title));
       if(v.desc)label.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
-      row.appendChild(cb);row.appendChild(label);
+      robody.appendChild(cb);robody.appendChild(label);
       row.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;cb.onchange();}};
-      w.appendChild(row);
+      body.appendChild(row);
     });
   } else {
-    w.appendChild(mks('div','font-size:12px;color:#aaa;margin-top:8px;','※ 영상을 먼저 설정에서 등록해주세요.'));
+    body.appendChild(mks('div','font-size:12px;color:#aaa;margin-top:8px;','※ 영상을 먼저 설정에서 등록해주세요.'));
   }
 
-  if(Q.err)w.appendChild(mk('div','err',Q.err));
-  const msg=mks('div','');w.appendChild(msg);
+  if(Q.err)body.appendChild(mk('div','err',Q.err));
+  const msg=mks('div','');body.appendChild(msg);
   const saveBtn=mk('button','btn-primary','저장');
   saveBtn.onclick=async()=>{
     const n=ni.value.trim(),c2=ci.value.trim();
@@ -499,10 +546,10 @@ async function aStuEdit(){
     await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
-  };w.appendChild(saveBtn);
+  };body.appendChild(saveBtn);
 
-  w.appendChild(mks('div','margin-top:24px;border-top:1px solid #eee;padding-top:16px;'));
-  w.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:8px;','위험 구역'));
+  body.appendChild(mks('div','margin-top:24px;border-top:1px solid #eee;padding-top:16px;'));
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:8px;','위험 구역'));
   const delBtn=mk('button','btn-danger','이 학생 삭제');
   delBtn.onclick=()=>{
     const name=Q.students.find(s=>s.id===stu.id)?.name||'';
@@ -511,7 +558,7 @@ async function aStuEdit(){
       Q.students=Q.students.filter(s=>s.id!==stu.id);
       await saveStu();Q.scr='aList';render();
     });
-  };w.appendChild(delBtn);
+  };body.appendChild(delBtn);
 }
 
 async function aLessonView(){
@@ -586,12 +633,15 @@ async function aLessonView(){
 }
 
 async function aSettings(){
-  const w=mks('div','padding:1rem;');A.appendChild(w);
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};w.appendChild(bb);
-  w.appendChild(mks('div','font-size:16px;font-weight:500;color:#111;margin-bottom:20px;','설정'));
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','설정'));
+  w.appendChild(hdr);
+  const w2=mk('div','page-body');w.appendChild(w2);
 
   // 비밀번호 변경
-  const c=mk('div','card');w.appendChild(c);
+  const c=mk('div','card');w2.appendChild(c);
   c.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:14px;','비밀번호 변경'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','현재 비밀번호'));
   const p1=document.createElement('input');p1.className='inp';p1.type='password';p1.placeholder='현재 비밀번호';c.appendChild(p1);
@@ -612,7 +662,7 @@ async function aSettings(){
   };c.appendChild(pbtn);
 
   // 영상 관리
-  const vc=mk('div','card');vc.style.marginTop='12px';w.appendChild(vc);
+  const vc=mk('div','card');vc.style.marginTop='12px';w2.appendChild(vc);
   const vhdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;');
   vhdr.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;','수업 영상 관리'));
   const vaBtn=mk('button','btn-ghost',Q.showVidAdd?'닫기':'+ 영상 추가');
@@ -649,7 +699,7 @@ async function aSettings(){
       const left=mks('div','flex:1;');
       left.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',v.title));
       if(v.desc)left.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
-      row.appendChild(left);
+      row2.appendChild(left);
       const delBtn=mk('button','btn-sm','삭제');
       delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
       delBtn.onclick=()=>{
@@ -657,7 +707,52 @@ async function aSettings(){
           Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();render();
         });
       };
-      row.appendChild(delBtn);vc.appendChild(row);
+      row2.appendChild(delBtn);vc.appendChild(row);
+    });
+  }
+
+  // 공지사항 관리
+  const nc=mk('div','card');nc.style.marginTop='12px';w2.appendChild(nc);
+  const nhdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;');
+  nhdr.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;','공지사항 관리'));
+  const naBtn=mk('button','btn-ghost',Q.showNoticeAdd?'닫기':'+ 공지 추가');
+  naBtn.onclick=()=>{Q.showNoticeAdd=!Q.showNoticeAdd;render();};nhdr.appendChild(naBtn);
+  nc.appendChild(nhdr);
+
+  if(Q.showNoticeAdd){
+    const af=mk('div','add-form');nc.appendChild(af);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','제목'));
+    const nt=document.createElement('input');nt.id='nt';nt.className='inp';nt.placeholder='예: 5월 수업료 안내';af.appendChild(nt);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','내용 (선택)'));
+    const nc2=document.createElement('input');nc2.id='nc2';nc2.className='inp';nc2.placeholder='간단한 내용 입력';af.appendChild(nc2);
+    const nAddBtn=mk('button','btn-primary','공지 추가');
+    nAddBtn.onclick=async()=>{
+      const title=(document.getElementById('nt')?.value||'').trim();
+      if(!title)return;
+      const content=(document.getElementById('nc2')?.value||'').trim();
+      if(!Q.notices)Q.notices=[];
+      Q.notices.unshift({id:Date.now().toString(),title,content,createdAt:Date.now()});
+      await saveNotices();Q.showNoticeAdd=false;render();
+    };af.appendChild(nAddBtn);
+  }
+
+  if(!Q.notices||!Q.notices.length){
+    nc.appendChild(mk('div','empty-box','등록된 공지가 없습니다.'));
+  } else {
+    Q.notices.forEach(n=>{
+      const row=mks('div','display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ee;');
+      const left=mks('div','flex:1;');
+      left.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',n.title));
+      if(n.content)left.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',n.content));
+      row2.appendChild(left);
+      const delBtn=mk('button','btn-sm','삭제');
+      delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
+      delBtn.onclick=()=>{
+        showModal('공지 삭제',`"${n.title}" 공지를 삭제합니다.`,async()=>{
+          Q.notices=Q.notices.filter(x=>x.id!==n.id);await saveNotices();render();
+        });
+      };
+      row2.appendChild(delBtn);nc.appendChild(row);
     });
   }
 }
@@ -928,7 +1023,7 @@ function vPlay(){
 (async()=>{
   A.innerHTML='<div style="text-align:center;padding:5rem 1rem;"><div style="font-size:13px;color:#aaa;">불러오는 중...</div></div>';
   await initData();
-  Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;
+  Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;
   render();
 })();
 })();
