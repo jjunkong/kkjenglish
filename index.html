@@ -840,25 +840,35 @@ async function pChart(){
   for(const d of allMonthDates){lessonCache[d]=await getLesson(Q.pStu.id,d);}
 
   // ① 단어시험 그래프 (통과/불통 있는 날만)
-  const vocabDates=allMonthDates.filter(d=>lessonCache[d]?.vocab?.pass);
+  // 단어시험: 점수 또는 통과/불통 있는 날짜 모두 포함
+  const vocabDates=allMonthDates.filter(d=>lessonCache[d]?.vocab&&(lessonCache[d].vocab.score||lessonCache[d].vocab.pass));
+
   if(vocabDates.length){
     const vw=mk('div','chart-wrap');body.appendChild(vw);
-    vw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','단어시험 추이'));
+    vw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:14px;','단어시험 추이'));
+    // 세로 막대 그래프
+    const colWrap=mks('div','display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:4px;');
     vocabDates.forEach(d=>{
       const v=lessonCache[d].vocab;
       const pass=v.pass==='pass';
-      const color=pass?'#16a34a':'#dc2626';
-      const row=mk('div','chart-bar-row');
-      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-      const bg=mk('div','chart-bar-bg');
-      const fill=mk('div','chart-bar-fill');
-      fill.style.background=color;fill.style.width='100%';
-      bg.appendChild(fill);row.appendChild(bg);
-      const badge=mks('span',`font-size:11px;font-weight:700;color:#fff;background:${color};padding:2px 10px;border-radius:20px;margin-left:6px;white-space:nowrap;`,pass?'통과':'불통');
-      if(v.score)row.appendChild(mks('div','font-size:11px;color:#888;margin-left:6px;min-width:30px;',v.score+'점'));
-      row.appendChild(badge);
-      vw.appendChild(row);
+      const fail=v.pass==='fail';
+      const color=pass?'#16a34a':fail?'#dc2626':'#93c5fd';
+      const col=mks('div','display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;');
+      // 점수 표시
+      if(v.score)col.appendChild(mks('div','font-size:10px;color:#555;font-weight:700;',v.score));
+      // 막대
+      const bar=mks('div',`background:${color};border-radius:4px 4px 0 0;width:100%;min-height:32px;height:${v.score?Math.min(Math.round(v.score/100*70)+20,80):40}px;`,'');
+      col.appendChild(bar);
+      // 통과/불통 배지
+      if(v.pass){
+        col.appendChild(mks('div',`font-size:9px;font-weight:700;color:${color};`,pass?'통과':'불통'));
+      }
+      // 날짜
+      const dm=new Date(d+'T00:00:00');
+      col.appendChild(mks('div','font-size:10px;color:#aaa;',`${dm.getMonth()+1}/${dm.getDate()}`));
+      colWrap.appendChild(col);
     });
+    vw.appendChild(colWrap);
   }
 
   // ② 완성도 그래프
@@ -867,7 +877,9 @@ async function pChart(){
 
   if(dates.length){
     const cw=mk('div','chart-wrap');body.appendChild(cw);
-    cw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','날짜별 평균 완성도'));
+    cw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:14px;','날짜별 평균 완성도'));
+    // 세로 막대 그래프
+    const colWrap2=mks('div','display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:4px;');
     dates.forEach(d=>{
       const l=lessonCache[d];
       const scores=LK.map(k=>RV[l.res[k].r]||0).filter(v=>v>0);
@@ -876,16 +888,17 @@ async function pChart(){
       const pct=Math.round((avg/3)*100);
       const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
       const label=avg>=2.5?'상':avg>=1.5?'중':'하';
-      const row=mk('div','chart-bar-row');
-      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-      const bg=mk('div','chart-bar-bg');
-      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
-      bg.appendChild(fill);row.appendChild(bg);
-      row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
-      cw.appendChild(row);
+      const col=mks('div','display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;');
+      col.appendChild(mks('div',`font-size:10px;font-weight:700;color:${color};`,label));
+      const bar=mks('div',`background:${color};border-radius:4px 4px 0 0;width:100%;height:${Math.max(Math.round(pct*0.7),16)}px;`,'');
+      col.appendChild(bar);
+      const dm=new Date(d+'T00:00:00');
+      col.appendChild(mks('div','font-size:10px;color:#aaa;',`${dm.getMonth()+1}/${dm.getDate()}`));
+      colWrap2.appendChild(col);
     });
+    cw.appendChild(colWrap2);
 
-    // ③ 항목별 평균
+    // ③ 항목별 평균 (가로 유지 - 항목이 3개라 세로보다 자연스러움)
     const cw2=mk('div','chart-wrap');body.appendChild(cw2);
     cw2.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','항목별 평균 완성도'));
     LK.forEach((k,i)=>{
