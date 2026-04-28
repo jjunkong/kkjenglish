@@ -797,9 +797,6 @@ function vPlay(){
   iframe.allow='accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
   iframe.allowFullscreen=true;
   wrap.appendChild(iframe);
-  const overlay=mks('div','position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;');
-  overlay.oncontextmenu=e=>e.preventDefault();
-  wrap.appendChild(overlay);
   body.appendChild(wrap);
   body.appendChild(mks('div','font-size:11px;color:#ccc;text-align:center;margin-top:8px;','© 김기준영어학원 — 무단 배포 금지'));
 }
