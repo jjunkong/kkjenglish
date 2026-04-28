@@ -359,16 +359,26 @@ async function aList(){
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};topRow.appendChild(bb);
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};topRow.appendChild(settingsBtn);
   hdr.appendChild(topRow);
-  // 날짜 선택 (헤더 안)
-  const dr=mks('div','display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border-radius:10px;padding:8px 12px;');
-  const di=document.createElement('input');di.className='date-inp';
-  di.style.cssText='background:transparent;border:none;color:#fff;font-size:13px;font-weight:600;flex:1;padding:0;';
-  di.type='date';di.value=Q.aDate;
-  di.onchange=()=>{Q.aDate=di.value;Q.showAllStu=false;render();};dr.appendChild(di);
-  const tb=mk('button','','오늘');
-  tb.style.cssText='background:rgba(255,255,255,0.2);border:none;border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;cursor:pointer;white-space:nowrap;font-weight:600;';
-  tb.onclick=()=>{Q.aDate=TODAY;Q.showAllStu=false;render();};dr.appendChild(tb);
-  hdr.appendChild(dr);
+
+  // 이번 달 드롭다운
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const monthDates=[];
+  for(let d=daysInMonth;d>=1;d--){
+    const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
+    monthDates.push(`${year}-${mm}-${dd}`);
+  }
+  const ds=document.createElement('select');
+  ds.style.cssText='background:rgba(255,255,255,0.12);border:none;color:#fff;font-size:13px;font-weight:600;padding:8px 12px;border-radius:10px;width:100%;cursor:pointer;';
+  monthDates.forEach(d=>{
+    const o=document.createElement('option');o.value=d;
+    o.style.cssText='background:#1a2f6e;color:#fff;';
+    o.textContent=fd(d)+(d===TODAY?' (오늘)':'');
+    if(d===Q.aDate)o.selected=true;ds.appendChild(o);
+  });
+  ds.onchange=()=>{Q.aDate=ds.value;Q.showAllStu=false;render();};
+  hdr.appendChild(ds);
   w.appendChild(hdr);
 
   const selDow=dowOf(Q.aDate);
