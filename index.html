@@ -852,15 +852,14 @@ async function pChart(){
       const fail=v.pass==='fail';
       const color=pass?'#16a34a':fail?'#dc2626':'#93c5fd';
       const row=mk('div','chart-bar-row');
-      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-      const bg=mk('div','chart-bar-bg');
-      const pct=v.score?Math.min(Math.round(Number(v.score)),100):100;
-      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
+      row.style.marginBottom='5px';
+      row.appendChild(mks('div','font-size:10px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
+      const bg=mks('div','flex:1;background:#f0f0ee;border-radius:3px;height:16px;position:relative;overflow:hidden;margin-left:8px;');
+      const pct=v.score?Math.min(Number(v.score),100):100;
+      const fill=mks('div',`height:100%;border-radius:3px;background:${color};width:${pct}%;display:flex;align-items:center;justify-content:center;min-width:36px;`,'');
+      if(v.pass)fill.appendChild(mks('span','font-size:9px;font-weight:700;color:#fff;white-space:nowrap;',pass?'통과':'불통'));
       bg.appendChild(fill);row.appendChild(bg);
-      const right=mks('div','display:flex;align-items:center;gap:4px;margin-left:6px;');
-      if(v.score)right.appendChild(mks('span','font-size:11px;color:#555;font-weight:700;',v.score+'점'));
-      if(v.pass)right.appendChild(mks('span',`font-size:9px;font-weight:700;color:#fff;background:${color};padding:2px 7px;border-radius:20px;`,pass?'통과':'불통'));
-      row.appendChild(right);
+      if(v.score)row.appendChild(mks('div','font-size:10px;color:#555;font-weight:700;margin-left:6px;min-width:28px;',v.score+'점'));
       vw.appendChild(row);
     });
   }
@@ -881,11 +880,12 @@ async function pChart(){
       const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
       const label=avg>=2.5?'상':avg>=1.5?'중':'하';
       const row=mk('div','chart-bar-row');
-      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
-      const bg=mk('div','chart-bar-bg');
-      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
+      row.style.marginBottom='5px';
+      row.appendChild(mks('div','font-size:10px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
+      const bg=mks('div','flex:1;background:#f0f0ee;border-radius:3px;height:16px;overflow:hidden;margin-left:8px;');
+      const fill=mks('div',`height:100%;border-radius:3px;background:${color};width:${pct}%;display:flex;align-items:center;justify-content:center;min-width:20px;`,'');
+      fill.appendChild(mks('span','font-size:9px;font-weight:700;color:#fff;',label));
       bg.appendChild(fill);row.appendChild(bg);
-      row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
       cw.appendChild(row);
     });
 
@@ -900,11 +900,12 @@ async function pChart(){
       const color=avg>=2.5?RC['상']:avg>=1.5?RC['중']:RC['하'];
       const label=avg>=2.5?'상':avg>=1.5?'중':'하';
       const row=mk('div','chart-bar-row');
-      row.appendChild(mks('div','font-size:11px;color:#888;width:44px;flex-shrink:0;text-align:right;',['CHECK','CORE','FIX'][i]));
-      const bg=mk('div','chart-bar-bg');
-      const fill=mk('div','chart-bar-fill');fill.style.background=color;fill.style.width=pct+'%';
+      row.style.marginBottom='5px';
+      row.appendChild(mks('div','font-size:10px;color:#888;width:44px;flex-shrink:0;text-align:right;',['CHECK','CORE','FIX'][i]));
+      const bg=mks('div','flex:1;background:#f0f0ee;border-radius:3px;height:16px;overflow:hidden;margin-left:8px;');
+      const fill=mks('div',`height:100%;border-radius:3px;background:${color};width:${pct}%;display:flex;align-items:center;justify-content:center;min-width:20px;`,'');
+      fill.appendChild(mks('span','font-size:9px;font-weight:700;color:#fff;',label));
       bg.appendChild(fill);row.appendChild(bg);
-      row.appendChild(mks('div','font-size:12px;font-weight:500;margin-left:6px;min-width:20px;',`<span style="color:${color}">${label}</span>`));
       cw2.appendChild(row);
     });
   }
