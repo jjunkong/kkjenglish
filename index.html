@@ -680,8 +680,11 @@ async function aStuEdit(){
   const body=mk('div','page-body');w.appendChild(body);
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
   const ni=document.createElement('input');ni.className='inp';ni.value=stu.name;body.appendChild(ni);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드'));
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드 (학부모용)'));
   const ci=document.createElement('input');ci.className='inp';ci.value=stu.code;body.appendChild(ci);
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 전용 코드 (학생용)'));
+  body.appendChild(mks('div','font-size:11px;color:#bbb;margin-bottom:5px;margin-top:-4px;','학부모 코드와 다르게 설정하면 학생만 영상 시청 가능'));
+  const vci2=document.createElement('input');vci2.className='inp';vci2.value=stu.videoCode||'';vci2.placeholder='예: 9999';body.appendChild(vci2);
   // 반 선택
   if(Q.classes&&Q.classes.length){
     body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반'));
@@ -738,11 +741,11 @@ async function aStuEdit(){
   const msg=mks('div','');body.appendChild(msg);
   const saveBtn=mk('button','btn-primary','저장');
   saveBtn.onclick=async()=>{
-    const n=ni.value.trim(),c2=ci.value.trim();
+    const n=ni.value.trim(),c2=ci.value.trim(),vc2=vci2.value.trim();
     if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
     if(Q.students.find(s=>s.name===n&&s.id!==stu.id)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
     const idx=Q.students.findIndex(s=>s.id===stu.id);
-    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||''};
+    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,videoCode:vc2||c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||'',info:stu.info||{}};
     await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
@@ -1349,16 +1352,17 @@ function vLogin(){
   if(Q.vStu){Q.scr='vList';render();return;}
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
-  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','이름과 코드를 입력하면 영상을 시청할 수 있어요.'));
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','이름과 영상 전용 코드를 입력해주세요.'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','이름'));
   const ni=document.createElement('input');ni.id='vln';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
-  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
-  const ci=document.createElement('input');ci.id='vlc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 전용 코드'));
+  const ci=document.createElement('input');ci.id='vlc';ci.className='inp';ci.placeholder='영상 코드 입력';c.appendChild(ci);
   if(Q.err)c.appendChild(mk('div','err',Q.err));
   const doV=()=>{
     const n=(document.getElementById('vln')?.value||'').trim();
     const code=(document.getElementById('vlc')?.value||'').trim();
-    const stu=Q.students.find(s=>s.name===n&&s.code===code);
+    // videoCode가 있으면 videoCode로, 없으면 기존 code로 인증
+    const stu=Q.students.find(s=>s.name===n&&(s.videoCode?s.videoCode===code:s.code===code));
     if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
     Q.vStu=stu;Q.err='';Q.scr='vList';render();
   };
