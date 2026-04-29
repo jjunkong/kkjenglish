@@ -1129,11 +1129,15 @@ async function pLogin(){
   const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
   const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
-  if(Q.err)c.appendChild(mk('div','err',Q.err));
+  const errDiv=mks('div','');errDiv.id='p-err';c.appendChild(errDiv);
   const doP=async()=>{
     const n=(gid('pn')?.value||'').trim(),code=(gid('pc')?.value||'').trim();
     const stu=Q.students.find(s=>s.name===n&&s.code===code);
-    if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
+    if(!stu){
+      const errDiv=document.getElementById('p-err');
+      if(errDiv)errDiv.innerHTML='<div class="err">이름 또는 코드가 맞지 않습니다.</div>';
+      return;
+    }
     Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=await getLesson(stu.id,TODAY);Q.pDates=await getDates(stu.id);Q.err='';Q.scr='pView';render();
   };
   ci.onkeydown=e=>{if(e.key==='Enter')doP();};
@@ -1381,13 +1385,15 @@ function vLogin(){
   const ni=document.createElement('input');ni.id='vln';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 전용 코드'));
   const ci=document.createElement('input');ci.id='vlc';ci.className='inp';ci.placeholder='영상 코드 입력';c.appendChild(ci);
-  if(Q.err)c.appendChild(mk('div','err',Q.err));
+  const verrDiv=mks('div','');verrDiv.id='v-err';c.appendChild(verrDiv);
   const doV=()=>{
     const n=(document.getElementById('vln')?.value||'').trim();
     const code=(document.getElementById('vlc')?.value||'').trim();
-    // videoCode가 있으면 videoCode로, 없으면 기존 code로 인증
     const stu=Q.students.find(s=>s.name===n&&(s.videoCode?s.videoCode===code:s.code===code));
-    if(!stu){Q.err='이름 또는 코드가 맞지 않습니다.';render();return;}
+    if(!stu){
+      document.getElementById('v-err').innerHTML='<div class="err">이름 또는 코드가 맞지 않습니다.</div>';
+      return;
+    }
     Q.vStu=stu;Q.err='';Q.scr='vList';render();
   };
   ci.onkeydown=e=>{if(e.key==='Enter')doV();};
