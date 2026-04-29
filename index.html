@@ -257,22 +257,24 @@ function sectionBlock(label,L,key,roplan,showRes){
   }
   if(showRes){
     w.appendChild(mk('div','divider'));
-    w.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:6px;','완성도'));
-    const bd=mk('div','rate-row');
-    const btns=[];
-    const upd=sel=>btns.forEach((b,i)=>{const r=['상','중','하'][i];const s=r===sel;b.style.background=s?RC[r]:'#fff';b.style.color=s?'#fff':'#888';b.style.borderColor=s?RC[r]:'#e8e8e6';});
-    ['상','중','하'].forEach(r=>{
-      const sel=L.res[key].r===r;
-      const b=mk('button','rate-btn',r);
-      if(sel){b.style.background=RC[r];b.style.color='#fff';b.style.borderColor=RC[r];}
-      b.onclick=()=>{L.res[key].r=r;upd(r);};btns.push(b);bd.appendChild(b);
-    });
-    w.appendChild(bd);
-    const mi=document.createElement('input');mi.className='inp';
-    mi.placeholder='피드백 메모 (선택사항)';mi.value=L.res[key].m||'';
-    mi.style.marginBottom='0';mi.oninput=()=>L.res[key].m=mi.value;w.appendChild(mi);
-
-    // Maintenance 섹션에만 단어시험 + 듣기과제 통합
+    // Maintenance는 완성도 상/중/하 없이 단어시험+듣기과제만
+    if(key!=='fix'){
+      w.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:6px;','완성도'));
+      const bd=mk('div','rate-row');
+      const btns=[];
+      const upd=sel=>btns.forEach((b,i)=>{const r=['상','중','하'][i];const s=r===sel;b.style.background=s?RC[r]:'#fff';b.style.color=s?'#fff':'#888';b.style.borderColor=s?RC[r]:'#e8e8e6';});
+      ['상','중','하'].forEach(r=>{
+        const sel=L.res[key].r===r;
+        const b=mk('button','rate-btn',r);
+        if(sel){b.style.background=RC[r];b.style.color='#fff';b.style.borderColor=RC[r];}
+        b.onclick=()=>{L.res[key].r=r;upd(r);};btns.push(b);bd.appendChild(b);
+      });
+      w.appendChild(bd);
+      const mi=document.createElement('input');mi.className='inp';
+      mi.placeholder='피드백 메모 (선택사항)';mi.value=L.res[key].m||'';
+      mi.style.marginBottom='0';mi.oninput=()=>L.res[key].m=mi.value;w.appendChild(mi);
+      w.appendChild(mk('div','divider'));
+    }
     if(key==='fix'){
       if(!L.vocab)L.vocab={score:'',comment:'',pass:''};
       w.appendChild(mk('div','divider'));
@@ -294,7 +296,7 @@ function sectionBlock(label,L,key,roplan,showRes){
         passBtn.style.cssText=`padding:5px 12px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;flex-shrink:0;background:${v==='pass'?'#16a34a':'transparent'};color:${v==='pass'?'#fff':'#888'};border:${v==='pass'?'none':'1.5px solid #e8e8e6'};`;
         failBtn.style.cssText=`padding:5px 12px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;flex-shrink:0;background:${v==='fail'?'#dc2626':'transparent'};color:${v==='fail'?'#fff':'#888'};border:${v==='fail'?'none':'1.5px solid #e8e8e6'};`;
       };
-      passBtn.onclick=()=>updPF(L.vocab.pass==='pass'?'':' pass');
+      passBtn.onclick=()=>updPF(L.vocab.pass==='pass'?'':'pass');
       failBtn.onclick=()=>updPF(L.vocab.pass==='fail'?'':'fail');
       updPF(L.vocab.pass||'');
       vrow.appendChild(passBtn);vrow.appendChild(failBtn);
