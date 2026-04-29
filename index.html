@@ -913,7 +913,7 @@ async function aSettings(){
       const left=mks('div','flex:1;');
       left.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',v.title));
       if(v.desc)left.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
-      row2.appendChild(left);
+      row.appendChild(left);
       const delBtn=mk('button','btn-sm','삭제');
       delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
       delBtn.onclick=()=>{
@@ -921,7 +921,7 @@ async function aSettings(){
           Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();render();
         });
       };
-      row2.appendChild(delBtn);vc.appendChild(row);
+      row.appendChild(delBtn);vc.appendChild(row);
     });
   }
 }
