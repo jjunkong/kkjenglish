@@ -879,6 +879,16 @@ async function aLessonView(){
       pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.planComment));
       body.appendChild(pc);
     }
+    // 강사 코멘트 표시
+    if(L.leaderComments&&Object.values(L.leaderComments).some(v=>v)){
+      const lc=mks('div','background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-bottom:10px;');
+      lc.appendChild(mks('div','font-size:11px;font-weight:700;color:#3730a3;margin-bottom:8px;','💬 강사 코멘트'));
+      LK.forEach((k,i)=>{if(L.leaderComments[k]){
+        lc.appendChild(mks('div','font-size:10px;font-weight:700;color:#6366f1;margin-bottom:2px;',LABELS[i].split('—')[0].trim()));
+        lc.appendChild(mks('div','font-size:12px;color:#333;line-height:1.5;margin-bottom:7px;',L.leaderComments[k]));
+      }});
+      body.appendChild(lc);
+    }
     body.appendChild(msg);
     const btn=mk('button','btn-primary','수업 계획 저장');
     btn.onclick=async()=>{
@@ -1718,18 +1728,60 @@ async function lView(){
   }
 }
 
-// 학습리더 수업 내용 보기 (읽기 전용)
-function lLessonView(){
+// 학습리더 수업 내용 보기 + 코멘트 입력
+async function lLessonView(){
   const stu=Q._lViewStu,L=Q._lViewLesson,date=Q._lViewDate;
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='lView';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
+  const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
+  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
+  hdr.appendChild(ph);
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(date)));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   if(L.status==='none'){body.appendChild(mk('div','empty-box','수업 계획이 없습니다.'));return;}
-  LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],L.status==='completed',L,k)));
+
+  // 리더 코멘트 초기화
+  if(!L.leaderComments)L.leaderComments={};
+
+  const msg=mks('div','');
+  LK.forEach((k,i)=>{
+    const sb=mk('div','section-block');
+    // 섹션 태그 + 내용
+    sb.appendChild(mk('div','section-tag',LABELS[i].split('—')[0].trim()));
+    sb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:8px;',LABELS[i].split('—')[1]?.trim()||''));
+    sb.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;',L.plan[k]||'<span style="color:#ccc">—</span>'));
+    // 완성도 (있으면 표시)
+    if(L.status==='completed'&&L.res[k]?.r){
+      sb.appendChild(mk('div','divider'));
+      const row=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:8px;');
+      row.appendChild(mks('span',`display:inline-block;font-size:12px;font-weight:700;color:#fff;background:${RC[L.res[k].r]};padding:3px 14px;border-radius:20px;`,L.res[k].r));
+      if(L.res[k].m)row.appendChild(mks('span','font-size:12px;color:#888;',L.res[k].m));
+      sb.appendChild(row);
+    }
+    // 리더 코멘트 입력
+    sb.appendChild(mk('div','divider'));
+    sb.appendChild(mks('div','font-size:11px;color:#3b5bdb;font-weight:700;margin-bottom:6px;','💬 강사 코멘트'));
+    const ta=document.createElement('textarea');
+    ta.className='section-ta';ta.rows=2;
+    ta.placeholder='이 섹션에 대한 코멘트를 남겨주세요...';
+    ta.value=L.leaderComments[k]||'';
+    ta.oninput=()=>L.leaderComments[k]=ta.value;
+    sb.appendChild(ta);
+    body.appendChild(sb);
+  });
+
+  body.appendChild(msg);
+  const btn=mk('button','btn-primary','코멘트 저장');
+  btn.onclick=async()=>{
+    btn.textContent='저장 중...';btn.disabled=true;
+    await setLesson(stu.id,date,L);
+    msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+    btn.textContent='코멘트 저장';btn.disabled=false;
+    setTimeout(()=>{msg.innerHTML='';},1500);
+  };
+  body.appendChild(btn);
 }
 
 // 학생 조회 (학부모 조회와 동일)
