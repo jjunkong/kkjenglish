@@ -1994,14 +1994,18 @@ async function quizResult(){
   `;
   body.appendChild(summary);
 
-  // 문제별 정답/오답 + 해설
+  // 문제별 정답/오답 + 해설 + 정답 수정
   const OPTS=['① 1개','② 2개','③ 3개','④ 4개','⑤ 5개'];
+  const editedAns={...result.questions.reduce((a,_,i)=>({...a,[i]:result.questions[i].ans}),{})};
+
   result.questions.forEach((q,i)=>{
     const isCorrect=result.answers[i]===q.ans;
     const card=mks('div',`background:#fff;border:1.5px solid ${isCorrect?'#bbf7d0':'#fecaca'};border-radius:12px;padding:14px;margin-bottom:10px;`);
     card.appendChild(mks('div',`font-size:12px;font-weight:700;color:${isCorrect?'#16a34a':'#dc2626'};margin-bottom:8px;`,(isCorrect?'✓ 정답':'✗ 오답')+` — Q${i+1}`));
     q.sentences.forEach(s=>card.appendChild(mks('div','font-size:12px;color:#333;padding:2px 0;line-height:1.6;',s)));
-    const ansRow=mks('div','display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;');
+
+    // 정답 표시 + 수정 드롭다운
+    const ansRow=mks('div','display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;');
     OPTS.forEach((opt,j)=>{
       const isAns=j===q.ans,isSel=result.answers[i]===j;
       const bg=isAns?'#16a34a':isSel&&!isAns?'#fecaca':'#f5f5f5';
@@ -2009,6 +2013,30 @@ async function quizResult(){
       ansRow.appendChild(mks('span',`font-size:11px;padding:3px 8px;border-radius:8px;background:${bg};color:${col};font-weight:${isAns?700:400};`,opt+(isAns?' ✓ 정답':'')+(isSel&&!isAns?' ← 학생':'')));
     });
     card.appendChild(ansRow);
+
+    // 관리자 정답 수정
+    const editRow=mks('div','display:flex;align-items:center;gap:8px;margin-top:10px;background:#fffbeb;border-radius:8px;padding:8px 10px;');
+    editRow.appendChild(mks('div','font-size:11px;color:#92400e;flex-shrink:0;','✏️ 정답 수정:'));
+    const sel=document.createElement('select');sel.className='inp';sel.style.cssText='margin-bottom:0;padding:4px 8px;font-size:12px;';
+    OPTS.forEach((opt,j)=>{const o=document.createElement('option');o.value=j;o.textContent=opt;if(j===q.ans)o.selected=true;sel.appendChild(o);});
+    sel.onchange=()=>{editedAns[i]=parseInt(sel.value);};
+    editRow.appendChild(sel);
+    const saveAnsBtn=mk('button','btn-primary','저장');
+    saveAnsBtn.style.cssText='padding:6px 12px;font-size:11px;margin-top:0;width:auto;';
+    saveAnsBtn.onclick=async()=>{
+      // 캐시 문제 정답 수정
+      const cacheKey='quizCache/'+((Q._quizResultStu.level||'M3')+'_'+(date.replace(/-/g,'')));
+      const cached=await fbGet(cacheKey);
+      if(cached&&cached.questions){
+        cached.questions[i].ans=editedAns[i];
+        cached.questions[i].correct_count=editedAns[i]+1;
+        await fbSet(cacheKey,cached);
+      }
+      saveAnsBtn.textContent='✓';setTimeout(()=>{saveAnsBtn.textContent='저장';},1000);
+    };
+    editRow.appendChild(saveAnsBtn);
+    card.appendChild(editRow);
+
     if(q.exp)card.appendChild(mks('div','font-size:11px;color:#3b5bdb;background:#eef2ff;padding:8px 10px;border-radius:8px;margin-top:10px;line-height:1.7;','💡 '+q.exp));
     body.appendChild(card);
   });
@@ -2148,8 +2176,8 @@ async function startQuiz(stu){
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:2000,
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2500,
         messages:[{role:'user',content:`너는 한국 중고등학교 영어 내신/수능 문법 출제 전문가야. 아래 수업 내용을 바탕으로 문법 문제 5개를 만들어줘.
 
 학생 수준: ${level} (${levelHint})
