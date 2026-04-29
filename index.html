@@ -472,7 +472,7 @@ function showModal(title,msg,onOk){
   bg.appendChild(box);document.body.appendChild(bg);
 }
 
-function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen})[Q.scr];if(fn)fn();}
+function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen,quizResult})[Q.scr];if(fn)fn();}
 
 function home(){
   const w=mks('div','');A.appendChild(w);
@@ -819,6 +819,15 @@ async function aStuEdit(){
     cs.onchange=()=>stu.classId=cs.value;
     body.appendChild(cs);
   }
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영어 수준'));
+  const lvSelect=document.createElement('select');lvSelect.className='inp';
+  ['선택 안 함','M1','M2','M3','H1','H2','H3'].forEach(l=>{
+    const o=document.createElement('option');o.value=l;o.textContent=l;
+    if((stu.level||'선택 안 함')===l)o.selected=true;
+    lvSelect.appendChild(o);
+  });
+  lvSelect.onchange=()=>stu.level=lvSelect.value;
+  body.appendChild(lvSelect);
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일'));
   const dpWrap=mks('div','');body.appendChild(dpWrap);
   const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(stu.days||[],ns=>{stu.days=ns;reRDP();}));};reRDP();
@@ -870,7 +879,7 @@ async function aStuEdit(){
     if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
     if(Q.students.find(s=>s.name===n&&s.id!==stu.id)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
     const idx=Q.students.findIndex(s=>s.id===stu.id);
-    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,videoCode:vc2||c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||'',info:stu.info||{}};
+    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,videoCode:vc2||c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||'',info:stu.info||{},level:stu.level||''};
     await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
@@ -898,9 +907,14 @@ async function aLessonView(){
   htxt.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.aStu)));
   htxt.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(Q.aDate)));
   hrow.appendChild(htxt);
+  const rightBtns=mks('div','display:flex;gap:6px;');
+  const quizBtn=mk('button','btn-ghost-inv','📝 퀴즈');
+  quizBtn.onclick=async()=>{Q._quizResultStu=Q.aStu;Q._quizResultDate=Q.aDate;Q.scr='quizResult';render();};
+  rightBtns.appendChild(quizBtn);
   const profileBtn=mk('button','btn-ghost-inv','👤 학생 정보');
   profileBtn.onclick=()=>{Q._showStuProfile=!Q._showStuProfile;render();};
-  hrow.appendChild(profileBtn);
+  rightBtns.appendChild(profileBtn);
+  hrow.appendChild(rightBtns);
   hdr.appendChild(hrow);
   w.appendChild(hdr);
 
@@ -1844,6 +1858,10 @@ async function lLessonView(){
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='lView';render();};hdr.appendChild(bb);
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
   ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
+  const lrBtns=mks('div','display:flex;gap:6px;');
+  const lqBtn=mk('button','btn-ghost-inv','📝 퀴즈');
+  lqBtn.onclick=()=>{Q._quizResultStu=stu;Q._quizResultDate=date;Q.scr='quizResult';render();};
+  lrBtns.appendChild(lqBtn);
   hdr.appendChild(ph);
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(date)));
   w.appendChild(hdr);
@@ -1942,6 +1960,60 @@ async function lLessonView(){
 }
 
 // 학생 조회 (학부모 조회와 동일)
+// 퀴즈 결과 상세 (관리자/학습리더용)
+async function quizResult(){
+  const stu=Q._quizResultStu;
+  const date=Q._quizResultDate;
+  const fromLeader=Q.lLeader!=null;
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');
+  bb.onclick=()=>{Q.scr=fromLeader?'lLessonView':'aLessonView';render();};
+  hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','📝 퀴즈 결과'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',stuDisplayName(stu)+' · '+fd(date)));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+
+  body.appendChild(mks('div','font-size:12px;color:#aaa;text-align:center;padding:12px;','불러오는 중...'));
+  const result=await fbGet(`quizResults/${stu.id}/${date}`);
+  body.innerHTML='';
+
+  if(!result){
+    body.appendChild(mk('div','empty-box','이 날짜의 퀴즈 제출 기록이 없어요.'));
+    return;
+  }
+
+  // 요약 카드
+  const color=result.score>=80?'#16a34a':result.score>=60?'#f59e0b':'#dc2626';
+  const summary=mk('div','card');summary.style.textAlign='center';summary.style.padding='1.2rem 0';
+  summary.innerHTML=`
+    <div style="font-size:40px;font-weight:800;color:${color};">${result.score}점</div>
+    <div style="font-size:13px;color:#888;margin-top:6px;">${result.total}문제 중 ${result.correct}개 정답</div>
+    <div style="font-size:10px;color:#bbb;margin-top:4px;">제출: ${new Date(result.submittedAt).toLocaleString('ko-KR')}</div>
+  `;
+  body.appendChild(summary);
+
+  // 문제별 정답/오답 + 해설
+  const OPTS=['① 1개','② 2개','③ 3개','④ 4개','⑤ 5개'];
+  result.questions.forEach((q,i)=>{
+    const isCorrect=result.answers[i]===q.ans;
+    const card=mks('div',`background:#fff;border:1.5px solid ${isCorrect?'#bbf7d0':'#fecaca'};border-radius:12px;padding:14px;margin-bottom:10px;`);
+    card.appendChild(mks('div',`font-size:12px;font-weight:700;color:${isCorrect?'#16a34a':'#dc2626'};margin-bottom:8px;`,(isCorrect?'✓ 정답':'✗ 오답')+` — Q${i+1}`));
+    q.sentences.forEach(s=>card.appendChild(mks('div','font-size:12px;color:#333;padding:2px 0;line-height:1.6;',s)));
+    const ansRow=mks('div','display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;');
+    OPTS.forEach((opt,j)=>{
+      const isAns=j===q.ans,isSel=result.answers[i]===j;
+      const bg=isAns?'#16a34a':isSel&&!isAns?'#fecaca':'#f5f5f5';
+      const col=isAns?'#fff':isSel&&!isAns?'#dc2626':'#888';
+      ansRow.appendChild(mks('span',`font-size:11px;padding:3px 8px;border-radius:8px;background:${bg};color:${col};font-weight:${isAns?700:400};`,opt+(isAns?' ✓ 정답':'')+(isSel&&!isAns?' ← 학생':'')));
+    });
+    card.appendChild(ansRow);
+    if(q.exp)card.appendChild(mks('div','font-size:11px;color:#3b5bdb;background:#eef2ff;padding:8px 10px;border-radius:8px;margin-top:10px;line-height:1.7;','💡 '+q.exp));
+    body.appendChild(card);
+  });
+}
+
 // 학생 로그인
 async function sLogin(){
   const w=mks('div','');A.appendChild(w);
@@ -2037,7 +2109,39 @@ async function startQuiz(stu){
   const L=await getLesson(stu.id,pastDate);
   if(L.status==='none'){Q.quiz={error:'지난 수업 내용이 없어요.'};render();return;}
 
+  const level=stu.level||'M3';
+  const levelGuide={
+    'M1':'현재/과거시제, be동사, 일반동사, 의문문, 부정문 등 기초 문법',
+    'M2':'현재진행, 미래시제, 조동사(can/will/must), 비교급, to부정사 기초',
+    'M3':'to부정사/동명사, 관계대명사(who/which/that), 수동태, 현재완료 기초',
+    'H1':'관계대명사 심화, 분사, 가정법 기초, 수동태 심화, 접속사',
+    'H2':'가정법 심화, 분사구문, 도치, 강조구문, 복합관계사',
+    'H3':'수능 문법 전 범위, 어법상 틀린 것 찾기, 고난도 구문'
+  };
+  const levelHint=levelGuide[level]||levelGuide['M3'];
+
   const content=LK.map((k,i)=>LABELS[i].split('—')[0].trim()+': '+L.plan[k]).filter(s=>s.split(': ')[1]).join('\n');
+
+  // 캐시 키: 레벨 + 날짜 + 내용 해시
+  const contentHash=content.split('').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0);
+  const cacheKey=`quizCache_${level}_${pastDate}_${Math.abs(contentHash)}`;
+
+  // Firebase 캐시 확인
+  const cached=await fbGet(cacheKey.replace(/_/g,'/').replace('quizCache/','quizCache_').replace(/\//g,'_'));
+  // 실제로는 간단히 key 형태로 저장
+  const cachedData=await fbGet('quizCache/'+level+'_'+pastDate.replace(/-/g,''));
+  if(cachedData&&cachedData.content===content&&cachedData.questions){
+    Q.quiz={questions:cachedData.questions,date:pastDate,fromCache:true};
+    render();return;
+  }
+
+  // 과거 좋은 문제 예시 가져오기 (Few-shot)
+  const pastExamples=await fbGet('quizExamples/'+level);
+  let fewShot='';
+  if(pastExamples&&Array.isArray(pastExamples)&&pastExamples.length>0){
+    const ex=pastExamples[0];
+    fewShot=`\n\n좋은 문제 예시:\n${JSON.stringify(ex,null,2)}`;
+  }
 
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -2045,26 +2149,43 @@ async function startQuiz(stu){
       headers:{'Content-Type':'application/json','x-api-key':CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
-        max_tokens:1500,
-        messages:[{role:'user',content:`다음 영어 수업 내용을 바탕으로 한국어 설명의 객관식 문제 5개를 만들어주세요.
+        max_tokens:2000,
+        messages:[{role:'user',content:`너는 한국 중고등학교 영어 내신/수능 문법 출제 전문가야. 아래 수업 내용을 바탕으로 문법 문제 5개를 만들어줘.
+
+학생 수준: ${level} (${levelHint})
 
 수업 내용:
-${content}
+${content}${fewShot}
 
-출력 형식은 반드시 아래 JSON만 (다른 텍스트 없이):
+【문제 형식】
+각 문제마다 영어 문장 6개(ⓐ~ⓕ)를 제시하고, 그 중 문법상 옳은 문장의 개수를 고르는 형식.
+선택지는 항상 "1개 / 2개 / 3개 / 4개 / 5개" 5가지.
+
+【제작 규칙】
+- 6문장 중 정답(옳은 문장) 개수는 문제마다 다르게 (1~5개 랜덤, 5문제에 걸쳐 고르게 분포)
+- 수업한 문법 포인트를 중심으로 오류 문장 제작
+- 틀린 문장은 해당 레벨 학생이 자주 틀리는 오류 유형 반영
+- 옳은 문장과 틀린 문장이 섞여서 헷갈리게 구성
+- exp에 각 문장별 정오 이유를 간결하게 설명 (ⓐ: O - 이유, ⓑ: X - 이유 형식)
+
+【출력 형식】 JSON만, 코드블록 없이:
 [
   {
-    "q": "문제 내용",
-    "opts": ["①선택지1","②선택지2","③선택지3","④선택지4"],
-    "ans": 0
+    "sentences": [
+      "ⓐ She has lived here since 2010.",
+      "ⓑ I am knowing the answer.",
+      "ⓒ He suggested that she goes there.",
+      "ⓓ The movie which I watched was boring.",
+      "ⓔ They have been married for 20 years.",
+      "ⓕ She didn't went to school yesterday."
+    ],
+    "correct_count": 3,
+    "ans": 2,
+    "exp": "ⓐ O(현재완료 since), ⓑ X(know는 상태동사), ⓒ X(suggest+that절→should go/go), ⓓ O(목적격 관계대명사), ⓔ O(현재완료 for), ⓕ X(didn't+동사원형→go)"
   }
 ]
 
-규칙:
-- 수업 내용에서 핵심 개념을 테스트하는 문제
-- 선택지는 4개, ans는 정답 인덱스(0~3)
-- 한국어로 작성
-- JSON만 출력, 코드블록 없이`}]
+(ans는 정답 인덱스: 1개=0, 2개=1, 3개=2, 4개=3, 5개=4)`}]
       })
     });
     if(!res.ok){
@@ -2076,6 +2197,14 @@ ${content}
     const text=data.content[0].text.trim();
     const json=JSON.parse(text.replace(/```json|```/g,'').trim());
     Q.quiz={questions:json,date:pastDate};
+
+    // Firebase에 캐시 저장 (같은 레벨+날짜+내용이면 재사용)
+    await fbSet('quizCache/'+level+'_'+pastDate.replace(/-/g,''),{content,questions:json,level,date:pastDate});
+
+    // 예시 문제 저장 (최대 3개 유지 — few-shot용)
+    const prevExamples=await fbGet('quizExamples/'+level)||[];
+    const newExamples=[json[0],...(Array.isArray(prevExamples)?prevExamples:[])].slice(0,3);
+    await fbSet('quizExamples/'+level,newExamples);
   } catch(e){
     console.error('퀴즈 오류:', e);
     Q.quiz={error:`오류: ${e.message}`};
@@ -2093,70 +2222,75 @@ function quizScreen(){
   const body=mk('div','page-body');w.appendChild(body);
 
   if(!Q.quiz){
-    body.appendChild(mks('div','text-align:center;padding:3rem 1rem;',`
-      <div style="font-size:13px;color:#aaa;margin-bottom:12px;">AI가 문제를 만들고 있어요...</div>
-      <div style="font-size:24px;">⏳</div>
-    `));
+    body.appendChild(mks('div','text-align:center;padding:3rem 1rem;',''));
+    body.lastChild.innerHTML='<div style="font-size:13px;color:#aaa;margin-bottom:16px;">AI가 문제를 만들고 있어요...</div><div style="font-size:28px;">⏳</div>';
     return;
   }
-  if(Q.quiz.error){
-    body.appendChild(mk('div','empty-box',Q.quiz.error));
-    return;
-  }
+  if(Q.quiz.error){body.appendChild(mk('div','empty-box',Q.quiz.error));return;}
 
   const qs=Q.quiz.questions;
+  const OPTS=['① 1개','② 2개','③ 3개','④ 4개','⑤ 5개'];
 
   if(Q.quizDone){
-    // 결과 화면
+    // 학생 결과 — 점수만 표시 (정답/해설 없음)
     const correct=qs.filter((q,i)=>Q.quizAnswers[i]===q.ans).length;
     const pct=Math.round(correct/qs.length*100);
     const color=pct>=80?'#16a34a':pct>=60?'#f59e0b':'#dc2626';
-    const rc=mk('div','card');
-    rc.appendChild(mks('div','text-align:center;padding:1rem 0;',`
-      <div style="font-size:40px;font-weight:800;color:${color};">${pct}점</div>
-      <div style="font-size:14px;color:#888;margin-top:6px;">${qs.length}문제 중 ${correct}개 정답</div>
-    `));
+    const rc=mk('div','card');rc.style.textAlign='center';rc.style.padding='2rem 0';
+    rc.innerHTML=`
+      <div style="font-size:52px;font-weight:800;color:${color};">${pct}점</div>
+      <div style="font-size:14px;color:#888;margin-top:8px;">${qs.length}문제 중 ${correct}개 정답</div>
+      <div style="font-size:11px;color:#bbb;margin-top:12px;">정답은 선생님께 문의해주세요 😊</div>
+    `;
     body.appendChild(rc);
-    // 오답 해설
-    qs.forEach((q,i)=>{
-      const isCorrect=Q.quizAnswers[i]===q.ans;
-      const card=mks('div',`background:#fff;border:1.5px solid ${isCorrect?'#bbf7d0':'#fecaca'};border-radius:12px;padding:14px;margin-bottom:8px;`);
-      card.appendChild(mks('div',`font-size:12px;font-weight:700;color:${isCorrect?'#16a34a':'#dc2626'};margin-bottom:6px;`,(isCorrect?'✓ 정답':'✗ 오답')+` (${i+1}번)`));
-      card.appendChild(mks('div','font-size:13px;color:#111;margin-bottom:8px;',q.q));
-      q.opts.forEach((opt,j)=>{
-        const isSel=Q.quizAnswers[i]===j,isAns=q.ans===j;
-        const style=isAns?'font-weight:700;color:#16a34a;':isSel?'color:#dc2626;text-decoration:line-through;':'color:#888;';
-        card.appendChild(mks('div',`font-size:12px;${style};padding:2px 0;`,opt+(isAns?' ✓':'')));
-      });
-      body.appendChild(card);
-    });
-    const retryBtn=mk('button','btn-primary','다시 풀기');
-    retryBtn.onclick=()=>{Q.quizAnswers={};Q.quizDone=false;render();};
+    const retryBtn=mk('button','btn-ghost','← 돌아가기');
+    retryBtn.style.marginTop='8px';
+    retryBtn.onclick=()=>{Q.scr='sView';Q.quiz=null;Q.quizDone=false;render();};
     body.appendChild(retryBtn);
     return;
   }
 
   // 문제 풀기 화면
-  body.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:14px;',`${fd(Q.quiz.date)} 수업 기반`));
+  body.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:14px;',`${fd(Q.quiz.date)} 수업 기반 · ${Q.quiz.fromCache?'📦 저장된 문제':'🤖 AI 생성'}`));
   qs.forEach((q,i)=>{
     const card=mk('div','section-block');
-    card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:10px;',`${i+1}. ${q.q}`));
-    q.opts.forEach((opt,j)=>{
-      const sel=Q.quizAnswers[i]===j;
-      const btn=mks('div',`padding:10px 12px;border-radius:10px;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};cursor:pointer;font-size:12px;color:${sel?'#1a2f6e':'#333'};margin-bottom:6px;`);
-      btn.textContent=opt;
-      btn.onclick=()=>{Q.quizAnswers[i]=j;render();};
-      card.appendChild(btn);
+    card.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;',`Q${i+1}. 다음 중 문법상 옳은 문장의 개수는?`));
+    // 6문장
+    const sentBox=mks('div','background:#f8f8f6;border-radius:10px;padding:12px;margin-bottom:12px;');
+    q.sentences.forEach(s=>{
+      sentBox.appendChild(mks('div','font-size:12px;color:#333;padding:3px 0;line-height:1.7;',s));
     });
+    card.appendChild(sentBox);
+    // 선택지
+    const optRow=mks('div','display:flex;flex-wrap:wrap;gap:8px;');
+    OPTS.forEach((opt,j)=>{
+      const sel=Q.quizAnswers[i]===j;
+      const btn=mks('button',`padding:8px 14px;border-radius:10px;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};cursor:pointer;font-size:13px;font-weight:${sel?700:400};color:${sel?'#1a2f6e':'#555'};font-family:inherit;`,opt);
+      btn.onclick=()=>{Q.quizAnswers[i]=j;render();};
+      optRow.appendChild(btn);
+    });
+    card.appendChild(optRow);
     body.appendChild(card);
   });
 
   const allAnswered=qs.every((_,i)=>Q.quizAnswers[i]!==undefined);
   const submitBtn=mk('button','btn-primary','제출하기');
   if(!allAnswered){submitBtn.disabled=true;submitBtn.style.opacity='0.5';}
-  submitBtn.onclick=()=>{Q.quizDone=true;render();};
+  submitBtn.onclick=async()=>{
+    const correct=qs.filter((q,i)=>Q.quizAnswers[i]===q.ans).length;
+    const pct=Math.round(correct/qs.length*100);
+    // Firebase에 결과 저장
+    const resultData={
+      studentId:Q.sStu.id,studentName:Q.sStu.name,level:Q.sStu.level||'',
+      date:Q.quiz.date,submittedAt:new Date().toISOString(),
+      answers:Q.quizAnswers,correct,total:qs.length,score:pct,
+      questions:qs
+    };
+    await fbSet(`quizResults/${Q.sStu.id}/${Q.quiz.date}`,resultData);
+    Q.quizDone=true;render();
+  };
   body.appendChild(submitBtn);
-  if(!allAnswered)body.appendChild(mks('div','font-size:11px;color:#aaa;text-align:center;margin-top:8px;','모든 문제에 답을 선택해주세요'));
+  if(!allAnswered)body.appendChild(mks('div','font-size:11px;color:#aaa;text-align:center;margin-top:8px;',`${Object.keys(Q.quizAnswers).length}/${qs.length}문제 답 선택됨`));
 }
 (async()=>{
   A.innerHTML='';
