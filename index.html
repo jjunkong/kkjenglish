@@ -539,7 +539,7 @@ function aLogin(){
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','비밀번호'));
-  const pi=document.createElement('input');pi.className='inp';pi.type='password';pi.placeholder='비밀번호 입력';c.appendChild(pi);
+  const pi=document.createElement('input');pi.className='inp';pi.type='password';pi.placeholder='비밀번호 입력';c.appendChild(pi);setTimeout(()=>pi.focus(),50);
   if(Q.err)c.appendChild(mk('div','err',Q.err));
   const doL=()=>{if(pi.value===Q.pw){Q.scr='aList';Q.err='';render();}else{Q.err='비밀번호가 맞지 않습니다.';render();}};
   pi.onkeydown=e=>{if(e.key==='Enter')doL();};
@@ -1235,7 +1235,7 @@ async function pLogin(){
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','자녀 이름과 원장님께 받은 코드를 입력해주세요.'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
-  const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
+  const ni=document.createElement('input');ni.id='pn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);setTimeout(()=>ni.focus(),50);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
   const ci=document.createElement('input');ci.id='pc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
   const errDiv=mks('div','');errDiv.id='p-err';c.appendChild(errDiv);
@@ -1509,7 +1509,7 @@ function vLogin(){
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','이름과 영상 전용 코드를 입력해주세요.'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','이름'));
-  const ni=document.createElement('input');ni.id='vln';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
+  const ni=document.createElement('input');ni.id='vln';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);setTimeout(()=>ni.focus(),50);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 전용 코드'));
   const ci=document.createElement('input');ci.id='vlc';ci.className='inp';ci.placeholder='영상 코드 입력';c.appendChild(ci);
   const verrDiv=mks('div','');verrDiv.id='v-err';c.appendChild(verrDiv);
@@ -1675,7 +1675,7 @@ function lLogin(){
   const c=mk('div','card');body.appendChild(c);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','이름과 코드를 입력해주세요.'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','이름'));
-  const ni=document.createElement('input');ni.id='ln';ni.className='inp';ni.placeholder='강사 이름';c.appendChild(ni);
+  const ni=document.createElement('input');ni.id='ln';ni.className='inp';ni.placeholder='강사 이름';c.appendChild(ni);setTimeout(()=>ni.focus(),50);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
   const ci=document.createElement('input');ci.id='lc';ci.className='inp';ci.placeholder='코드 입력';c.appendChild(ci);
   const errDiv=mks('div','');errDiv.id='l-err';c.appendChild(errDiv);
