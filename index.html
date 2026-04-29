@@ -489,6 +489,10 @@ async function aList(){
     left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
     row.appendChild(left);
     const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
+    // 학부모 코멘트 알림
+    if(l.planComment||l.resultComment){
+      right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
+    }
     const badge=mk('span',SL_BADGE[l.status],SL[l.status]);right.appendChild(badge);
     const editBtn=mk('button','btn-sm','✏');
     editBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
@@ -591,6 +595,13 @@ async function aLessonView(){
   const msg=mks('div','');
   if(Q.aTab==='plan'){
     LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
+    // 학부모 코멘트 표시 (수업계획 탭)
+    if(L.planComment){
+      const pc=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;');
+      pc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학부모 코멘트'));
+      pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.planComment));
+      body.appendChild(pc);
+    }
     body.appendChild(msg);
     const btn=mk('button','btn-primary','수업 계획 저장');
     btn.onclick=async()=>{
@@ -633,10 +644,10 @@ async function aLessonView(){
     vb.appendChild(vci);body.appendChild(vb);
 
     // 학부모 코멘트 표시 (읽기 전용)
-    if(L.parentComment){
+    if(L.planComment){
       const pc=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;');
-      pc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학부모 코멘트'));
-      pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.parentComment));
+      pc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학부모 코멘트 (수업 계획)'));
+      pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.planComment));
       body.appendChild(pc);
     }
 
@@ -806,10 +817,14 @@ async function pView(){
   }
   if(Q.pTab==='plan'||L.status==='planned'){
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],null,false)));
+    // 오늘 배울 내용 탭 코멘트
+    if(Q.pDate===TODAY){
+      body.appendChild(pCommentBox(L,'planComment',Q.pStu.id,Q.pDate));
+    }
   } else {
     body.appendChild(mks('div','font-size:12px;font-weight:700;color:#059669;margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:10px;','✅ 수업 결과'));
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],true)));
-    // 단어시험 결과 (수업 결과 탭 안)
+    // 단어시험 결과
     if(L.vocab&&(L.vocab.score||L.vocab.pass)){
       const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px 14px;margin-top:4px;');
       const vhdr=mks('div','display:flex;align-items:center;gap:10px;margin-bottom:6px;');
@@ -823,34 +838,34 @@ async function pView(){
       if(L.vocab.comment)vb.appendChild(mks('div','font-size:12px;color:#888;',L.vocab.comment));
       body.appendChild(vb);
     }
-  }
-
-  // 학부모 코멘트 (당일 날짜에만 표시)
-  if(Q.pDate===TODAY){
-    const cb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-top:12px;');
-    cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:8px;','💬 학부모 코멘트'));
-    if(L.parentComment){
-      cb.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:8px;',L.parentComment));
+    // 수업 결과 탭 코멘트
+    if(Q.pDate===TODAY){
+      body.appendChild(pCommentBox(L,'resultComment',Q.pStu.id,Q.pDate));
     }
-    const ta=document.createElement('textarea');
-    ta.className='section-ta';ta.rows=3;
-    ta.placeholder='선생님께 전하고 싶은 말을 남겨주세요...';
-    ta.value=L.parentComment||'';
-    cb.appendChild(ta);
-    const msg=mks('div','');cb.appendChild(msg);
-    const btn=mk('button','btn-primary','코멘트 저장');
-    btn.style.marginTop='8px';
-    btn.onclick=async()=>{
-      const txt=ta.value.trim();
-      btn.textContent='저장 중...';btn.disabled=true;
-      L.parentComment=txt;
-      await setLesson(Q.pStu.id,Q.pDate,L);
-      msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
-      btn.textContent='코멘트 저장';btn.disabled=false;
-    };
-    cb.appendChild(btn);
-    body.appendChild(cb);
   }
+}
+
+// 학부모 코멘트 입력 박스 (탭별)
+function pCommentBox(L,field,sid,date){
+  const cb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-top:12px;');
+  cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:8px;','💬 학부모 코멘트'));
+  const ta=document.createElement('textarea');
+  ta.className='section-ta';ta.rows=3;
+  ta.placeholder='선생님께 전하고 싶은 말을 남겨주세요...';
+  ta.value=L[field]||'';
+  cb.appendChild(ta);
+  const msg=mks('div','');cb.appendChild(msg);
+  const btn=mk('button','btn-primary','코멘트 저장');
+  btn.style.marginTop='8px';
+  btn.onclick=async()=>{
+    btn.textContent='저장 중...';btn.disabled=true;
+    L[field]=ta.value.trim();
+    await setLesson(sid,date,L);
+    msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+    btn.textContent='코멘트 저장';btn.disabled=false;
+  };
+  cb.appendChild(btn);
+  return cb;
 }
 
 async function pChart(){
