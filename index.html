@@ -206,6 +206,11 @@ const SC={none:'#9ca3af',planned:'#2563eb',completed:'#16a34a'};
 const LK=['check','core','fix'];
 const LABELS=['CHECK — 확인 및 복습','CORE — 핵심 내용','FIX — 교정 및 정착'];
 const RV={상:3,중:2,하:1};
+const stuDisplayName=stu=>{
+  if(!stu)return'';
+  const cls=Q.classes&&Q.classes.find(c=>c.id===stu.classId);
+  return cls?`${cls.name}_${stu.name}`:stu.name;
+};
 
 // 유튜브 URL → ID 추출
 const ytId=url=>{
@@ -952,7 +957,7 @@ async function pView(){
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';render();};hdr.appendChild(bb);
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
-  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',Q.pStu.name));
+  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.pStu)));
   const right=mks('div','display:flex;align-items:center;gap:10px;');
   const chartBtn=mk('button','btn-ghost-inv','📊 그래프');
   chartBtn.onclick=()=>{Q.scr='pChart';render();};right.appendChild(chartBtn);
@@ -1080,7 +1085,7 @@ async function pChart(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='pView';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',Q.pStu.name+' 수업 현황'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.pStu)+' 수업 현황'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','누적 학습 기록'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
