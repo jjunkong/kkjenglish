@@ -400,10 +400,32 @@ function home(){
   const hdr=mks('div','background:linear-gradient(135deg,#3b5bdb 0%,#6d28d9 100%);padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
   // 검정 배지 + 그라데이션 볼드 텍스트
   const badge=mks('div','display:inline-block;background:#0a0a14;border-radius:20px;padding:5px 14px;margin-bottom:10px;');
-  const badgeText=mks('span','font-size:10px;font-weight:800;letter-spacing:.1em;','KIMKIJUN ENGLISH ACADEMY');
+  const badgeText=mks('span','','KIMKIJUN ENGLISH ACADEMY');
   badgeText.style.cssText='font-size:10px;font-weight:800;letter-spacing:.1em;background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;';
   badge.appendChild(badgeText);hdr.appendChild(badge);
-  hdr.appendChild(mks('div','font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;font-family:GmarketSans,Nanum Gothic,sans-serif;','김기준영어학원'));
+  // 제목을 배지와 같은 너비로
+  const titleWrap=mks('div','display:inline-block;margin-bottom:3px;');
+  const titleEl=mks('div','font-size:22px;font-weight:700;color:#fff;font-family:GmarketSans,Nanum Gothic,sans-serif;width:100%;','김기준영어학원');
+  titleWrap.style.cssText='display:block;';
+  titleEl.style.cssText='font-size:22px;font-weight:700;color:#fff;font-family:GmarketSans,Nanum Gothic,sans-serif;margin-bottom:3px;letter-spacing:-.3px;width:fit-content;';
+  // JS로 배지 너비 맞추기
+  titleEl.id='hdr-title-main';
+  badge.id='hdr-badge-main';
+  hdr.appendChild(titleEl);
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
+  w.appendChild(hdr);
+  // 배지 너비에 제목 맞추기
+  requestAnimationFrame(()=>{
+    const b=document.getElementById('hdr-badge-main');
+    const t=document.getElementById('hdr-title-main');
+    if(b&&t){
+      const bw=b.offsetWidth;
+      t.style.fontSize=`${Math.min(22, Math.floor(bw/5.2))}px`;
+      t.style.width=bw+'px';
+      t.style.textAlign='justify';
+      t.style.textAlignLast='justify';
+    }
+  });
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
   w.appendChild(hdr);
 
