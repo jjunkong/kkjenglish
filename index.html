@@ -919,14 +919,27 @@ async function aLessonView(){
     }
 
     body.appendChild(msg);
-    const btn=mk('button','btn-primary','완성도 저장');
-    btn.onclick=async()=>{
-      btn.textContent='저장 중...';btn.disabled=true;
-      L.status='completed';
+    // 임시 저장 버튼
+    const saveBtn=mk('button','btn-ghost','임시 저장');
+    saveBtn.style.cssText='width:100%;margin-top:6px;padding:12px;border-radius:10px;';
+    saveBtn.onclick=async()=>{
+      saveBtn.textContent='저장 중...';saveBtn.disabled=true;
+      L.status='completed';L.parentVisible=false;
       await setLesson(Q.aStu.id,Q.aDate,L);
-      msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+      msg.innerHTML='<div class="ok-msg">✓ 임시 저장됐습니다. (학부모에게 아직 미공개)</div>';
+      saveBtn.textContent='임시 저장';saveBtn.disabled=false;
+    };body.appendChild(saveBtn);
+    // 학부모 공개 버튼
+    const pubBtn=mk('button','btn-primary', L.parentVisible?'✓ 학부모 공개 완료':'확인 후 학부모 공개');
+    if(L.parentVisible){pubBtn.style.background='#16a34a';}
+    pubBtn.style.marginTop='8px';
+    pubBtn.onclick=async()=>{
+      pubBtn.textContent='저장 중...';pubBtn.disabled=true;
+      L.status='completed';L.parentVisible=true;
+      await setLesson(Q.aStu.id,Q.aDate,L);
+      msg.innerHTML='<div class="ok-msg">✓ 학부모에게 공개됐습니다!</div>';
       setTimeout(()=>{Q.scr='aList';render();},700);
-    };body.appendChild(btn);
+    };body.appendChild(pubBtn);
   }
 }
 
@@ -1299,12 +1312,15 @@ async function pView(){
 
   if(L.status==='none'){body.appendChild(mk('div','empty-box','이 날의 수업 기록이 없습니다.'));return;}
   if(!Q.pTab)Q.pTab='plan';
-  if(L.status==='completed'){
+  if(L.status==='completed'&&L.parentVisible){
     const tabs=mk('div','tab-wrap');body.appendChild(tabs);
     ['plan','result'].forEach(t=>{
       const tb=mk('button','tab-btn'+(Q.pTab===t?' active':''),t==='plan'?'오늘 배울 내용':'수업 결과');
       tb.onclick=()=>{Q.pTab=t;render();};tabs.appendChild(tb);
     });
+  } else if(L.status==='completed'&&!L.parentVisible){
+    body.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:12px;padding:10px 14px;background:#eef2ff;border-radius:10px;','📚 오늘 배울 내용'));
+    body.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:12px;text-align:center;','수업 결과는 선생님 확인 후 공개됩니다.'));
   } else {
     body.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:12px;padding:10px 14px;background:#eef2ff;border-radius:10px;','📚 오늘 배울 내용'));
   }
@@ -1767,19 +1783,19 @@ async function lLessonView(){
       if(L.res[k].m)row.appendChild(mks('span','font-size:12px;color:#888;',L.res[k].m));
       sb.appendChild(row);
     }
-    // 완료/미완료 + 리더 코멘트 입력
+    // 완료/미완료 + 리더 코멘트 입력 (L.res[k].r 공유 — 관리자와 연동)
     if(k!=='fix'){
       sb.appendChild(mk('div','divider'));
       sb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:6px;','완료 여부'));
       const bd=mk('div','rate-row');
-      if(!L.leaderResults)L.leaderResults={};
+      if(!L.res[k])L.res[k]={r:'',m:''};
       const RC2={'완료':'#16a34a','부분완료':'#f59e0b','미완료':'#dc2626'};
       const btns2=[];
       const upd2=sel=>btns2.forEach(b=>{const s=b.textContent===sel;b.style.background=s?RC2[sel]:'#fff';b.style.color=s?'#fff':'#888';b.style.borderColor=s?RC2[sel]:'#e8e8e6';});
       ['완료','부분완료','미완료'].forEach(r=>{
         const b=mk('button','rate-btn',r);
-        if(L.leaderResults[k]===r){b.style.background=RC2[r];b.style.color='#fff';b.style.borderColor=RC2[r];}
-        b.onclick=()=>{L.leaderResults[k]=r;upd2(r);};btns2.push(b);bd.appendChild(b);
+        if(L.res[k].r===r){b.style.background=RC2[r];b.style.color='#fff';b.style.borderColor=RC2[r];}
+        b.onclick=()=>{L.res[k].r=r;upd2(r);};btns2.push(b);bd.appendChild(b);
       });
       sb.appendChild(bd);
     }
@@ -1796,10 +1812,10 @@ async function lLessonView(){
       vsi.style.cssText='margin-bottom:0;width:70px;flex-shrink:0;';
       vsi.type='number';vsi.placeholder='점수';vsi.value=L.vocab.score||'';
       vsi.oninput=()=>L.vocab.score=vsi.value;vrow.appendChild(vsi);
-      const RC3={'통과':'#16a34a','부분':'#f59e0b','불통':'#dc2626'};
+      const RC3={'통과':'#16a34a','불통':'#dc2626'};
       const pbtns=[];
       const updP=sel=>pbtns.forEach(b=>{const s=b.textContent===sel;b.style.cssText=`padding:4px 10px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;background:${s?RC3[sel]:'transparent'};color:${s?'#fff':'#888'};border:${s?'none':'1.5px solid #e8e8e6'};`;});
-      ['통과','부분','불통'].forEach(r=>{
+      ['통과','불통'].forEach(r=>{
         const b=mks('button','',r);b.style.cssText=`padding:4px 10px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;background:${L.vocab.pass===r?RC3[r]:'transparent'};color:${L.vocab.pass===r?'#fff':'#888'};border:${L.vocab.pass===r?'none':'1.5px solid #e8e8e6'};`;
         b.onclick=()=>{L.vocab.pass=r;updP(r);};pbtns.push(b);vrow.appendChild(b);
       });
