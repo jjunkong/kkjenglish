@@ -493,7 +493,7 @@ async function aList(){
         const sc=mk('div','stu-card');sc.style.marginBottom='6px';
         const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
         const left=mks('div','flex:1;cursor:pointer;');
-        left.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',stu.name));
+        left.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',(cls.name&&cls.id!=='__none__'?cls.name+'_':'')+stu.name));
         left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
         row.appendChild(left);
         const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
@@ -610,8 +610,8 @@ async function aStuEdit(){
       const label=mks('div','flex:1;');
       label.appendChild(mks('div','font-size:13px;color:#111;',v.title));
       if(v.desc)label.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
-      robody.appendChild(cb);robody.appendChild(label);
       row.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;cb.onchange();}};
+      row.appendChild(cb);row.appendChild(label);
       body.appendChild(row);
     });
   } else {
