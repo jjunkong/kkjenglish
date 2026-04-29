@@ -1598,6 +1598,30 @@ async function pChart(){
       cw2.appendChild(row);
     });
   }
+
+  // ④ 복습 퀴즈 누적 결과
+  const allQuizRaw=await fbGet(`quizResults/${Q.pStu.id}`)||{};
+  const quizDates=Object.keys(allQuizRaw).sort();
+  if(quizDates.length){
+    const qw=mk('div','chart-wrap');body.appendChild(qw);
+    qw.appendChild(mks('div','font-size:12px;font-weight:600;color:#333;margin-bottom:12px;','📝 복습 퀴즈 점수'));
+    quizDates.forEach(d=>{
+      const r=allQuizRaw[d];
+      const pct=r.score||0;
+      const color=pct>=80?'#16a34a':pct>=60?'#f59e0b':'#dc2626';
+      const row=mk('div','chart-bar-row');row.style.marginBottom='5px';
+      row.appendChild(mks('div','font-size:10px;color:#888;width:44px;flex-shrink:0;text-align:right;',fdShort(d)));
+      const bg=mks('div','flex:1;background:#e8e4f4;border-radius:3px;height:16px;overflow:hidden;margin-left:8px;');
+      const fill=mks('div',`height:100%;border-radius:3px;background:${color};width:${pct}%;display:flex;align-items:center;justify-content:center;min-width:30px;`,'');
+      fill.appendChild(mks('span','font-size:9px;font-weight:700;color:#fff;',pct+'점'));
+      bg.appendChild(fill);row.appendChild(bg);
+      qw.appendChild(row);
+    });
+    // 평균 점수
+    const avg=Math.round(quizDates.reduce((a,d)=>a+(allQuizRaw[d].score||0),0)/quizDates.length);
+    const avgColor=avg>=80?'#16a34a':avg>=60?'#f59e0b':'#dc2626';
+    qw.appendChild(mks('div',`font-size:11px;font-weight:700;color:${avgColor};text-align:right;margin-top:6px;`,`평균 ${avg}점 (${quizDates.length}회)`));
+  }
 }
 
 // 영상 — 학생 로그인
@@ -1857,14 +1881,41 @@ async function lLessonView(){
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='lView';render();};hdr.appendChild(bb);
   const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
-  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
+  const htxt=mks('div','');
+  htxt.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
+  htxt.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(date)));
+  ph.appendChild(htxt);
   const lrBtns=mks('div','display:flex;gap:6px;');
   const lqBtn=mk('button','btn-ghost-inv','📝 퀴즈');
   lqBtn.onclick=()=>{Q._quizResultStu=stu;Q._quizResultDate=date;Q.scr='quizResult';render();};
   lrBtns.appendChild(lqBtn);
+  const lpBtn=mk('button','btn-ghost-inv','👤 정보');
+  lpBtn.onclick=()=>{Q._showLdrStuProfile=!Q._showLdrStuProfile;render();};
+  lrBtns.appendChild(lpBtn);
+  ph.appendChild(lrBtns);
   hdr.appendChild(ph);
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(date)));
   w.appendChild(hdr);
+
+  // 학생 정보 패널 (학습리더)
+  if(Q._showLdrStuProfile){
+    const panel=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:14px;margin:12px 12px 0;padding:14px;');
+    panel.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:10px;','학생 정보'));
+    const fields=[
+      {key:'school',label:'학교/학년'},{key:'level',label:'현재 실력'},
+      {key:'prevMethod',label:'이전 공부 방법'},{key:'prevResult',label:'이전 학습 결과'}
+    ];
+    fields.forEach(f=>{
+      if(stu.info?.[f.key]){
+        const row=mks('div','display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0ee;');
+        row.appendChild(mks('div','font-size:11px;color:#888;flex-shrink:0;width:80px;',f.label));
+        row.appendChild(mks('div','font-size:13px;color:#111;',stu.info[f.key]));
+        panel.appendChild(row);
+      }
+    });
+    if(stu.level)panel.appendChild(mks('div','font-size:11px;color:#3b5bdb;margin-top:8px;font-weight:600;','영어 수준: '+stu.level));
+    w.appendChild(panel);
+  }
+
   const body=mk('div','page-body');w.appendChild(body);
   if(L.status==='none'){body.appendChild(mk('div','empty-box','수업 계획이 없습니다.'));return;}
 
@@ -1976,13 +2027,27 @@ async function quizResult(){
   const body=mk('div','page-body');w.appendChild(body);
 
   body.appendChild(mks('div','font-size:12px;color:#aaa;text-align:center;padding:12px;','불러오는 중...'));
-  const result=await fbGet(`quizResults/${stu.id}/${date}`);
+
+  // 해당 학생의 모든 퀴즈 결과 날짜 목록
+  const allResults=await fbGet(`quizResults/${stu.id}`)||{};
+  const resultDates=Object.keys(allResults).sort().reverse();
   body.innerHTML='';
 
-  if(!result){
-    body.appendChild(mk('div','empty-box','이 날짜의 퀴즈 제출 기록이 없어요.'));
-    return;
+  if(!resultDates.length){
+    body.appendChild(mk('div','empty-box','퀴즈 제출 기록이 없어요.'));return;
   }
+
+  // 날짜 드롭다운
+  if(!Q._quizResultDate||!allResults[Q._quizResultDate])Q._quizResultDate=resultDates[0];
+  const ds=document.createElement('select');ds.className='inp';
+  resultDates.forEach(d=>{
+    const o=document.createElement('option');o.value=d;o.textContent=fd(d);
+    if(d===Q._quizResultDate)o.selected=true;ds.appendChild(o);
+  });
+  ds.onchange=()=>{Q._quizResultDate=ds.value;Q.scr='quizResult';render();};
+  body.appendChild(ds);
+
+  const result=allResults[Q._quizResultDate];
 
   // 요약 카드
   const color=result.score>=80?'#16a34a':result.score>=60?'#f59e0b':'#dc2626';
