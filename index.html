@@ -877,7 +877,7 @@ async function aSettings(){
 
   // 영상 관리
   const vc=mk('div','card');vc.style.marginTop='12px';w2.appendChild(vc);
-  const vhdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;');
+  const vhdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;');
   vhdr.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;','수업 영상 관리'));
   const vaBtn=mk('button','btn-ghost',Q.showVidAdd?'닫기':'+ 영상 추가');
   vaBtn.onclick=()=>{Q.showVidAdd=!Q.showVidAdd;render();};vhdr.appendChild(vaBtn);
@@ -908,20 +908,58 @@ async function aSettings(){
   if(!Q.videos.length){
     vc.appendChild(mk('div','empty-box','등록된 영상이 없습니다.'));
   } else {
-    Q.videos.forEach((v,i)=>{
-      const row=mks('div','display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ee;');
-      const left=mks('div','flex:1;');
-      left.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',v.title));
-      if(v.desc)left.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
-      row.appendChild(left);
-      const delBtn=mk('button','btn-sm','삭제');
-      delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
-      delBtn.onclick=()=>{
-        showModal('영상 삭제',`"${v.title}" 영상을 삭제합니다.`,async()=>{
-          Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();render();
+    Q.videos.forEach(v=>{
+      const expanded=Q._expandedVid===v.id;
+      const card=mks('div','border:1px solid #f0f0ee;border-radius:10px;margin-top:8px;overflow:hidden;');
+
+      // 드롭다운 헤더
+      const chdr=mks('div','display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;background:#fafafa;');
+      const cl=mks('div','flex:1;');
+      cl.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',v.title));
+      if(v.desc&&!expanded)cl.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
+      chdr.appendChild(cl);
+      chdr.appendChild(mks('span','font-size:13px;color:#aaa;margin-left:8px;',expanded?'▲':'▼'));
+      chdr.onclick=()=>{Q._expandedVid=expanded?null:v.id;render();};
+      card.appendChild(chdr);
+
+      if(expanded){
+        const cbody=mks('div','padding:12px;border-top:1px solid #f0f0ee;background:#fff;');
+
+        // 수정 폼
+        cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','제목'));
+        const ti=document.createElement('input');ti.className='inp';ti.value=v.title;cbody.appendChild(ti);
+        cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','유튜브 URL'));
+        const ui=document.createElement('input');ui.className='inp';ui.value=`https://www.youtube.com/watch?v=${v.ytId}`;cbody.appendChild(ui);
+        cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','설명'));
+        const di=document.createElement('input');di.className='inp';di.style.marginBottom='10px';di.value=v.desc||'';cbody.appendChild(di);
+
+        const emsg=mks('div','');cbody.appendChild(emsg);
+        const btnRow=mks('div','display:flex;gap:8px;');
+
+        // 저장 버튼
+        const saveBtn=mk('button','btn-primary','저장');saveBtn.style.flex='1';
+        saveBtn.onclick=async()=>{
+          const newTitle=ti.value.trim();
+          const newId=ytId(ui.value.trim());
+          if(!newTitle){emsg.innerHTML='<div class="err">제목을 입력하세요.</div>';return;}
+          if(!newId){emsg.innerHTML='<div class="err">올바른 유튜브 URL을 입력하세요.</div>';return;}
+          const idx=Q.videos.findIndex(x=>x.id===v.id);
+          if(idx>=0)Q.videos[idx]={...Q.videos[idx],title:newTitle,ytId:newId,desc:di.value.trim()};
+          await saveVideos();Q._expandedVid=null;render();
+        };
+
+        // 삭제 버튼
+        const delBtn=mk('button','btn-sm','삭제');
+        delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
+        delBtn.onclick=()=>showModal('영상 삭제',`"${v.title}" 영상을 삭제합니다.`,async()=>{
+          Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();Q._expandedVid=null;render();
         });
-      };
-      row.appendChild(delBtn);vc.appendChild(row);
+
+        btnRow.appendChild(saveBtn);btnRow.appendChild(delBtn);
+        cbody.appendChild(btnRow);
+        card.appendChild(cbody);
+      }
+      vc.appendChild(card);
     });
   }
 }
