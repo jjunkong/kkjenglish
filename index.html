@@ -851,31 +851,24 @@ function pCommentBox(L,field,sid,date){
   cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;','💬 학부모 코멘트'));
 
   const saved=L[field];
-  const viewMode=mks('div','');
-  const editMode=mks('div','display:none;');
 
-  // 저장된 코멘트 보기 모드
-  if(saved){
-    viewMode.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:10px;',saved));
+  // 저장된 코멘트 보기 (수정/삭제)
+  if(saved&&!L[field+'_editing']){
+    cb.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:10px;',saved));
     const btnRow=mks('div','display:flex;gap:8px;');
     const editBtn=mk('button','btn-ghost','수정');
     const delBtn=mk('button','btn-ghost','삭제');
     delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
-    editBtn.onclick=()=>{
-      ta.value=saved;
-      viewMode.style.display='none';
-      editMode.style.display='block';
-    };
+    editBtn.onclick=()=>{L[field+'_editing']=true;cb.parentNode.replaceChild(pCommentBox(L,field,sid,date),cb);};
     delBtn.onclick=async()=>{
       if(!confirm('코멘트를 삭제할까요?'))return;
-      L[field]='';
+      L[field]='';delete L[field+'_editing'];
       await setLesson(sid,date,L);
-      cb.innerHTML='';
-      cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;','💬 학부모 코멘트'));
-      cb.appendChild(buildEditMode());
+      cb.parentNode.replaceChild(pCommentBox(L,field,sid,date),cb);
     };
     btnRow.appendChild(editBtn);btnRow.appendChild(delBtn);
-    viewMode.appendChild(btnRow);
+    cb.appendChild(btnRow);
+    return cb;
   }
 
   // 입력/수정 모드
@@ -883,59 +876,25 @@ function pCommentBox(L,field,sid,date){
   ta.className='section-ta';ta.rows=3;
   ta.placeholder='선생님께 전하고 싶은 말을 남겨주세요...';
   ta.value=saved||'';
-
-  const buildEditMode=()=>{
-    const wrap=mks('div','');
-    wrap.appendChild(ta);
-    const msg=mks('div','');wrap.appendChild(msg);
-    const row=mks('div','display:flex;gap:8px;margin-top:8px;');
-    const saveBtn=mk('button','btn-primary','저장');
-    saveBtn.style.flex='1';
-    const cancelBtn=mk('button','btn-ghost','취소');
-    if(saved){
-      cancelBtn.onclick=()=>{
-        editMode.style.display='none';
-        viewMode.style.display='block';
-      };
-    } else {
-      cancelBtn.style.display='none';
-    }
-    saveBtn.onclick=async()=>{
-      const txt=ta.value.trim();
-      if(!txt){msg.innerHTML='<div class="err">내용을 입력하세요.</div>';return;}
-      saveBtn.textContent='저장 중...';saveBtn.disabled=true;
-      L[field]=txt;
-      await setLesson(sid,date,L);
-      // 저장 후 보기 모드로 전환
-      viewMode.innerHTML='';
-      viewMode.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:10px;',txt));
-      const br=mks('div','display:flex;gap:8px;');
-      const eb=mk('button','btn-ghost','수정');
-      const db=mk('button','btn-ghost','삭제');
-      db.style.color='#dc2626';db.style.borderColor='#fca5a5';
-      eb.onclick=()=>{ta.value=txt;editMode.style.display='block';viewMode.style.display='none';};
-      db.onclick=async()=>{
-        if(!confirm('코멘트를 삭제할까요?'))return;
-        L[field]='';await setLesson(sid,date,L);
-        viewMode.innerHTML='';editMode.style.display='block';
-        ta.value='';
-      };
-      br.appendChild(eb);br.appendChild(db);viewMode.appendChild(br);
-      editMode.style.display='none';
-      viewMode.style.display='block';
-    };
-    row.appendChild(saveBtn);if(saved)row.appendChild(cancelBtn);
-    wrap.appendChild(row);
-    return wrap;
+  cb.appendChild(ta);
+  const msg=mks('div','');cb.appendChild(msg);
+  const btnRow=mks('div','display:flex;gap:8px;margin-top:8px;');
+  const saveBtn=mk('button','btn-primary','저장');saveBtn.style.flex='1';
+  saveBtn.onclick=async()=>{
+    const txt=ta.value.trim();
+    if(!txt){msg.innerHTML='<div class="err">내용을 입력하세요.</div>';return;}
+    saveBtn.textContent='저장 중...';saveBtn.disabled=true;
+    L[field]=txt;delete L[field+'_editing'];
+    await setLesson(sid,date,L);
+    cb.parentNode.replaceChild(pCommentBox(L,field,sid,date),cb);
   };
-
-  editMode.appendChild(buildEditMode());
-
-  // 코멘트 없으면 바로 입력 모드
-  if(!saved)editMode.style.display='block';
-
-  cb.appendChild(viewMode);
-  cb.appendChild(editMode);
+  btnRow.appendChild(saveBtn);
+  if(saved){
+    const cancelBtn=mk('button','btn-ghost','취소');
+    cancelBtn.onclick=()=>{delete L[field+'_editing'];cb.parentNode.replaceChild(pCommentBox(L,field,sid,date),cb);};
+    btnRow.appendChild(cancelBtn);
+  }
+  cb.appendChild(btnRow);
   return cb;
 }
 
