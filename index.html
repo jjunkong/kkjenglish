@@ -199,7 +199,11 @@ let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,notices:MEM.notic
   pStu:null,pDate:TODAY,pLesson:null,pDates:[],pTab:'plan',
   lLeader:null,
   vStu:null,vVideo:null,
+  quiz:null,quizAnswers:{},quizDone:false,
   err:'',showAdd:false,showAllStu:false,showVidAdd:false,showNoticeAdd:false,loading:true};
+
+// ⚠️ 여기에 API 키를 입력하세요
+const CLAUDE_API_KEY='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';
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
@@ -467,7 +471,7 @@ function showModal(title,msg,onOk){
   bg.appendChild(box);document.body.appendChild(bg);
 }
 
-function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin})[Q.scr];if(fn)fn();}
+function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen})[Q.scr];if(fn)fn();}
 
 function home(){
   const w=mks('div','');A.appendChild(w);
@@ -1917,15 +1921,215 @@ async function lLessonView(){
 }
 
 // 학생 조회 (학부모 조회와 동일)
+// 학생 로그인
 async function sLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';Q.sStu=null;render();};hdr.appendChild(bb);
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학생 조회'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 내용 확인'));
   w.appendChild(hdr);
-  // 학부모 조회와 동일 — pLogin으로 리다이렉트
-  Q.scr='pLogin';render();
+  if(Q.sStu){Q.scr='sView';Q.pStu=Q.sStu;Q.pDate=TODAY;Q.pLesson=await getLesson(Q.sStu.id,TODAY);render();return;}
+  const body=mk('div','page-body');w.appendChild(body);
+  const c=mk('div','card');body.appendChild(c);
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:16px;','이름과 코드를 입력해주세요.'));
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','이름'));
+  const ni=document.createElement('input');ni.id='sn';ni.className='inp';ni.placeholder='홍길동';c.appendChild(ni);
+  setTimeout(()=>ni.focus(),50);
+  c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','코드'));
+  const ci=document.createElement('input');ci.id='sc';ci.className='inp';ci.placeholder='1234';c.appendChild(ci);
+  const errDiv=mks('div','');errDiv.id='s-err';c.appendChild(errDiv);
+  const doS=async()=>{
+    const n=(gid('sn')?.value||'').trim(),code=(gid('sc')?.value||'').trim();
+    const stu=Q.students.find(s=>s.name===n&&s.code===code);
+    if(!stu){document.getElementById('s-err').innerHTML='<div class="err">이름 또는 코드가 맞지 않습니다.</div>';return;}
+    Q.sStu=stu;Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=await getLesson(stu.id,TODAY);Q.scr='sView';render();
+  };
+  ci.onkeydown=e=>{if(e.key==='Enter')doS();};
+  mk('button','btn-primary','조회하기').onclick=doS;c.appendChild(c.lastChild||mk('button','btn-primary','조회하기'));
+  const btn2=mk('button','btn-primary','조회하기');btn2.onclick=doS;c.appendChild(btn2);
+}
+
+// 학생 메인 화면
+async function sView(){
+  const stu=Q.sStu;
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';render();};hdr.appendChild(bb);
+  const ph=mks('div','display:flex;justify-content:space-between;align-items:center;');
+  ph.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stu.name));
+  const lo=mk('button','logout-btn','로그아웃');
+  lo.onclick=()=>{Q.sStu=null;Q.pStu=null;Q.scr='sLogin';render();};ph.appendChild(lo);
+  hdr.appendChild(ph);w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+
+  // 복습 박스
+  const qbox=mks('div','background:linear-gradient(135deg,#3b5bdb,#6d28d9);border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;');
+  const ql=mks('div','');
+  ql.appendChild(mks('div','font-size:14px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','📝 복습 퀴즈'));
+  ql.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.65);margin-top:3px;','지난 수업 내용으로 AI가 문제를 만들어요'));
+  qbox.appendChild(ql);
+  qbox.appendChild(mks('span','font-size:20px;color:rgba(255,255,255,0.8);','›'));
+  qbox.onclick=async()=>{await startQuiz(stu);};
+  body.appendChild(qbox);
+
+  // 날짜 드롭다운
+  const now=new Date();const year=now.getFullYear(),month=now.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const monthDates=[];
+  for(let d=daysInMonth;d>=1;d--){
+    const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
+    monthDates.push(`${year}-${mm}-${dd}`);
+  }
+  const ds=document.createElement('select');ds.className='inp';
+  monthDates.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=fd(d)+(d===TODAY?' (오늘)':'');if(d===Q.pDate)o.selected=true;ds.appendChild(o);});
+  ds.onchange=async()=>{Q.pDate=ds.value;Q.pLesson=await getLesson(stu.id,Q.pDate);render();};
+  body.appendChild(ds);
+
+  const L=Q.pLesson;
+  if(L.status==='none'){body.appendChild(mk('div','empty-box','이 날의 수업 기록이 없습니다.'));return;}
+  const hasAnyResult=L.status==='completed'&&LK.some(k=>L.res[k]?.r);
+  if(hasAnyResult){
+    const tabs=mk('div','tab-wrap');body.appendChild(tabs);
+    ['plan','result'].forEach(t=>{
+      if(!Q.pTab)Q.pTab='plan';
+      const tb=mk('button','tab-btn'+(Q.pTab===t?' active':''),t==='plan'?'오늘 배울 내용':'수업 결과');
+      tb.onclick=()=>{Q.pTab=t;render();};tabs.appendChild(tb);
+    });
+  }
+  if(Q.pTab==='result'&&hasAnyResult){
+    body.appendChild(mks('div','font-size:12px;font-weight:700;color:#059669;margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:10px;','✅ 수업 결과'));
+    LK.forEach((k,i)=>body.appendChild(sectionBlockROFiltered(LABELS[i],L.plan[k],L.res[k],true,L,k,L.parentVisible)));
+  } else {
+    LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],null,false,null,k)));
+  }
+}
+
+// 퀴즈 시작 — AI 문제 생성
+async function startQuiz(stu){
+  Q.quiz=null;Q.quizAnswers={};Q.quizDone=false;Q.scr='quizScreen';render();
+
+  // 지난 수업 찾기
+  const dates=await getDates(stu.id);
+  const pastDate=dates.find(d=>d<TODAY);
+  if(!pastDate){Q.quiz={error:'아직 지난 수업 기록이 없어요.'};render();return;}
+  const L=await getLesson(stu.id,pastDate);
+  if(L.status==='none'){Q.quiz={error:'지난 수업 내용이 없어요.'};render();return;}
+
+  const content=LK.map((k,i)=>LABELS[i].split('—')[0].trim()+': '+L.plan[k]).filter(s=>s.split(': ')[1]).join('\n');
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:1500,
+        messages:[{role:'user',content:`다음 영어 수업 내용을 바탕으로 한국어 설명의 객관식 문제 5개를 만들어주세요.
+
+수업 내용:
+${content}
+
+출력 형식은 반드시 아래 JSON만 (다른 텍스트 없이):
+[
+  {
+    "q": "문제 내용",
+    "opts": ["①선택지1","②선택지2","③선택지3","④선택지4"],
+    "ans": 0
+  }
+]
+
+규칙:
+- 수업 내용에서 핵심 개념을 테스트하는 문제
+- 선택지는 4개, ans는 정답 인덱스(0~3)
+- 한국어로 작성
+- JSON만 출력, 코드블록 없이`}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content[0].text.trim();
+    const json=JSON.parse(text.replace(/```json|```/g,'').trim());
+    Q.quiz={questions:json,date:pastDate};
+  } catch(e){
+    Q.quiz={error:'문제 생성 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.'};
+  }
+  render();
+}
+
+// 퀴즈 화면
+function quizScreen(){
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='sView';Q.quiz=null;Q.quizDone=false;render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','📝 복습 퀴즈'));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+
+  if(!Q.quiz){
+    body.appendChild(mks('div','text-align:center;padding:3rem 1rem;',`
+      <div style="font-size:13px;color:#aaa;margin-bottom:12px;">AI가 문제를 만들고 있어요...</div>
+      <div style="font-size:24px;">⏳</div>
+    `));
+    return;
+  }
+  if(Q.quiz.error){
+    body.appendChild(mk('div','empty-box',Q.quiz.error));
+    return;
+  }
+
+  const qs=Q.quiz.questions;
+
+  if(Q.quizDone){
+    // 결과 화면
+    const correct=qs.filter((q,i)=>Q.quizAnswers[i]===q.ans).length;
+    const pct=Math.round(correct/qs.length*100);
+    const color=pct>=80?'#16a34a':pct>=60?'#f59e0b':'#dc2626';
+    const rc=mk('div','card');
+    rc.appendChild(mks('div','text-align:center;padding:1rem 0;',`
+      <div style="font-size:40px;font-weight:800;color:${color};">${pct}점</div>
+      <div style="font-size:14px;color:#888;margin-top:6px;">${qs.length}문제 중 ${correct}개 정답</div>
+    `));
+    body.appendChild(rc);
+    // 오답 해설
+    qs.forEach((q,i)=>{
+      const isCorrect=Q.quizAnswers[i]===q.ans;
+      const card=mks('div',`background:#fff;border:1.5px solid ${isCorrect?'#bbf7d0':'#fecaca'};border-radius:12px;padding:14px;margin-bottom:8px;`);
+      card.appendChild(mks('div',`font-size:12px;font-weight:700;color:${isCorrect?'#16a34a':'#dc2626'};margin-bottom:6px;`,(isCorrect?'✓ 정답':'✗ 오답')+` (${i+1}번)`));
+      card.appendChild(mks('div','font-size:13px;color:#111;margin-bottom:8px;',q.q));
+      q.opts.forEach((opt,j)=>{
+        const isSel=Q.quizAnswers[i]===j,isAns=q.ans===j;
+        const style=isAns?'font-weight:700;color:#16a34a;':isSel?'color:#dc2626;text-decoration:line-through;':'color:#888;';
+        card.appendChild(mks('div',`font-size:12px;${style};padding:2px 0;`,opt+(isAns?' ✓':'')));
+      });
+      body.appendChild(card);
+    });
+    const retryBtn=mk('button','btn-primary','다시 풀기');
+    retryBtn.onclick=()=>{Q.quizAnswers={};Q.quizDone=false;render();};
+    body.appendChild(retryBtn);
+    return;
+  }
+
+  // 문제 풀기 화면
+  body.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:14px;',`${fd(Q.quiz.date)} 수업 기반`));
+  qs.forEach((q,i)=>{
+    const card=mk('div','section-block');
+    card.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:10px;',`${i+1}. ${q.q}`));
+    q.opts.forEach((opt,j)=>{
+      const sel=Q.quizAnswers[i]===j;
+      const btn=mks('div',`padding:10px 12px;border-radius:10px;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};cursor:pointer;font-size:12px;color:${sel?'#1a2f6e':'#333'};margin-bottom:6px;`);
+      btn.textContent=opt;
+      btn.onclick=()=>{Q.quizAnswers[i]=j;render();};
+      card.appendChild(btn);
+    });
+    body.appendChild(card);
+  });
+
+  const allAnswered=qs.every((_,i)=>Q.quizAnswers[i]!==undefined);
+  const submitBtn=mk('button','btn-primary','제출하기');
+  if(!allAnswered){submitBtn.disabled=true;submitBtn.style.opacity='0.5';}
+  submitBtn.onclick=()=>{Q.quizDone=true;render();};
+  body.appendChild(submitBtn);
+  if(!allAnswered)body.appendChild(mks('div','font-size:11px;color:#aaa;text-align:center;margin-top:8px;','모든 문제에 답을 선택해주세요'));
 }
 (async()=>{
   A.innerHTML='';
