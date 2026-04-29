@@ -626,7 +626,7 @@ async function aStuEdit(){
     if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
     if(Q.students.find(s=>s.name===n&&s.id!==stu.id)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
     const idx=Q.students.findIndex(s=>s.id===stu.id);
-    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,days:stu.days,videos:stu.videos||[]};
+    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||''};
     await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
