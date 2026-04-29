@@ -300,7 +300,7 @@ function showModal(title,msg,onOk){
   bg.appendChild(box);document.body.appendChild(bg);
 }
 
-function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite})[Q.scr];if(fn)fn();}
+function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite})[Q.scr];if(fn)fn();}
 
 function home(){
   const w=mks('div','');A.appendChild(w);
@@ -442,6 +442,19 @@ async function aList(){
   const otherStu=Q.students.filter(s=>!s.days||!s.days.includes(selDow));
 
   const body=mk('div','page-body');w.appendChild(body);
+
+  // 공통 수업 계획 버튼
+  if(todayStu.length>0){
+    const groupBtn=mks('div','background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;');
+    const gl=mks('div','');
+    gl.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;','📋 공통 수업 계획 입력'));
+    gl.appendChild(mks('div','font-size:11px;color:#818cf8;margin-top:2px;',`${DAYS[selDow]}요일 학생 ${todayStu.length}명에게 한 번에 적용`));
+    groupBtn.appendChild(gl);
+    groupBtn.appendChild(mks('span','font-size:18px;color:#818cf8;','›'));
+    groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=todayStu;render();};
+    body.appendChild(groupBtn);
+  }
+
   const hdr2=mk('div','hdr-row');body.appendChild(hdr2);
   const hl=mks('div','');
   hl.appendChild(mks('div','font-size:14px;font-weight:700;color:#111;',`${DAYS[selDow]}요일 수업 학생 ${todayStu.length}명`));
@@ -661,6 +674,57 @@ async function aLessonView(){
       setTimeout(()=>{Q.scr='aList';render();},700);
     };body.appendChild(btn);
   }
+}
+
+async function aGroupPlan(){
+  const date=Q._groupDate;
+  const students=Q._groupStudents||[];
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','공통 수업 계획'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',`${fd(date)} · ${students.length}명 적용`));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+
+  // 적용 대상 학생 표시
+  const stuWrap=mks('div','display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;');
+  students.forEach(s=>{
+    stuWrap.appendChild(mks('span','font-size:11px;background:#eef2ff;color:#1a2f6e;padding:3px 10px;border-radius:20px;font-weight:600;',s.name));
+  });
+  body.appendChild(stuWrap);
+
+  // 공통 입력 레슨 객체
+  const GL={plan:{check:'',core:'',fix:''}};
+
+  LK.forEach((k,i)=>{
+    const sb=mk('div','section-block');
+    sb.appendChild(mk('div','section-tag',LABELS[i].split('—')[0].trim()));
+    sb.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:8px;',LABELS[i].split('—')[1]?.trim()||''));
+    const ta=document.createElement('textarea');
+    ta.className='section-ta';ta.rows=3;ta.placeholder='내용을 입력하세요...';
+    ta.oninput=()=>GL.plan[k]=ta.value;
+    sb.appendChild(ta);body.appendChild(sb);
+  });
+
+  const msg=mks('div','');body.appendChild(msg);
+  const btn=mk('button','btn-primary',`${students.length}명에게 일괄 적용`);
+  btn.onclick=async()=>{
+    btn.textContent='저장 중...';btn.disabled=true;
+    let count=0;
+    for(const stu of students){
+      const existing=await getLesson(stu.id,date);
+      // 기존 내용이 없는 경우에만 덮어씀 (개별 입력 보호)
+      if(existing.status==='none'||confirm(`${stu.name} 학생은 이미 수업 계획이 있습니다. 덮어쓸까요?`)){
+        const newL={...existing,plan:{...GL.plan},status:'planned'};
+        await setLesson(stu.id,date,newL);
+        count++;
+      }
+    }
+    msg.innerHTML=`<div class="ok-msg">✓ ${count}명에게 적용됐습니다!</div>`;
+    setTimeout(()=>{Q.scr='aList';render();},900);
+  };
+  body.appendChild(btn);
 }
 
 async function aSettings(){
