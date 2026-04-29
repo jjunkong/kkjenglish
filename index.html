@@ -344,13 +344,15 @@ function sectionBlockRO(label,plan,res,showRes,L,key){
   w.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;min-height:16px;',plan||'<span style="color:#ccc">—</span>'));
   if(showRes&&res){
     w.appendChild(mk('div','divider'));
-    if(res.r){
-      const row=mks('div','display:flex;align-items:center;gap:8px;');
-      row.appendChild(mks('span',`display:inline-block;font-size:12px;font-weight:700;color:#fff;background:${RC[res.r]};padding:3px 14px;border-radius:20px;`,res.r));
-      if(res.m)row.appendChild(mks('span','font-size:12px;color:#888;',res.m));
-      w.appendChild(row);
-    } else {
-      w.appendChild(mks('div','font-size:12px;color:#ccc;','완성도 미입력'));
+    if(key!=='fix'){
+      if(res.r){
+        const row=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:6px;');
+        row.appendChild(mks('span',`display:inline-block;font-size:12px;font-weight:700;color:#fff;background:${RC[res.r]};padding:3px 14px;border-radius:20px;`,res.r));
+        if(res.m)row.appendChild(mks('span','font-size:12px;color:#888;',res.m));
+        w.appendChild(row);
+      } else {
+        w.appendChild(mks('div','font-size:12px;color:#ccc;margin-bottom:6px;','완성도 미입력'));
+      }
     }
     // Maintenance 섹션 — 단어시험 + 듣기과제 표시
     if(key==='fix'&&L){
@@ -1166,20 +1168,6 @@ async function pView(){
   } else {
     body.appendChild(mks('div','font-size:12px;font-weight:700;color:#059669;margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:10px;','✅ 수업 결과'));
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],true,L,k)));
-    // 단어시험 결과
-    if(L.vocab&&(L.vocab.score||L.vocab.pass)){
-      const vb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px 14px;margin-top:4px;');
-      const vhdr=mks('div','display:flex;align-items:center;gap:10px;margin-bottom:6px;');
-      vhdr.appendChild(mks('div','font-size:11px;font-weight:700;background:#1a2f6e;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap;','단어시험'));
-      if(L.vocab.score)vhdr.appendChild(mks('div','font-size:16px;font-weight:700;color:#1a2f6e;',L.vocab.score+'점'));
-      if(L.vocab.pass){
-        const pass=L.vocab.pass==='pass';
-        vhdr.appendChild(mks('span',`font-size:12px;font-weight:700;color:#fff;background:${pass?'#16a34a':'#dc2626'};padding:3px 12px;border-radius:20px;`,pass?'통과':'불통'));
-      }
-      vb.appendChild(vhdr);
-      if(L.vocab.comment)vb.appendChild(mks('div','font-size:12px;color:#888;',L.vocab.comment));
-      body.appendChild(vb);
-    }
     // 수업 결과 탭 코멘트
     if(Q.pDate===TODAY){
       body.appendChild(pCommentBox(L,'resultComment',Q.pStu.id,Q.pDate));
