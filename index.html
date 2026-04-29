@@ -420,14 +420,15 @@ function home(){
     const t=document.getElementById('hdr-title-main');
     if(b&&t){
       const bw=b.offsetWidth;
-      t.style.fontSize=`${Math.min(22, Math.floor(bw/5.2))}px`;
       t.style.width=bw+'px';
-      t.style.textAlign='justify';
-      t.style.textAlignLast='justify';
+      t.style.display='block';
+      // 글자 수로 letter-spacing 계산
+      const chars=t.textContent.length;
+      const tw=t.scrollWidth;
+      const diff=bw-tw;
+      t.style.letterSpacing=(diff/(chars-1))+'px';
     }
   });
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
-  w.appendChild(hdr);
 
   // 공지사항 섹션 (클릭 → 새 화면)
   const nb=mks('div','margin:10px 12px 0;background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:10px 14px;cursor:pointer;');
