@@ -25,12 +25,12 @@
 <title>김기준영어학원 수업 관리</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'NanumGothic','Nanum Gothic',-apple-system,sans-serif;background:#f0f0ee;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
-  #app{width:100%;max-width:480px;min-height:100vh;background:#f0f0ee;padding-top:40px;}
+  body{font-family:'NanumGothic','Nanum Gothic',-apple-system,sans-serif;background:linear-gradient(160deg,#0a2a8a 0%,#0e9fd8 60%,#1a6fd4 100%);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0;}
+  #app{width:100%;max-width:480px;min-height:100vh;background:transparent;padding-top:40px;}
   .gm{font-family:'GmarketSans','NanumGothic',sans-serif;font-weight:700;}
   input,select,textarea,button{font-family:'NanumGothic','Nanum Gothic',-apple-system,sans-serif;}
   /* 네이비 상단 헤더 */
-  .page-header{background:#1a2f6e;padding:20px 20px 24px;position:relative;border-radius:20px;margin:12px 12px 0;}
+  .page-header{background:linear-gradient(135deg,#3b5bdb 0%,#6d28d9 100%);padding:20px 20px 24px;position:relative;border-radius:20px;margin:12px 12px 0;}
   .page-header-sub{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.08em;margin-bottom:4px;}
   .page-header-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;}
   .page-header-desc{font-size:11px;color:rgba(255,255,255,0.5);}
@@ -48,7 +48,7 @@
   .btn-back{background:transparent;border:none;color:rgba(255,255,255,0.7);font-size:12px;cursor:pointer;padding:0 0 12px;display:block;}
   .btn-back-dark{background:transparent;border:none;color:#888;font-size:12px;cursor:pointer;padding:0 0 14px;display:block;}
   .btn-ghost{background:transparent;border:1px solid #ddd;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:#444;}
-  .btn-ghost:hover{background:#f0f0ee;}
+  .btn-ghost:hover{background:#e8e4f4;}
   .btn-ghost-inv{background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:#fff;}
   .btn-ghost-inv:hover{background:rgba(255,255,255,0.25);}
   .btn-sm{background:#f5f5f3;border:none;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;color:#666;}
@@ -87,8 +87,8 @@
   .home-card{background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:16px 14px;cursor:pointer;transition:border-color .15s;}
   .home-card:hover{border-color:#aaa;}
   .home-card-icon{width:34px;height:34px;border-radius:9px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:16px;}
-  .home-card-full{background:#1a2f6e;border-radius:14px;padding:16px;cursor:pointer;grid-column:1/-1;display:flex;align-items:center;gap:14px;transition:background .15s;}
-  .home-card-full:hover{background:#1e3a8a;}
+  .home-card-full{background:linear-gradient(135deg,#3b5bdb 0%,#6d28d9 100%);border-radius:14px;padding:16px;cursor:pointer;grid-column:1/-1;display:flex;align-items:center;gap:14px;transition:background .15s;}
+  .home-card-full:hover{background:linear-gradient(135deg,#4c6ef5 0%,#7c3aed 100%);}
   .home-card-full-icon{width:38px;height:38px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
   .tog-btn{width:100%;padding:10px;border:1px dashed #ddd;border-radius:10px;background:transparent;color:#aaa;font-size:12px;cursor:pointer;margin-top:4px;}
   .date-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
@@ -103,7 +103,7 @@
   .logout-btn-dark{font-size:12px;color:#aaa;background:transparent;border:none;cursor:pointer;padding:0;}
   .chart-wrap{background:#fff;border-radius:14px;padding:1rem;margin-bottom:12px;border:1px solid #e8e8e6;}
   .chart-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-  .chart-bar-bg{flex:1;background:#f0f0ee;border-radius:4px;height:22px;overflow:hidden;}
+  .chart-bar-bg{flex:1;background:#e8e4f4;border-radius:4px;height:22px;overflow:hidden;}
   .chart-bar-fill{height:100%;border-radius:4px;}
   .modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;}
   .modal{background:#fff;border-radius:16px;padding:1.5rem;width:90%;max-width:360px;}
@@ -397,8 +397,12 @@ function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEd
 
 function home(){
   const w=mks('div','');A.appendChild(w);
-  const hdr=mks('div','background:#1a2f6e;padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
-  hdr.appendChild(mks('div','font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:.1em;margin-bottom:6px;','KIMKIJUN ENGLISH ACADEMY'));
+  const hdr=mks('div','background:linear-gradient(135deg,#3b5bdb 0%,#6d28d9 100%);padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
+  // 검정 배지 + 그라데이션 볼드 텍스트
+  const badge=mks('div','display:inline-block;background:#0a0a14;border-radius:20px;padding:5px 14px;margin-bottom:10px;');
+  const badgeText=mks('span','font-size:10px;font-weight:800;letter-spacing:.1em;','KIMKIJUN ENGLISH ACADEMY');
+  badgeText.style.cssText='font-size:10px;font-weight:800;letter-spacing:.1em;background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;';
+  badge.appendChild(badgeText);hdr.appendChild(badge);
   hdr.appendChild(mks('div','font-size:22px;font-weight:700;color:#fff;margin-bottom:3px;font-family:GmarketSans,Nanum Gothic,sans-serif;','김기준영어학원'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
   w.appendChild(hdr);
