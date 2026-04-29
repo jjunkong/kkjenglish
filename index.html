@@ -1301,14 +1301,32 @@ async function pView(){
   }
   if(Q.pTab==='plan'||L.status==='planned'){
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],null,false,L,k)));
-    // 오늘 배울 내용 탭 코멘트
+    // 강사 코멘트 (오늘 배울 내용 탭)
+    if(L.leaderComments&&Object.values(L.leaderComments).some(v=>v)){
+      const lc=mks('div','background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-top:8px;');
+      lc.appendChild(mks('div','font-size:11px;font-weight:700;color:#3730a3;margin-bottom:8px;','💬 강사 코멘트'));
+      LK.forEach((k,i)=>{if(L.leaderComments[k]){
+        lc.appendChild(mks('div','font-size:10px;font-weight:700;color:#6366f1;margin-bottom:2px;',LABELS[i].split('—')[0].trim()));
+        lc.appendChild(mks('div','font-size:12px;color:#333;line-height:1.5;margin-bottom:7px;',L.leaderComments[k]));
+      }});
+      body.appendChild(lc);
+    }
     if(Q.pDate===TODAY){
       body.appendChild(pCommentBox(L,'planComment',Q.pStu.id,Q.pDate));
     }
   } else {
     body.appendChild(mks('div','font-size:12px;font-weight:700;color:#059669;margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:10px;','✅ 수업 결과'));
     LK.forEach((k,i)=>body.appendChild(sectionBlockRO(LABELS[i],L.plan[k],L.res[k],true,L,k)));
-    // 수업 결과 탭 코멘트
+    // 강사 코멘트 (수업 결과 탭)
+    if(L.leaderComments&&Object.values(L.leaderComments).some(v=>v)){
+      const lc=mks('div','background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-top:8px;');
+      lc.appendChild(mks('div','font-size:11px;font-weight:700;color:#3730a3;margin-bottom:8px;','💬 강사 코멘트'));
+      LK.forEach((k,i)=>{if(L.leaderComments[k]){
+        lc.appendChild(mks('div','font-size:10px;font-weight:700;color:#6366f1;margin-bottom:2px;',LABELS[i].split('—')[0].trim()));
+        lc.appendChild(mks('div','font-size:12px;color:#333;line-height:1.5;margin-bottom:7px;',L.leaderComments[k]));
+      }});
+      body.appendChild(lc);
+    }
     if(Q.pDate===TODAY){
       body.appendChild(pCommentBox(L,'resultComment',Q.pStu.id,Q.pDate));
     }
