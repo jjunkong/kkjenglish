@@ -1094,8 +1094,20 @@ async function pChart(){
     const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
     allMonthDates.push(`${year}-${mm}-${dd}`);
   }
+  // 로딩 표시
+  body.appendChild(mks('div','font-size:12px;color:#aaa;text-align:center;padding:20px;','데이터 불러오는 중...'));
+
+  // 학생 전체 레슨 한 번에 로드 (30번 → 1번)
+  const allLessonsRaw=await fbGet(`lessons/${Q.pStu.id}`)||{};
   const lessonCache={};
-  for(const d of allMonthDates){lessonCache[d]=await getLesson(Q.pStu.id,d);}
+  allMonthDates.forEach(d=>{
+    const key=d.replace(/-/g,'_');
+    lessonCache[d]=allLessonsRaw[key]||emL();
+    // 메모리 캐시에도 저장
+    MEM.lessons[`${Q.pStu.id}__${d}`]=lessonCache[d];
+  });
+
+  body.innerHTML='';
 
   // ① 단어시험 그래프 (통과/불통 있는 날만)
   // 단어시험: 점수 또는 통과/불통 있는 날짜 모두 포함
