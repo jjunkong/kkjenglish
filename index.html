@@ -589,7 +589,7 @@ async function aStuEdit(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','학생 정보 수정'));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
@@ -679,7 +679,7 @@ async function aLessonView(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;',Q.aStu.name));
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.aStu)));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(Q.aDate)));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
