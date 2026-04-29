@@ -400,7 +400,7 @@ function home(){
   const hdr=mks('div','background:linear-gradient(135deg,#3b5bdb 0%,#6d28d9 100%);padding:28px 20px 24px;border-radius:20px;margin:12px 12px 0;');
   // 검정 배지 + 그라데이션 볼드 텍스트
   const badge=mks('div','display:inline-block;background:#0a0a14;border-radius:20px;padding:5px 14px;margin-bottom:10px;');
-  const badgeText=mks('span','','KIMKIJUN ENGLISH ACADEMY');
+  const badgeText=mks('span','','KIMKIJUN ENGLISH MANAGEMENT');
   badgeText.style.cssText='font-size:10px;font-weight:800;letter-spacing:.1em;background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;';
   badge.appendChild(badgeText);hdr.appendChild(badge);
   // 제목을 배지와 같은 너비로
@@ -414,19 +414,16 @@ function home(){
   hdr.appendChild(titleEl);
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);','수업 관리 시스템'));
   w.appendChild(hdr);
-  // 배지 너비에 제목 맞추기
-  requestAnimationFrame(()=>{
+  // 배지 너비에 제목 맞추기 (폰트 로드 후)
+  document.fonts.ready.then(()=>{
     const b=document.getElementById('hdr-badge-main');
     const t=document.getElementById('hdr-title-main');
     if(b&&t){
-      const bw=b.offsetWidth;
-      t.style.width=bw+'px';
-      t.style.display='block';
-      // 글자 수로 letter-spacing 계산
+      const bw=b.getBoundingClientRect().width;
+      t.style.letterSpacing='0px';
+      const tw=t.getBoundingClientRect().width;
       const chars=t.textContent.length;
-      const tw=t.scrollWidth;
-      const diff=bw-tw;
-      t.style.letterSpacing=(diff/(chars-1))+'px';
+      if(chars>1)t.style.letterSpacing=((bw-tw)/(chars-1))+'px';
     }
   });
 
