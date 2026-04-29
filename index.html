@@ -146,6 +146,7 @@ const initData=async()=>{
   const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);
   const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);
   const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);
+  const apikey=await fbGet('apikey');if(apikey)CLAUDE_API_KEY=apikey;
 };
 
 const saveStu=async()=>{
@@ -202,8 +203,8 @@ let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,notices:MEM.notic
   quiz:null,quizAnswers:{},quizDone:false,
   err:'',showAdd:false,showAllStu:false,showVidAdd:false,showNoticeAdd:false,loading:true};
 
-// ⚠️ 여기에 API 키를 입력하세요
-const CLAUDE_API_KEY='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';
+// API 키는 Firebase에서 로드 (설정에서 입력)
+let CLAUDE_API_KEY='';
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
@@ -1102,6 +1103,26 @@ async function aSettings(){
     pmsg.innerHTML='<div class="ok-msg">✓ 비밀번호가 변경되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},1000);
   };c.appendChild(pbtn);
+
+  // Claude API 키 설정
+  const ac=mk('div','card');ac.style.marginTop='12px';w2.appendChild(ac);
+  ac.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','복습 퀴즈 API 키'));
+  ac.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:10px;','console.anthropic.com 에서 발급받은 API 키를 입력하세요'));
+  const aki=document.createElement('input');aki.className='inp';aki.type='password';
+  aki.placeholder='sk-ant-...';aki.value=CLAUDE_API_KEY||'';
+  ac.appendChild(aki);
+  const akmsg=mks('div','');ac.appendChild(akmsg);
+  const akBtn=mk('button','btn-primary','저장');
+  akBtn.onclick=async()=>{
+    const key=aki.value.trim();
+    if(!key){akmsg.innerHTML='<div class="err">API 키를 입력하세요.</div>';return;}
+    akBtn.textContent='저장 중...';akBtn.disabled=true;
+    CLAUDE_API_KEY=key;
+    await fbSet('apikey',key);
+    akmsg.innerHTML='<div class="ok-msg">✓ 저장됐습니다!</div>';
+    akBtn.textContent='저장';akBtn.disabled=false;
+  };
+  ac.appendChild(akBtn);
 
   // 반 관리
   const cc=mk('div','card');cc.style.marginTop='12px';w2.appendChild(cc);
@@ -2046,12 +2067,18 @@ ${content}
 - JSON만 출력, 코드블록 없이`}]
       })
     });
+    if(!res.ok){
+      const errText=await res.text();
+      console.error('API 오류:', res.status, errText);
+      Q.quiz={error:`API 오류 (${res.status}): ${errText.slice(0,200)}`};render();return;
+    }
     const data=await res.json();
     const text=data.content[0].text.trim();
     const json=JSON.parse(text.replace(/```json|```/g,'').trim());
     Q.quiz={questions:json,date:pastDate};
   } catch(e){
-    Q.quiz={error:'문제 생성 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.'};
+    console.error('퀴즈 오류:', e);
+    Q.quiz={error:`오류: ${e.message}`};
   }
   render();
 }
