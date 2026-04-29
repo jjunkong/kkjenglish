@@ -136,7 +136,7 @@ const fbSet=async(path,val)=>{try{await fetch(`${FB}/${path}.json`,{method:'PUT'
 const fbDel=async path=>{try{await fetch(`${FB}/${path}.json`,{method:'DELETE'});return true;}catch{return false;}};
 
 // 메모리 캐시
-const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[]};
+const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[]};
 
 // 초기 로딩
 const initData=async()=>{
@@ -144,6 +144,7 @@ const initData=async()=>{
   const pw=await fbGet('pw');if(pw)MEM.pw=pw;
   const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);
   const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);
+  const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);
 };
 
 const saveStu=async()=>{
@@ -154,6 +155,7 @@ const saveStu=async()=>{
 const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
 const saveVideos=async()=>{MEM.videos=Q.videos;await fbSet('videos',Q.videos);};
 const saveNotices=async()=>{MEM.notices=Q.notices;await fbSet('notices',Q.notices);};
+const saveClasses=async()=>{MEM.classes=Q.classes;await fbSet('classes',Q.classes);};
 
 const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
@@ -190,7 +192,7 @@ const deleteStu=async sid=>{
   if(MEM.dates)delete MEM.dates[sid];
 };
 
-let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,
+let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,notices:MEM.notices,classes:MEM.classes,
   aDate:TODAY,aStu:null,aLesson:null,aTab:'plan',editStu:null,
   pStu:null,pDate:TODAY,pLesson:null,pDates:[],pTab:'plan',
   vStu:null,vVideo:null,
@@ -443,22 +445,95 @@ async function aList(){
 
   const body=mk('div','page-body');w.appendChild(body);
 
-  // 공통 수업 계획 버튼
-  if(todayStu.length>0){
-    const groupBtn=mks('div','background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;');
-    const gl=mks('div','');
-    gl.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;','📋 공통 수업 계획 입력'));
-    gl.appendChild(mks('div','font-size:11px;color:#818cf8;margin-top:2px;',`${DAYS[selDow]}요일 학생 ${todayStu.length}명에게 한 번에 적용`));
-    groupBtn.appendChild(gl);
-    groupBtn.appendChild(mks('span','font-size:18px;color:#818cf8;','›'));
-    groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=todayStu;render();};
-    body.appendChild(groupBtn);
+  // 반이 없으면 안내
+  if(!Q.classes||!Q.classes.length){
+    const nb=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:14px;');
+    nb.appendChild(mks('div','font-size:13px;color:#92400e;margin-bottom:6px;','⚙ 설정에서 반을 먼저 만들어주세요.'));
+    nb.appendChild(mks('div','font-size:11px;color:#b45309;','설정 → 반 관리 → + 반 추가'));
+    body.appendChild(nb);
+  }
+
+  // 반별 그룹
+  const classes=Q.classes||[];
+  const unassigned=todayStu.filter(s=>!s.classId);
+
+  // 반 카드 렌더
+  const renderClassCard=(cls,stuList)=>{
+    if(!stuList.length)return;
+    const expanded=Q._expandedClass===cls.id;
+    const card=mks('div','background:#fff;border:1.5px solid #e8e8e6;border-radius:14px;margin-bottom:10px;overflow:hidden;');
+
+    // 반 헤더
+    const chdr=mks('div','display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;');
+    const cl=mks('div','display:flex;align-items:center;gap:10px;');
+    cl.appendChild(mks('div','font-size:14px;font-weight:700;color:#1a2f6e;',cls.name));
+    cl.appendChild(mks('span','font-size:11px;color:#aaa;',`${stuList.length}명`));
+    // 코멘트 알림 체크
+    chdr.appendChild(cl);
+    chdr.appendChild(mks('span','font-size:16px;color:#aaa;transition:transform .2s;',expanded?'▲':'▼'));
+    chdr.onclick=()=>{Q._expandedClass=expanded?null:cls.id;render();};
+    card.appendChild(chdr);
+
+    if(expanded){
+      const cbody=mks('div','padding:0 14px 14px;border-top:1px solid #f0f0ee;');
+
+      // 공통 수업 계획 버튼
+      const groupBtn=mks('div','background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:10px;padding:10px 12px;margin:10px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;');
+      const gl=mks('div','');
+      gl.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;','📋 공통 수업 계획 입력'));
+      gl.appendChild(mks('div','font-size:10px;color:#818cf8;margin-top:2px;','선택한 학생에게 적용'));
+      groupBtn.appendChild(gl);groupBtn.appendChild(mks('span','font-size:14px;color:#818cf8;','›'));
+      groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=stuList;Q._groupClassName=cls.name;render();};
+      cbody.appendChild(groupBtn);
+
+      // 학생 목록
+      const SL_BADGE={none:'badge badge-none',planned:'badge badge-plan',completed:'badge badge-done'};
+      stuList.forEach(stu=>{
+        const l=MEM.lessons[`${stu.id}__${Q.aDate}`]||{status:'none'};
+        const sc=mk('div','stu-card');sc.style.marginBottom='6px';
+        const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
+        const left=mks('div','flex:1;cursor:pointer;');
+        left.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',stu.name));
+        left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
+        row.appendChild(left);
+        const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
+        if(l.planComment||l.resultComment)right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
+        right.appendChild(mk('span',SL_BADGE[l.status],SL[l.status]));
+        const editBtn=mk('button','btn-sm','✏');
+        editBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
+        right.appendChild(editBtn);row.appendChild(right);sc.appendChild(row);cbody.appendChild(sc);
+      });
+      card.appendChild(cbody);
+    }
+    body.appendChild(card);
+  };
+
+  // 반별로 학생 분류
+  classes.forEach(cls=>{
+    const stuList=todayStu.filter(s=>s.classId===cls.id);
+    renderClassCard(cls,stuList);
+  });
+
+  // 반 미배정 학생
+  if(unassigned.length){
+    renderClassCard({id:'__none__',name:'반 미배정'},unassigned);
+  }
+
+  // 오늘 수업 없는 학생
+  if(otherStu.length){
+    const tog=mk('button','tog-btn',Q.showAllStu?'▲ 다른 요일 학생 접기':`▼ 다른 요일 학생도 보기 (${otherStu.length}명)`);
+    tog.onclick=()=>{Q.showAllStu=!Q.showAllStu;render();};body.appendChild(tog);
+    if(Q.showAllStu){
+      body.appendChild(mks('div','font-size:11px;color:#aaa;padding:8px 2px 4px;','다른 요일 학생'));
+      otherStu.forEach(stu=>{
+        const sc=mk('div','stu-card');sc.style.opacity='0.4';
+        sc.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',stu.name));
+        body.appendChild(sc);
+      });
+    }
   }
 
   const hdr2=mk('div','hdr-row');body.appendChild(hdr2);
-  const hl=mks('div','');
-  hl.appendChild(mks('div','font-size:14px;font-weight:700;color:#111;',`${DAYS[selDow]}요일 수업 학생 ${todayStu.length}명`));
-  hdr2.appendChild(hl);
   const ab=mk('button','btn-ghost',Q.showAdd?'닫기':'+ 학생 추가');
   ab.onclick=()=>{Q.showAdd=!Q.showAdd;Q.err='';render();};hdr2.appendChild(ab);
 
@@ -469,6 +544,14 @@ async function aList(){
     const nn=document.createElement('input');nn.id='an';nn.className='inp';nn.placeholder='홍길동';af.appendChild(nn);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드 (숫자 4자리 권장)'));
     const nc=document.createElement('input');nc.id='ac';nc.className='inp';nc.placeholder='예: 1234';af.appendChild(nc);
+    // 반 선택
+    if(Q.classes&&Q.classes.length){
+      af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반 선택'));
+      const cs=document.createElement('select');cs.id='acls';cs.className='inp';
+      const opt0=document.createElement('option');opt0.value='';opt0.textContent='반 없음';cs.appendChild(opt0);
+      Q.classes.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;cs.appendChild(o);});
+      af.appendChild(cs);
+    }
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일 선택'));
     let selDays2=[];
     const dpWrap=mks('div','');af.appendChild(dpWrap);
@@ -477,49 +560,12 @@ async function aList(){
     const addBtn=mk('button','btn-primary','추가 완료');
     addBtn.onclick=async()=>{
       const n=(gid('an')?.value||'').trim(),c2=(gid('ac')?.value||'').trim();
+      const classId=gid('acls')?.value||'';
       if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
       if(Q.students.find(s=>s.name===n)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
-      Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2});
+      Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2,classId});
       await saveStu();Q.showAdd=false;Q.err='';render();
     };af.appendChild(addBtn);
-  }
-
-  if(!Q.students.length){body.appendChild(mk('div','empty-box','등록된 학생이 없습니다.'));return;}
-
-  const list=mks('div','');body.appendChild(list);
-  const SL_BADGE={none:'badge badge-none',planned:'badge badge-plan',completed:'badge badge-done'};
-  const renderCard=async(stu,dimmed)=>{
-    const l=await getLesson(stu.id,Q.aDate);
-    const sc=mk('div','stu-card');if(dimmed)sc.style.opacity='0.4';
-    const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
-    const left=mks('div','flex:1;cursor:pointer;');
-    left.appendChild(mks('div','font-size:14px;font-weight:600;color:#111;',stu.name));
-    const sub=mk('div','sub-info');
-    sub.appendChild(dayTags(stu.days||[]));
-    sub.appendChild(mks('span','color:#ddd;','·'));
-    sub.appendChild(mks('span','',`코드 ${stu.code}`));
-    left.appendChild(sub);
-    left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
-    row.appendChild(left);
-    const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
-    // 학부모 코멘트 알림
-    if(l.planComment||l.resultComment){
-      right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
-    }
-    const badge=mk('span',SL_BADGE[l.status],SL[l.status]);right.appendChild(badge);
-    const editBtn=mk('button','btn-sm','✏');
-    editBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
-    right.appendChild(editBtn);row.appendChild(right);sc.appendChild(row);list.appendChild(sc);
-  };
-  if(todayStu.length)for(const s of todayStu)await renderCard(s,false);
-  else list.appendChild(mk('div','empty-box',`${DAYS[selDow]}요일 수업 학생이 없습니다.`));
-  if(otherStu.length){
-    const tog=mk('button','tog-btn',Q.showAllStu?'▲ 다른 요일 학생 접기':`▼ 다른 요일 학생도 보기 (${otherStu.length}명)`);
-    tog.onclick=()=>{Q.showAllStu=!Q.showAllStu;render();};list.appendChild(tog);
-    if(Q.showAllStu){
-      list.appendChild(mks('div','font-size:11px;color:#aaa;padding:8px 2px 4px;','다른 요일 학생'));
-      for(const s of otherStu)await renderCard(s,true);
-    }
   }
 }
 
@@ -535,6 +581,15 @@ async function aStuEdit(){
   const ni=document.createElement('input');ni.className='inp';ni.value=stu.name;body.appendChild(ni);
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드'));
   const ci=document.createElement('input');ci.className='inp';ci.value=stu.code;body.appendChild(ci);
+  // 반 선택
+  if(Q.classes&&Q.classes.length){
+    body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반'));
+    const cs=document.createElement('select');cs.className='inp';
+    const opt0=document.createElement('option');opt0.value='';opt0.textContent='반 없음';cs.appendChild(opt0);
+    Q.classes.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;if(c.id===stu.classId)o.selected=true;cs.appendChild(o);});
+    cs.onchange=()=>stu.classId=cs.value;
+    body.appendChild(cs);
+  }
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일'));
   const dpWrap=mks('div','');body.appendChild(dpWrap);
   const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(stu.days||[],ns=>{stu.days=ns;reRDP();}));};reRDP();
@@ -679,24 +734,46 @@ async function aLessonView(){
 async function aGroupPlan(){
   const date=Q._groupDate;
   const students=Q._groupStudents||[];
+  const className=Q._groupClassName||'';
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;','공통 수업 계획'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',`${fd(date)} · ${students.length}명 적용`));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',`${className} · ${fd(date)}`));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
 
-  // 적용 대상 학생 표시
-  const stuWrap=mks('div','display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;');
+  // 학생 체크박스 선택
+  body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin-bottom:8px;','적용할 학생 선택'));
+  const checks={};
+  const stuWrap=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px;margin-bottom:14px;');
   students.forEach(s=>{
-    stuWrap.appendChild(mks('span','font-size:11px;background:#eef2ff;color:#1a2f6e;padding:3px 10px;border-radius:20px;font-weight:600;',s.name));
+    checks[s.id]=true;
+    const row=mks('div','display:flex;align-items:center;gap:10px;padding:6px 0;');
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;
+    cb.style.cssText='width:16px;height:16px;accent-color:#1a2f6e;cursor:pointer;flex-shrink:0;';
+    cb.onchange=()=>checks[s.id]=cb.checked;
+    row.appendChild(cb);
+    row.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',s.name));
+    stuWrap.appendChild(row);
   });
+  // 전체 선택/해제
+  const allRow=mks('div','display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f0ee;margin-bottom:4px;');
+  const allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=true;
+  allCb.style.cssText='width:16px;height:16px;accent-color:#1a2f6e;cursor:pointer;flex-shrink:0;';
+  allCb.onchange=()=>{
+    const v=allCb.checked;
+    Object.keys(checks).forEach(k=>checks[k]=v);
+    stuWrap.querySelectorAll('input[type=checkbox]').forEach((c,i)=>{if(i>0)c.checked=v;});
+  };
+  allRow.appendChild(allCb);
+  allRow.appendChild(mks('div','font-size:12px;font-weight:700;color:#888;','전체 선택'));
+  stuWrap.insertBefore(allRow,stuWrap.firstChild);
   body.appendChild(stuWrap);
 
-  // 공통 입력 레슨 객체
+  // 수업 내용 입력
+  body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin-bottom:8px;','수업 내용 입력'));
   const GL={plan:{check:'',core:'',fix:''}};
-
   LK.forEach((k,i)=>{
     const sb=mk('div','section-block');
     sb.appendChild(mk('div','section-tag',LABELS[i].split('—')[0].trim()));
@@ -708,18 +785,19 @@ async function aGroupPlan(){
   });
 
   const msg=mks('div','');body.appendChild(msg);
-  const btn=mk('button','btn-primary',`${students.length}명에게 일괄 적용`);
+  const btn=mk('button','btn-primary','선택 학생에게 적용');
   btn.onclick=async()=>{
+    const selected=students.filter(s=>checks[s.id]);
+    if(!selected.length){msg.innerHTML='<div class="err">학생을 1명 이상 선택하세요.</div>';return;}
     btn.textContent='저장 중...';btn.disabled=true;
     let count=0;
-    for(const stu of students){
+    for(const stu of selected){
       const existing=await getLesson(stu.id,date);
-      // 기존 내용이 없는 경우에만 덮어씀 (개별 입력 보호)
-      if(existing.status==='none'||confirm(`${stu.name} 학생은 이미 수업 계획이 있습니다. 덮어쓸까요?`)){
-        const newL={...existing,plan:{...GL.plan},status:'planned'};
-        await setLesson(stu.id,date,newL);
-        count++;
+      if(existing.status!=='none'){
+        if(!confirm(`${stu.name} 학생은 이미 수업 계획이 있습니다. 덮어쓸까요?`))continue;
       }
+      const newL={...existing,plan:{...GL.plan},status:'planned'};
+      await setLesson(stu.id,date,newL);count++;
     }
     msg.innerHTML=`<div class="ok-msg">✓ ${count}명에게 적용됐습니다!</div>`;
     setTimeout(()=>{Q.scr='aList';render();},900);
@@ -755,6 +833,42 @@ async function aSettings(){
     pmsg.innerHTML='<div class="ok-msg">✓ 비밀번호가 변경되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},1000);
   };c.appendChild(pbtn);
+
+  // 반 관리
+  const cc=mk('div','card');cc.style.marginTop='12px';w2.appendChild(cc);
+  const cchdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;');
+  cchdr.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;','반 관리'));
+  const clAddBtn=mk('button','btn-ghost',Q._showClsAdd?'닫기':'+ 반 추가');
+  clAddBtn.onclick=()=>{Q._showClsAdd=!Q._showClsAdd;render();};cchdr.appendChild(clAddBtn);
+  cc.appendChild(cchdr);
+  if(Q._showClsAdd){
+    const af=mk('div','add-form');cc.appendChild(af);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반 이름'));
+    const ci=document.createElement('input');ci.className='inp';ci.placeholder='예: 중등 심화반';af.appendChild(ci);
+    const addCBtn=mk('button','btn-primary','추가');
+    addCBtn.onclick=async()=>{
+      const name=ci.value.trim();
+      if(!name)return;
+      if(!Q.classes)Q.classes=[];
+      Q.classes.push({id:Date.now().toString(),name});
+      await saveClasses();Q._showClsAdd=false;render();
+    };af.appendChild(addCBtn);
+  }
+  if(!Q.classes||!Q.classes.length){
+    cc.appendChild(mk('div','empty-box','등록된 반이 없습니다.'));
+  } else {
+    Q.classes.forEach(cls=>{
+      const row=mks('div','display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ee;');
+      row.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',cls.name));
+      const delBtn=mk('button','btn-sm','삭제');delBtn.style.cssText='color:#dc2626;border-color:#fca5a5;';
+      delBtn.onclick=()=>showModal('반 삭제',`"${cls.name}" 반을 삭제합니다. 학생들의 반 배정은 해제됩니다.`,async()=>{
+        Q.classes=Q.classes.filter(c=>c.id!==cls.id);
+        Q.students.forEach(s=>{if(s.classId===cls.id)s.classId='';});
+        await saveClasses();await saveStu();render();
+      });
+      row.appendChild(delBtn);cc.appendChild(row);
+    });
+  }
 
   // 영상 관리
   const vc=mk('div','card');vc.style.marginTop='12px';w2.appendChild(vc);
@@ -1227,7 +1341,7 @@ async function noticeWrite(){
 (async()=>{
   A.innerHTML='<div style="text-align:center;padding:5rem 1rem;"><div style="font-size:13px;color:#aaa;">불러오는 중...</div></div>';
   await initData();
-  Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;
+  Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;Q.classes=MEM.classes;
   render();
 })();
 })();
