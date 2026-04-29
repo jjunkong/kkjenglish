@@ -679,9 +679,50 @@ async function aLessonView(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
-  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.aStu)));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(Q.aDate)));
+  const hrow=mks('div','display:flex;align-items:center;justify-content:space-between;');
+  const htxt=mks('div','');
+  htxt.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(Q.aStu)));
+  htxt.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(Q.aDate)));
+  hrow.appendChild(htxt);
+  const profileBtn=mk('button','btn-ghost-inv','👤 학생 정보');
+  profileBtn.onclick=()=>{Q._showStuProfile=!Q._showStuProfile;render();};
+  hrow.appendChild(profileBtn);
+  hdr.appendChild(hrow);
   w.appendChild(hdr);
+
+  // 학생 정보 패널
+  if(Q._showStuProfile){
+    const panel=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:14px;margin:12px 12px 0;padding:14px;');
+    panel.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:12px;','학생 정보'));
+    const fields=[
+      {key:'school',label:'학교/학년',placeholder:'예: 광남중 3학년'},
+      {key:'level',label:'현재 실력',placeholder:'예: 중급, 내신 3등급'},
+      {key:'prevMethod',label:'이전 공부 방법',placeholder:'예: 학원, 인강, 독학'},
+      {key:'prevResult',label:'이전 학습 결과',placeholder:'예: 성적 변화, 취약 단원'},
+    ];
+    const stu=Q.aStu;
+    fields.forEach(f=>{
+      panel.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;',f.label));
+      const inp=document.createElement('input');inp.className='inp';
+      inp.placeholder=f.placeholder;inp.value=stu.info?.[f.key]||'';
+      inp.style.marginBottom='8px';
+      inp.oninput=()=>{if(!stu.info)stu.info={};stu.info[f.key]=inp.value;};
+      panel.appendChild(inp);
+    });
+    const pmsg=mks('div','');panel.appendChild(pmsg);
+    const saveBtn=mk('button','btn-primary','저장');
+    saveBtn.onclick=async()=>{
+      saveBtn.textContent='저장 중...';saveBtn.disabled=true;
+      const idx=Q.students.findIndex(s=>s.id===stu.id);
+      if(idx>=0)Q.students[idx].info=stu.info||{};
+      await saveStu();
+      pmsg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+      saveBtn.textContent='저장';saveBtn.disabled=false;
+      setTimeout(()=>{pmsg.innerHTML='';},1500);
+    };
+    panel.appendChild(saveBtn);
+    w.appendChild(panel);
+  }
   const body=mk('div','page-body');w.appendChild(body);
   const tabs=mk('div','tab-wrap');body.appendChild(tabs);
   ['plan','result'].forEach(t=>{
