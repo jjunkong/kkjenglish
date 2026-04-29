@@ -848,23 +848,94 @@ async function pView(){
 // 학부모 코멘트 입력 박스 (탭별)
 function pCommentBox(L,field,sid,date){
   const cb=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:14px;margin-top:12px;');
-  cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:8px;','💬 학부모 코멘트'));
+  cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;','💬 학부모 코멘트'));
+
+  const saved=L[field];
+  const viewMode=mks('div','');
+  const editMode=mks('div','display:none;');
+
+  // 저장된 코멘트 보기 모드
+  if(saved){
+    viewMode.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:10px;',saved));
+    const btnRow=mks('div','display:flex;gap:8px;');
+    const editBtn=mk('button','btn-ghost','수정');
+    const delBtn=mk('button','btn-ghost','삭제');
+    delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
+    editBtn.onclick=()=>{
+      ta.value=saved;
+      viewMode.style.display='none';
+      editMode.style.display='block';
+    };
+    delBtn.onclick=async()=>{
+      if(!confirm('코멘트를 삭제할까요?'))return;
+      L[field]='';
+      await setLesson(sid,date,L);
+      cb.innerHTML='';
+      cb.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;','💬 학부모 코멘트'));
+      cb.appendChild(buildEditMode());
+    };
+    btnRow.appendChild(editBtn);btnRow.appendChild(delBtn);
+    viewMode.appendChild(btnRow);
+  }
+
+  // 입력/수정 모드
   const ta=document.createElement('textarea');
   ta.className='section-ta';ta.rows=3;
   ta.placeholder='선생님께 전하고 싶은 말을 남겨주세요...';
-  ta.value=L[field]||'';
-  cb.appendChild(ta);
-  const msg=mks('div','');cb.appendChild(msg);
-  const btn=mk('button','btn-primary','코멘트 저장');
-  btn.style.marginTop='8px';
-  btn.onclick=async()=>{
-    btn.textContent='저장 중...';btn.disabled=true;
-    L[field]=ta.value.trim();
-    await setLesson(sid,date,L);
-    msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
-    btn.textContent='코멘트 저장';btn.disabled=false;
+  ta.value=saved||'';
+
+  const buildEditMode=()=>{
+    const wrap=mks('div','');
+    wrap.appendChild(ta);
+    const msg=mks('div','');wrap.appendChild(msg);
+    const row=mks('div','display:flex;gap:8px;margin-top:8px;');
+    const saveBtn=mk('button','btn-primary','저장');
+    saveBtn.style.flex='1';
+    const cancelBtn=mk('button','btn-ghost','취소');
+    if(saved){
+      cancelBtn.onclick=()=>{
+        editMode.style.display='none';
+        viewMode.style.display='block';
+      };
+    } else {
+      cancelBtn.style.display='none';
+    }
+    saveBtn.onclick=async()=>{
+      const txt=ta.value.trim();
+      if(!txt){msg.innerHTML='<div class="err">내용을 입력하세요.</div>';return;}
+      saveBtn.textContent='저장 중...';saveBtn.disabled=true;
+      L[field]=txt;
+      await setLesson(sid,date,L);
+      // 저장 후 보기 모드로 전환
+      viewMode.innerHTML='';
+      viewMode.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;background:#f8f8f6;border-radius:8px;padding:10px 12px;margin-bottom:10px;',txt));
+      const br=mks('div','display:flex;gap:8px;');
+      const eb=mk('button','btn-ghost','수정');
+      const db=mk('button','btn-ghost','삭제');
+      db.style.color='#dc2626';db.style.borderColor='#fca5a5';
+      eb.onclick=()=>{ta.value=txt;editMode.style.display='block';viewMode.style.display='none';};
+      db.onclick=async()=>{
+        if(!confirm('코멘트를 삭제할까요?'))return;
+        L[field]='';await setLesson(sid,date,L);
+        viewMode.innerHTML='';editMode.style.display='block';
+        ta.value='';
+      };
+      br.appendChild(eb);br.appendChild(db);viewMode.appendChild(br);
+      editMode.style.display='none';
+      viewMode.style.display='block';
+    };
+    row.appendChild(saveBtn);if(saved)row.appendChild(cancelBtn);
+    wrap.appendChild(row);
+    return wrap;
   };
-  cb.appendChild(btn);
+
+  editMode.appendChild(buildEditMode());
+
+  // 코멘트 없으면 바로 입력 모드
+  if(!saved)editMode.style.display='block';
+
+  cb.appendChild(viewMode);
+  cb.appendChild(editMode);
   return cb;
 }
 
