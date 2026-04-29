@@ -1537,7 +1537,7 @@ async function noticeWrite(){
 
 // Firebase 데이터 로드 후 시작
 (async()=>{
-  A.innerHTML='<div style="text-align:center;padding:5rem 1rem;"><div style="font-size:13px;color:#aaa;">불러오는 중...</div></div>';
+  A.innerHTML='';
   await initData();
   Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;Q.classes=MEM.classes;
   render();
