@@ -162,6 +162,8 @@ const initData=async()=>{
   const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);
   const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);
   const apikey=await fbGet('apikey');if(apikey)CLAUDE_API_KEY=apikey;
+  const solapiCfg=await fbGet('solapiCfg');
+  if(solapiCfg){SOLAPI_KEY=solapiCfg.key||'';SOLAPI_SECRET=solapiCfg.secret||'';SOLAPI_SENDER=solapiCfg.sender||'';}
 };
 
 const saveStu=async()=>{
@@ -220,6 +222,9 @@ let Q={scr:'home',students:MEM.stu,pw:MEM.pw,videos:MEM.videos,notices:MEM.notic
 
 // API 키는 Firebase에서 로드 (설정에서 입력)
 let CLAUDE_API_KEY='';
+let SOLAPI_KEY='';
+let SOLAPI_SECRET='';
+let SOLAPI_SENDER='';
 
 const A=document.getElementById('app');
 const gid=id=>document.getElementById(id);
@@ -500,7 +505,7 @@ window.addEventListener('popstate',()=>{
 history.pushState({scr:'home'},'','');
 history.pushState({scr:'home'},'','');
 
-function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen,quizResult})[Q.scr];if(fn)fn();}
+function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen,quizResult,smsBulk})[Q.scr];if(fn)fn();}
 
 function home(){
   const w=mks('div','');A.appendChild(w);
@@ -675,6 +680,7 @@ async function aList(){
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};topRow.appendChild(bb);
   const rightBtns=mks('div','display:flex;gap:6px;');
   const noticeBtn=mk('button','btn-ghost-inv','🔔 공지');noticeBtn.onclick=()=>{Q._fromAdmin=true;Q.scr='noticeList';render();};rightBtns.appendChild(noticeBtn);
+  const smsBtn2=mk('button','btn-ghost-inv','📱 문자');smsBtn2.onclick=()=>{Q._smsDate=Q.aDate;Q.scr='smsBulk';render();};rightBtns.appendChild(smsBtn2);
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   const loBtn=mk('button','btn-ghost-inv','로그아웃');
   loBtn.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='home';render();};
@@ -1303,6 +1309,26 @@ async function aSettings(){
   };
   ac.appendChild(akBtn);
 
+  // 솔라피 문자 발송 설정
+  const sc=mk('div','card');sc.style.marginTop='12px';w2.appendChild(sc);
+  sc.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','문자 발송 설정 (솔라피)'));
+  sc.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:10px;','솔라피(solapi.com) API 키를 입력하세요'));
+  sc.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:4px;','API Key'));
+  const ski=document.createElement('input');ski.className='inp';ski.placeholder='API Key';ski.value=SOLAPI_KEY||'';sc.appendChild(ski);
+  sc.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:4px;','API Secret'));
+  const ssi=document.createElement('input');ssi.className='inp';ssi.type='password';ssi.placeholder='API Secret';ssi.value=SOLAPI_SECRET||'';sc.appendChild(ssi);
+  sc.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:4px;','발신번호'));
+  const sni=document.createElement('input');sni.className='inp';sni.placeholder='예: 01012345678';sni.value=SOLAPI_SENDER||'';sc.appendChild(sni);
+  const skmsg=mks('div','');sc.appendChild(skmsg);
+  const skBtn=mk('button','btn-primary','저장');
+  skBtn.onclick=async()=>{
+    skBtn.textContent='저장 중...';skBtn.disabled=true;
+    SOLAPI_KEY=ski.value.trim();SOLAPI_SECRET=ssi.value.trim();SOLAPI_SENDER=sni.value.trim();
+    await fbSet('solapiCfg',{key:SOLAPI_KEY,secret:SOLAPI_SECRET,sender:SOLAPI_SENDER});
+    skmsg.innerHTML='<div class="ok-msg">✓ 저장됐습니다!</div>';
+    skBtn.textContent='저장';skBtn.disabled=false;
+  };sc.appendChild(skBtn);
+
   // 반 관리
   const cc=mk('div','card');cc.style.marginTop='12px';w2.appendChild(cc);
   const cchdr=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;');
@@ -1814,6 +1840,121 @@ async function pChart(){
     const avgColor=avg>=80?'#16a34a':avg>=60?'#f59e0b':'#dc2626';
     qw.appendChild(mks('div',`font-size:11px;font-weight:700;color:${avgColor};text-align:right;margin-top:6px;`,`평균 ${avg}점 (${quizDates.length}회)`));
   }
+}
+
+// 솔라피 단체 문자 발송 API 호출
+async function sendSolapi(messages){
+  const date=new Date().toISOString();
+  const salt=Math.random().toString(36).slice(2,12);
+  const enc=new TextEncoder();
+  const key=await crypto.subtle.importKey('raw',enc.encode(SOLAPI_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const sig=await crypto.subtle.sign('HMAC',key,enc.encode(date+salt));
+  const sigHex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const auth=`HMAC-SHA256 apiKey=${SOLAPI_KEY}, date=${date}, salt=${salt}, signature=${sigHex}`;
+  const res=await fetch('https://api.solapi.com/messages/v4/send-many',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':auth},
+    body:JSON.stringify({messages})
+  });
+  return res.json();
+}
+
+// 단체 문자 발송 화면
+async function smsBulk(){
+  const date=Q._smsDate||Q.aDate;
+  const w=mks('div','');A.appendChild(w);
+  const hdr=mk('div','page-header');
+  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';render();};hdr.appendChild(bb);
+  hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','📱 단체 문자 발송'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(date)));
+  w.appendChild(hdr);
+  const body=mk('div','page-body');w.appendChild(body);
+
+  if(!SOLAPI_KEY||!SOLAPI_SECRET||!SOLAPI_SENDER){
+    const nb=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;');
+    nb.appendChild(mks('div','font-size:13px;font-weight:700;color:#92400e;margin-bottom:6px;','⚠ 솔라피 설정이 필요합니다'));
+    nb.appendChild(mks('div','font-size:12px;color:#b45309;','설정 → 문자 발송 설정에서 API 키와 발신번호를 입력해주세요.'));
+    body.appendChild(nb);return;
+  }
+
+  const selDow=dowOf(date);
+  const todayStu=Q.students.filter(s=>s.days&&s.days.includes(selDow));
+  if(!todayStu.length){body.appendChild(mk('div','empty-box','이 날 수업 학생이 없습니다.'));return;}
+
+  // 템플릿 선택
+  body.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:8px;','문자 내용'));
+  const TMPLS=[
+    {label:'수업 결과 요약',async fn(stu){
+      const L=await getLesson(stu.id,date);
+      const lines=[`[KKJ English] ${stu.name} 학생 수업 결과 (${fd(date)})`,''];
+      LK.forEach((k,i)=>{if(L.plan[k]){lines.push(`■ ${LABELS[i].split('—')[0].trim()}: ${L.plan[k]}`);if(L.res[k]?.r)lines.push(`  → ${L.res[k].r}`);}});
+      if(L.vocab?.score)lines.push(`■ 단어시험: ${L.vocab.score}점 (${L.vocab.pass==='pass'?'통과':'불통'})`);
+      lines.push('','감사합니다 🙏');return lines.join('\n');
+    }},
+    {label:'수업 완료 안내',async fn(stu){return `[KKJ English] ${stu.name} 학생\n${fd(date)} 수업이 완료되었습니다.\n앱에서 오늘 수업 내용을 확인해주세요.\n감사합니다 🙏`;}},
+    {label:'직접 입력',async fn(){return Q._smsTmplText||'';}}
+  ];
+  if(!Q._selTmpl)Q._selTmpl=0;
+  const tmplWrap=mks('div','display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;');
+  TMPLS.forEach((t,i)=>{
+    const sel=Q._selTmpl===i;
+    const tb=mks('button',`padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};color:${sel?'#1a2f6e':'#555'};`,t.label);
+    tb.onclick=()=>{Q._selTmpl=i;Q._smsDate=date;Q.scr='smsBulk';render();};
+    tmplWrap.appendChild(tb);
+  });
+  body.appendChild(tmplWrap);
+
+  const ta=document.createElement('textarea');ta.className='section-ta';ta.rows=5;
+  ta.placeholder='직접 입력 시 여기에 작성하세요. {이름} 은 학생 이름으로 자동 치환됩니다.';
+  ta.value=Q._smsTmplText||'';ta.oninput=()=>Q._smsTmplText=ta.value;
+  body.appendChild(ta);
+
+  // 학생 선택
+  body.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin:14px 0 8px;','발송 대상'));
+  const checks={};
+  const stuWrap=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:12px;padding:12px;margin-bottom:14px;');
+  const allRow=mks('div','display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f0ee;margin-bottom:4px;');
+  const allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=true;
+  allCb.style.cssText='width:16px;height:16px;accent-color:#3b5bdb;cursor:pointer;';
+  allCb.onchange=()=>{Object.keys(checks).forEach(k=>checks[k]=allCb.checked);stuWrap.querySelectorAll('input[type=checkbox]').forEach((c,i)=>{if(i>0)c.checked=allCb.checked;});};
+  allRow.appendChild(allCb);allRow.appendChild(mks('div','font-size:12px;font-weight:700;color:#888;','전체 선택'));
+  stuWrap.appendChild(allRow);
+  todayStu.forEach(stu=>{
+    checks[stu.id]=true;
+    const phone=stu.info?.phone||'';
+    const row=mks('div','display:flex;align-items:center;gap:10px;padding:7px 0;');
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;
+    cb.style.cssText='width:16px;height:16px;accent-color:#3b5bdb;cursor:pointer;flex-shrink:0;';
+    cb.onchange=()=>checks[stu.id]=cb.checked;
+    const info=mks('div','flex:1;');
+    info.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',stuDisplayName(stu)));
+    info.appendChild(mks('div','font-size:11px;color:'+(phone?'#3b5bdb':'#dc2626')+';',phone||'⚠ 연락처 없음'));
+    row.appendChild(cb);row.appendChild(info);stuWrap.appendChild(row);
+  });
+  body.appendChild(stuWrap);
+
+  const noPhone=todayStu.filter(s=>!s.info?.phone);
+  if(noPhone.length)body.appendChild(mks('div','font-size:11px;color:#dc2626;margin-bottom:10px;',`⚠ 연락처 미등록: ${noPhone.map(s=>s.name).join(', ')}`));
+
+  const smsg=mks('div','');body.appendChild(smsg);
+  const sendBtn=mk('button','btn-primary',`📱 ${todayStu.filter(s=>s.info?.phone).length}명에게 문자 발송`);
+  sendBtn.onclick=async()=>{
+    const selected=todayStu.filter(s=>checks[s.id]&&s.info?.phone);
+    if(!selected.length){smsg.innerHTML='<div class="err">연락처가 있는 학생을 선택해주세요.</div>';return;}
+    const customText=ta.value.trim();
+    if(Q._selTmpl===2&&!customText){smsg.innerHTML='<div class="err">문자 내용을 입력하세요.</div>';return;}
+    sendBtn.textContent=`발송 중...`;sendBtn.disabled=true;
+    const messages=await Promise.all(selected.map(async stu=>{
+      let text=Q._selTmpl===2?customText.replace(/\{이름\}/g,stu.name):await TMPLS[Q._selTmpl].fn(stu);
+      return {to:stu.info.phone.replace(/[^0-9]/g,''),from:SOLAPI_SENDER.replace(/[^0-9]/g,''),text,type:'SMS'};
+    }));
+    try{
+      const result=await sendSolapi(messages);
+      if(result.errorCount>0)smsg.innerHTML=`<div class="err">일부 실패: ${result.errorCount}건 오류. 솔라피 대시보드 확인해주세요.</div>`;
+      else smsg.innerHTML=`<div class="ok-msg">✓ ${selected.length}명에게 발송 완료!</div>`;
+    }catch(e){smsg.innerHTML=`<div class="err">발송 오류: ${e.message}</div>`;}
+    sendBtn.textContent=`📱 ${selected.length}명에게 문자 발송`;sendBtn.disabled=false;
+  };
+  body.appendChild(sendBtn);
 }
 
 // 영상 — 학생 로그인
