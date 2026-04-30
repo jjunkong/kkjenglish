@@ -1232,15 +1232,42 @@ async function aSettings(){
     cc.appendChild(mk('div','empty-box','등록된 반이 없습니다.'));
   } else {
     Q.classes.forEach(cls=>{
-      const row=mks('div','display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0ee;');
-      row.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',cls.name));
-      const delBtn=mk('button','btn-sm','삭제');delBtn.style.cssText='color:#dc2626;border-color:#fca5a5;';
-      delBtn.onclick=()=>showModal('반 삭제',`"${cls.name}" 반을 삭제합니다. 학생들의 반 배정은 해제됩니다.`,async()=>{
-        Q.classes=Q.classes.filter(c=>c.id!==cls.id);
-        Q.students.forEach(s=>{if(s.classId===cls.id)s.classId='';});
-        await saveClasses();await saveStu();render();
-      });
-      row.appendChild(delBtn);cc.appendChild(row);
+      const editing=Q._editingClsId===cls.id;
+      const row=mks('div','padding:10px 0;border-bottom:1px solid #f0f0ee;');
+      if(editing){
+        // 수정 모드
+        const editRow=mks('div','display:flex;gap:6px;align-items:center;');
+        const ei=document.createElement('input');ei.className='inp';
+        ei.style.cssText='margin-bottom:0;flex:1;';ei.value=cls.name;
+        const saveBtn=mk('button','btn-primary','저장');saveBtn.style.cssText='padding:6px 12px;font-size:12px;width:auto;margin-top:0;';
+        saveBtn.onclick=async()=>{
+          const newName=ei.value.trim();
+          if(!newName)return;
+          const idx=Q.classes.findIndex(c=>c.id===cls.id);
+          if(idx>=0)Q.classes[idx].name=newName;
+          await saveClasses();Q._editingClsId=null;render();
+        };
+        const cancelBtn=mk('button','btn-ghost','취소');cancelBtn.style.cssText='padding:6px 12px;font-size:12px;width:auto;';
+        cancelBtn.onclick=()=>{Q._editingClsId=null;render();};
+        editRow.appendChild(ei);editRow.appendChild(saveBtn);editRow.appendChild(cancelBtn);
+        row.appendChild(editRow);
+      } else {
+        // 보기 모드
+        const viewRow=mks('div','display:flex;justify-content:space-between;align-items:center;');
+        viewRow.appendChild(mks('div','font-size:13px;font-weight:500;color:#111;',cls.name));
+        const btnRow=mks('div','display:flex;gap:6px;');
+        const editBtn=mk('button','btn-sm','수정');
+        editBtn.onclick=()=>{Q._editingClsId=cls.id;render();};
+        const delBtn=mk('button','btn-sm','삭제');delBtn.style.cssText='color:#dc2626;border-color:#fca5a5;';
+        delBtn.onclick=()=>showModal('반 삭제',`"${cls.name}" 반을 삭제합니다. 학생들의 반 배정은 해제됩니다.`,async()=>{
+          Q.classes=Q.classes.filter(c=>c.id!==cls.id);
+          Q.students.forEach(s=>{if(s.classId===cls.id)s.classId='';});
+          await saveClasses();await saveStu();render();
+        });
+        btnRow.appendChild(editBtn);btnRow.appendChild(delBtn);
+        viewRow.appendChild(btnRow);row.appendChild(viewRow);
+      }
+      cc.appendChild(row);
     });
   }
 
