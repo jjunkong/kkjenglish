@@ -923,6 +923,10 @@ async function aStuEdit(){
     cs.onchange=()=>stu.classId=cs.value;
     body.appendChild(cs);
   }
+  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학부모 연락처'));
+  const phi=document.createElement('input');phi.className='inp';phi.placeholder='010-1234-5678';phi.value=stu.info?.phone||'';
+  phi.oninput=()=>{if(!stu.info)stu.info={};stu.info.phone=phi.value;};
+  body.appendChild(phi);
   body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영어 수준'));
   const lvSelect=document.createElement('select');lvSelect.className='inp';
   ['선택 안 함','M1','M2','M3','H1','H2','H3'].forEach(l=>{
@@ -1027,6 +1031,7 @@ async function aLessonView(){
     const panel=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:14px;margin:12px 12px 0;padding:14px;');
     panel.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:12px;','학생 정보'));
     const fields=[
+      {key:'phone',label:'학부모 연락처',placeholder:'예: 010-1234-5678'},
       {key:'school',label:'학교/학년',placeholder:'예: 광남중 3학년'},
       {key:'level',label:'현재 실력',placeholder:'예: 중급, 내신 3등급'},
       {key:'prevMethod',label:'이전 공부 방법',placeholder:'예: 학원, 인강, 독학'},
@@ -1095,6 +1100,31 @@ async function aLessonView(){
     }
 
     body.appendChild(msg);
+    // 문자 보내기 버튼
+    const smsBtn=mk('button','btn-ghost','📱 학부모 문자 보내기');
+    smsBtn.style.marginTop='8px';
+    smsBtn.onclick=()=>{
+      const phone=(Q.aStu.info?.phone||'').replace(/[^0-9]/g,'');
+      const L2=Q.aLesson;
+      const lines=[];
+      lines.push(`[김기준영어학원] ${Q.aStu.name} 학생 ${fd(Q.aDate)} 수업 결과`);
+      lines.push('');
+      LK.forEach((k,i)=>{
+        if(L2.plan[k]){
+          lines.push(`■ ${LABELS[i].split('—')[0].trim()}`);
+          lines.push(L2.plan[k]);
+          if(L2.res[k]?.r)lines.push(`→ ${L2.res[k].r}`);
+          lines.push('');
+        }
+      });
+      if(L2.vocab?.score)lines.push(`■ 단어시험: ${L2.vocab.score}점 (${L2.vocab.pass==='pass'?'통과':'불통'})`);
+      if(L2.listening?.done!==undefined&&L2.listening._touched)lines.push(`■ 듣기과제: ${L2.listening.done?'완료':'미완료'}`);
+      lines.push('');lines.push('감사합니다 🙏');
+      const body2=encodeURIComponent(lines.join('\n'));
+      const smsUrl=phone?`sms:${phone}?body=${body2}`:`sms:?body=${body2}`;
+      window.open(smsUrl,'_self');
+    };
+    body.appendChild(smsBtn);
     // 임시 저장 버튼
     const saveBtn=mk('button','btn-ghost','임시 저장');
     saveBtn.style.cssText='width:100%;margin-top:6px;padding:12px;border-radius:10px;';
