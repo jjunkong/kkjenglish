@@ -759,10 +759,12 @@ async function aList(){
     }
   }
 
-  const hdr2=mk('div','hdr-row');body.appendChild(hdr2);
-  const ab=mk('button','btn-ghost',Q.showAdd?'닫기':'+ 학생 추가');
+  const hdr2=mks('div','display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.15);');body.appendChild(hdr2);
+  const ab=mks('button','',Q.showAdd?'닫기':'+ 학생 추가');
+  ab.style.cssText='flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#1a2f6e;border:1.5px solid #c7d2fe;font-family:inherit;';
   ab.onclick=()=>{Q.showAdd=Q.showAdd?false:'single';Q.showBulk=false;Q.err='';render();};hdr2.appendChild(ab);
-  const ab2=mk('button','btn-ghost',Q.showBulk?'닫기':'+ 단체 추가');
+  const ab2=mks('button','',Q.showBulk?'닫기':'+ 단체 추가');
+  ab2.style.cssText='flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#1a2f6e;border:1.5px solid #c7d2fe;font-family:inherit;';
   ab2.onclick=()=>{Q.showBulk=!Q.showBulk;Q.showAdd=false;Q.err='';render();};hdr2.appendChild(ab2);
 
   if(Q.showAdd){
