@@ -682,18 +682,29 @@ async function aList(){
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
 
-  // 이번 달 드롭다운
+  // 최근 6개월 드롭다운
   const now=new Date();
-  const year=now.getFullYear(),month=now.getMonth();
-  const daysInMonth=new Date(year,month+1,0).getDate();
   const monthDates=[];
-  for(let d=daysInMonth;d>=1;d--){
-    const dd=String(d).padStart(2,'0'),mm=String(month+1).padStart(2,'0');
-    monthDates.push(`${year}-${mm}-${dd}`);
+  for(let mOffset=0;mOffset<6;mOffset++){
+    const d=new Date(now.getFullYear(),now.getMonth()-mOffset,1);
+    const y=d.getFullYear(),m=d.getMonth();
+    const daysInM=new Date(y,m+1,0).getDate();
+    for(let day=daysInM;day>=1;day--){
+      const dd=String(day).padStart(2,'0'),mm=String(m+1).padStart(2,'0');
+      monthDates.push(`${y}-${mm}-${dd}`);
+    }
   }
   const ds=document.createElement('select');
   ds.style.cssText='background:rgba(255,255,255,0.12);border:none;color:#fff;font-size:13px;font-weight:600;padding:8px 12px;border-radius:10px;width:100%;cursor:pointer;';
+  let lastMonth='';
   monthDates.forEach(d=>{
+    const thisMonth=d.slice(0,7);
+    if(thisMonth!==lastMonth){
+      const og=document.createElement('optgroup');
+      og.label=d.slice(0,4)+'년 '+String(parseInt(d.slice(5,7)))+'월';
+      og.style.background='#0a1a4e';ds.appendChild(og);
+      lastMonth=thisMonth;
+    }
     const o=document.createElement('option');o.value=d;
     o.style.cssText='background:#1a2f6e;color:#fff;';
     o.textContent=fd(d)+(d===TODAY?' (오늘)':'');
