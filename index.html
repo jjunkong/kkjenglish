@@ -1137,31 +1137,6 @@ async function aLessonView(){
     }
 
     body.appendChild(msg);
-    // 문자 보내기 버튼
-    const smsBtn=mk('button','btn-ghost','📱 학부모 문자 보내기');
-    smsBtn.style.marginTop='8px';
-    smsBtn.onclick=()=>{
-      const phone=(Q.aStu.info?.phone||'').replace(/[^0-9]/g,'');
-      const L2=Q.aLesson;
-      const lines=[];
-      lines.push(`[김기준영어학원] ${Q.aStu.name} 학생 ${fd(Q.aDate)} 수업 결과`);
-      lines.push('');
-      LK.forEach((k,i)=>{
-        if(L2.plan[k]){
-          lines.push(`■ ${LABELS[i].split('—')[0].trim()}`);
-          lines.push(L2.plan[k]);
-          if(L2.res[k]?.r)lines.push(`→ ${L2.res[k].r}`);
-          lines.push('');
-        }
-      });
-      if(L2.vocab?.score)lines.push(`■ 단어시험: ${L2.vocab.score}점 (${L2.vocab.pass==='pass'?'통과':'불통'})`);
-      if(L2.listening?.done!==undefined&&L2.listening._touched)lines.push(`■ 듣기과제: ${L2.listening.done?'완료':'미완료'}`);
-      lines.push('');lines.push('감사합니다 🙏');
-      const body2=encodeURIComponent(lines.join('\n'));
-      const smsUrl=phone?`sms:${phone}?body=${body2}`:`sms:?body=${body2}`;
-      window.open(smsUrl,'_self');
-    };
-    body.appendChild(smsBtn);
     // 임시 저장 버튼
     const saveBtn=mk('button','btn-ghost','임시 저장');
     saveBtn.style.cssText='width:100%;margin-top:6px;padding:12px;border-radius:10px;';
@@ -2680,18 +2655,18 @@ function quizScreen(){
   body.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:14px;',`${fd(Q.quiz.date)} 수업 기반 · ${Q.quiz.fromCache?'📦 저장된 문제':'🤖 AI 생성'}`));
   qs.forEach((q,i)=>{
     const card=mk('div','section-block');
-    card.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;margin-bottom:10px;',`Q${i+1}. 다음 중 문법상 옳은 문장의 개수는?`));
+    card.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:10px;',`Q${i+1}. 다음 중 문법상 옳은 문장의 개수는?`));
     // 6문장
     const sentBox=mks('div','background:#f8f8f6;border-radius:10px;padding:12px;margin-bottom:12px;');
     q.sentences.forEach(s=>{
-      sentBox.appendChild(mks('div','font-size:12px;color:#333;padding:3px 0;line-height:1.7;',s));
+      sentBox.appendChild(mks('div','font-size:13px;color:#333;padding:3px 0;line-height:1.7;',s));
     });
     card.appendChild(sentBox);
-    // 선택지
-    const optRow=mks('div','display:flex;flex-wrap:wrap;gap:8px;');
+    // 선택지 — 5개 균등 배치 (줄바꿈 방지)
+    const optRow=mks('div','display:grid;grid-template-columns:repeat(5,1fr);gap:5px;');
     OPTS.forEach((opt,j)=>{
       const sel=Q.quizAnswers[i]===j;
-      const btn=mks('button',`padding:8px 14px;border-radius:10px;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};cursor:pointer;font-size:13px;font-weight:${sel?700:400};color:${sel?'#1a2f6e':'#555'};font-family:inherit;`,opt);
+      const btn=mks('button',`padding:7px 2px;border-radius:10px;border:1.5px solid ${sel?'#3b5bdb':'#e8e8e6'};background:${sel?'#eef2ff':'#fff'};cursor:pointer;font-size:12px;font-weight:${sel?700:400};color:${sel?'#1a2f6e':'#555'};font-family:inherit;text-align:center;width:100%;`,opt);
       btn.onclick=()=>{Q.quizAnswers[i]=j;render();};
       optRow.appendChild(btn);
     });
