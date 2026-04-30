@@ -634,6 +634,8 @@ function home(){
 }
 
 function aLogin(){
+  // 자동 로그인 확인
+  if(localStorage.getItem('kkj_admin_auth')==='true'){Q.scr='aList';Q.err='';render();return;}
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
@@ -645,7 +647,22 @@ function aLogin(){
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','비밀번호'));
   const pi=document.createElement('input');pi.className='inp';pi.type='password';pi.placeholder='비밀번호 입력';c.appendChild(pi);setTimeout(()=>pi.focus(),50);
   if(Q.err)c.appendChild(mk('div','err',Q.err));
-  const doL=()=>{if(pi.value===Q.pw){Q.scr='aList';Q.err='';render();}else{Q.err='비밀번호가 맞지 않습니다.';render();}};
+  // 로그인 유지 체크박스
+  const keepRow=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:8px;');
+  const keepCb=document.createElement('input');keepCb.type='checkbox';keepCb.checked=true;keepCb.style.cssText='width:16px;height:16px;accent-color:#3b5bdb;cursor:pointer;';
+  keepRow.appendChild(keepCb);
+  keepRow.appendChild(mks('div','font-size:12px;color:#888;','로그인 유지 (이 기기에서)'));
+  c.appendChild(keepRow);
+  const doL=()=>{
+    if(pi.value===Q.pw){
+      if(keepCb.checked)localStorage.setItem('kkj_admin_auth','true');
+      Q.scr='aList';Q.err='';render();
+    }else{
+      const errEl=document.getElementById('a-err');
+      if(errEl)errEl.innerHTML='<div class="err">비밀번호가 맞지 않습니다.</div>';
+    }
+  };
+  const errDiv=mks('div','');errDiv.id='a-err';c.appendChild(errDiv);
   pi.onkeydown=e=>{if(e.key==='Enter')doL();};
   const btn=mk('button','btn-primary','로그인');btn.onclick=doL;c.appendChild(btn);
 }
@@ -659,6 +676,9 @@ async function aList(){
   const rightBtns=mks('div','display:flex;gap:6px;');
   const noticeBtn=mk('button','btn-ghost-inv','🔔 공지');noticeBtn.onclick=()=>{Q._fromAdmin=true;Q.scr='noticeList';render();};rightBtns.appendChild(noticeBtn);
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
+  const loBtn=mk('button','btn-ghost-inv','로그아웃');
+  loBtn.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='home';render();};
+  rightBtns.appendChild(loBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
 
