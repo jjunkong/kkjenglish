@@ -472,6 +472,19 @@ function showModal(title,msg,onOk){
   bg.appendChild(box);document.body.appendChild(bg);
 }
 
+// 모바일 뒤로가기 처리
+const pushState=()=>history.pushState({scr:Q.scr},'','');
+window.addEventListener('popstate',()=>{
+  if(Q.scr==='home'){
+    history.pushState({scr:'home'},'','');
+  } else {
+    Q.scr='home';Q.err='';render();
+    history.pushState({scr:'home'},'','');
+  }
+});
+history.pushState({scr:'home'},'','');
+history.pushState({scr:'home'},'','');
+
 function render(){A.innerHTML='';const fn=({home,aLogin,aList,aLessonView,aStuEdit,aSettings,aGroupPlan,pLogin,pView,pChart,vLogin,vList,vPlay,noticeList,noticeWrite,lLogin,lView,lLessonView,sLogin,sView,quizScreen,quizResult})[Q.scr];if(fn)fn();}
 
 function home(){
