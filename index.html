@@ -661,14 +661,18 @@ async function aList(){
 
   const body=mk('div','page-body');w.appendChild(body);
 
-  // 오늘 수업 학생 레슨 미리 로딩 (병렬)
-  if(todayStu.length){
-    const toLoad=todayStu.filter(s=>!MEM.lessons[`${s.id}__${Q.aDate}`]);
-    if(toLoad.length){
-      body.appendChild(mks('div','font-size:12px;color:#aaa;text-align:center;padding:16px;','불러오는 중...'));
-      await Promise.all(toLoad.map(s=>getLesson(s.id,Q.aDate)));
-      body.innerHTML='';
-    }
+  // 오늘 수업 학생 레슨 미리 로딩 — 캐시 없는 것만, 로딩 표시 없이 백그라운드
+  const toLoad=todayStu.filter(s=>!MEM.lessons[`${s.id}__${Q.aDate}`]);
+  if(toLoad.length){
+    // 학생 전체 레슨을 Firebase에서 한번에 가져오기
+    const allLessonsRaw=await fbGet('lessons')||{};
+    todayStu.forEach(s=>{
+      const key=`${s.id}__${Q.aDate}`;
+      if(!MEM.lessons[key]){
+        const dateKey=Q.aDate.replace(/-/g,'_');
+        MEM.lessons[key]=(allLessonsRaw[s.id]&&allLessonsRaw[s.id][dateKey])||emL();
+      }
+    });
   }
 
   // 반이 없으면 안내
