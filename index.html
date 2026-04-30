@@ -761,7 +761,9 @@ async function aList(){
 
   const hdr2=mk('div','hdr-row');body.appendChild(hdr2);
   const ab=mk('button','btn-ghost',Q.showAdd?'닫기':'+ 학생 추가');
-  ab.onclick=()=>{Q.showAdd=!Q.showAdd;Q.err='';render();};hdr2.appendChild(ab);
+  ab.onclick=()=>{Q.showAdd=Q.showAdd?false:'single';Q.showBulk=false;Q.err='';render();};hdr2.appendChild(ab);
+  const ab2=mk('button','btn-ghost',Q.showBulk?'닫기':'+ 단체 추가');
+  ab2.onclick=()=>{Q.showBulk=!Q.showBulk;Q.showAdd=false;Q.err='';render();};hdr2.appendChild(ab2);
 
   if(Q.showAdd){
     const af=mk('div','add-form');body.appendChild(af);
@@ -770,7 +772,6 @@ async function aList(){
     const nn=document.createElement('input');nn.id='an';nn.className='inp';nn.placeholder='홍길동';af.appendChild(nn);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드 (숫자 4자리 권장)'));
     const nc=document.createElement('input');nc.id='ac';nc.className='inp';nc.placeholder='예: 1234';af.appendChild(nc);
-    // 반 선택
     if(Q.classes&&Q.classes.length){
       af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반 선택'));
       const cs=document.createElement('select');cs.id='acls';cs.className='inp';
@@ -792,6 +793,75 @@ async function aList(){
       Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2,classId});
       await saveStu();Q.showAdd=false;Q.err='';render();
     };af.appendChild(addBtn);
+  }
+
+  // 단체 추가
+  if(Q.showBulk){
+    const bf=mk('div','add-form');body.appendChild(bf);
+    bf.appendChild(mks('div','font-size:13px;font-weight:700;color:#111;margin-bottom:12px;','단체 학생 추가'));
+
+    // 반 선택
+    bf.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반 선택'));
+    const bcs=document.createElement('select');bcs.className='inp';
+    const bopt0=document.createElement('option');bopt0.value='';bopt0.textContent='반 없음';bcs.appendChild(bopt0);
+    (Q.classes||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;bcs.appendChild(o);});
+    bf.appendChild(bcs);
+
+    // 레벨 선택
+    bf.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영어 수준 (공통)'));
+    const blvl=document.createElement('select');blvl.className='inp';
+    ['선택 안 함','M1','M2','M3','H1','H2','H3'].forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;blvl.appendChild(o);});
+    bf.appendChild(blvl);
+
+    // 출석 요일
+    bf.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일 (공통)'));
+    let bulkDays=[];
+    const bdpWrap=mks('div','');bf.appendChild(bdpWrap);
+    const reRDP2=()=>{bdpWrap.innerHTML='';bdpWrap.appendChild(dayPicker(bulkDays,ns=>{bulkDays=ns;reRDP2();}));};reRDP2();
+
+    // 학생 행
+    bf.appendChild(mks('div','font-size:12px;color:#888;margin:10px 0 5px;','학생 목록'));
+    const rows=[];
+    const rowContainer=mks('div','');bf.appendChild(rowContainer);
+
+    const addRow=(name='',code='')=>{
+      const row={name,code};rows.push(row);
+      const rd=mks('div','display:flex;gap:6px;margin-bottom:6px;align-items:center;');
+      const ni=document.createElement('input');ni.className='inp';ni.style.cssText='margin-bottom:0;flex:2;';ni.placeholder='이름';ni.value=name;
+      ni.oninput=()=>row.name=ni.value;
+      const ci=document.createElement('input');ci.className='inp';ci.style.cssText='margin-bottom:0;flex:1;';ci.placeholder='코드';ci.value=code;
+      ci.oninput=()=>row.code=ci.value;
+      const delBtn=mks('button','font-size:14px;color:#dc2626;background:none;border:none;cursor:pointer;flex-shrink:0;','✕');
+      delBtn.onclick=()=>{const idx=rows.indexOf(row);if(idx>=0)rows.splice(idx,1);rd.remove();};
+      rd.appendChild(ni);rd.appendChild(ci);rd.appendChild(delBtn);
+      rowContainer.appendChild(rd);
+    };
+
+    // 기본 3행
+    addRow();addRow();addRow();
+
+    const addRowBtn=mk('button','btn-ghost','+ 행 추가');
+    addRowBtn.style.marginBottom='10px';
+    addRowBtn.onclick=()=>addRow();
+    bf.appendChild(addRowBtn);
+
+    const bmsg=mks('div','');bf.appendChild(bmsg);
+    const bulkSaveBtn=mk('button','btn-primary','전체 저장');
+    bulkSaveBtn.onclick=async()=>{
+      const valid=rows.filter(r=>r.name.trim()&&r.code.trim());
+      if(!valid.length){bmsg.innerHTML='<div class="err">최소 1명의 이름과 코드를 입력하세요.</div>';return;}
+      const dups=valid.filter(r=>Q.students.find(s=>s.name===r.name.trim()));
+      if(dups.length){bmsg.innerHTML=`<div class="err">이미 있는 학생: ${dups.map(r=>r.name).join(', ')}</div>`;return;}
+      bulkSaveBtn.textContent='저장 중...';bulkSaveBtn.disabled=true;
+      const classId=bcs.value;const level=blvl.value;
+      valid.forEach(r=>{
+        Q.students.push({id:Date.now().toString()+'_'+Math.random().toString(36).slice(2),name:r.name.trim(),code:r.code.trim(),days:bulkDays,classId,level});
+      });
+      await saveStu();
+      bmsg.innerHTML=`<div class="ok-msg">✓ ${valid.length}명 추가됐습니다!</div>`;
+      setTimeout(()=>{Q.showBulk=false;render();},800);
+    };
+    bf.appendChild(bulkSaveBtn);
   }
 }
 
