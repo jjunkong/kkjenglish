@@ -2,8 +2,23 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KKJ English">
+<meta name="theme-color" content="#3b5bdb">
+<link rel="apple-touch-icon" id="pwa-icon">
+<title>김기준영어학원 수업 관리</title>
+<script>
+// PWA 아이콘 SVG 인라인 생성
+const iconSvg=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%233b5bdb'/><stop offset='1' stop-color='%236d28d9'/></linearGradient></defs><rect width='512' height='512' rx='100' fill='url(%23g)'/><text x='256' y='190' font-size='130' text-anchor='middle' fill='rgba(255,255,255,0.6)' font-family='Arial' font-weight='bold'>KKJ</text><text x='256' y='340' font-size='90' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>English</text></svg>`;
+document.getElementById('pwa-icon').href='data:image/svg+xml,'+iconSvg;
+// manifest 동적 생성
+const manifest={name:'김기준영어학원',short_name:'KKJ English',start_url:'./',display:'standalone',background_color:'#0a2a8a',theme_color:'#3b5bdb',orientation:'portrait',icons:[{src:'data:image/svg+xml,'+iconSvg,sizes:'512x512',type:'image/svg+xml'}]};
+const ml=document.createElement('link');ml.rel='manifest';ml.href='data:application/json,'+encodeURIComponent(JSON.stringify(manifest));document.head.appendChild(ml);
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 @font-face {
