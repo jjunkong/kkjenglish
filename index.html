@@ -570,14 +570,15 @@ function home(){
   const codeInp=mkInp('비번','password');
   const enterBtn=mks('button','','Enter');
   enterBtn.style.cssText='display:flex;align-items:center;justify-content:center;width:100%;height:42px;border-radius:50px;background:linear-gradient(180deg,#5b9ef8,#2060e8 70%,#1a4fd6);border:none;box-shadow:0 4px 0 #1440a0,inset 0 1px 0 rgba(255,255,255,0.4);font-size:14px;color:#fff;cursor:pointer;font-family:'+CF+';';
+  const loginMsg=mks('div','');loginMsg.style.cssText='font-size:11px;color:#f87171;text-align:center;min-height:16px;font-family:'+CF+';';
   enterBtn.onclick=async()=>{
     const n=nameInp.value.trim(),code=codeInp.value.trim();
-    const stu=Q.students.find(s=>s.name===n&&s.code===code);
-    if(!stu){codeInp.style.borderColor='#f87171';setTimeout(()=>codeInp.style.borderColor='rgba(180,200,255,0.6)',1500);return;}
+    const stu=(Q.students||[]).find(s=>s.name===n&&s.code===code);
+    if(!stu){loginMsg.textContent='이름 또는 코드가 맞지 않습니다.';setTimeout(()=>loginMsg.textContent='',2000);return;}
     Q.pStu=stu;Q.pDate=TODAY;Q.pLesson=await getLesson(stu.id,TODAY);Q.scr='pView';render();
   };
   codeInp.onkeydown=e=>{if(e.key==='Enter')enterBtn.onclick();};
-  form.appendChild(nameInp);form.appendChild(codeInp);form.appendChild(enterBtn);
+  form.appendChild(nameInp);form.appendChild(codeInp);form.appendChild(enterBtn);form.appendChild(loginMsg);
   mainCard.appendChild(form);bg.appendChild(mainCard);
 
   // 관리자 BODA 카드
