@@ -1277,9 +1277,9 @@ async function aSettings(){
   };c.appendChild(pbtn);
 
   // 학습리더 비밀번호 설정
-  const lc=mk('div','card');lc.style.marginTop='12px';w2.appendChild(lc);
-  lc.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','학습리더 비밀번호 설정'));
-  lc.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:12px;','각 학습리더의 로그인 코드를 설정하세요'));
+  const ldrPwCard=mk('div','card');ldrPwCard.style.marginTop='12px';w2.appendChild(ldrPwCard);
+  ldrPwCard.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','학습리더 비밀번호 설정'));
+  ldrPwCard.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:12px;','각 학습리더의 로그인 코드를 설정하세요'));
   const lmsg=mks('div','');
   if(Q.leaders&&Q.leaders.length){
     Q.leaders.forEach((ldr,i)=>{
@@ -1297,12 +1297,12 @@ async function aSettings(){
         saveBtn.textContent='✓';setTimeout(()=>saveBtn.textContent='저장',1000);
       };
       row.appendChild(label);row.appendChild(ni);row.appendChild(ci);row.appendChild(saveBtn);
-      lc.appendChild(row);
+      ldrPwCard.appendChild(row);
     });
   } else {
-    lc.appendChild(mks('div','font-size:12px;color:#aaa;','등록된 학습리더가 없습니다. 아래 학습리더 관리에서 먼저 추가하세요.'));
+    ldrPwCard.appendChild(mks('div','font-size:12px;color:#aaa;','등록된 학습리더가 없습니다. 아래 학습리더 관리에서 먼저 추가하세요.'));
   }
-  lc.appendChild(lmsg);
+  ldrPwCard.appendChild(lmsg);
 
   // Claude API 키 설정
   const ac=mk('div','card');ac.style.marginTop='12px';w2.appendChild(ac);
