@@ -3955,11 +3955,23 @@ function showToast(msg,type='') {
 }
 
 // ── 페이지 시작 ────────────────────────────────────────────
+// URL 파라미터로 학원코드 자동 설정 (BODA 앱에서 연동)
+const _urlParams = new URLSearchParams(window.location.search);
+const _urlCode = _urlParams.get('code');
+const _autoStart = _urlParams.get('start');
+if (_urlCode) setAcademyCode(_urlCode);
+
 // 학원 코드가 없으면 코드 입력 화면, 있으면 홈으로 이동 + 자동 새로고침
 if (getAcademyCode()) {
   document.getElementById('s-home').classList.add('active');
   updateHome();
-  // 백그라운드에서 클라우드 새로고침 (실패해도 캐시로 동작)
+  // start=1 이면 바로 채점 시작 화면으로
+  if (_autoStart === '1') {
+    setTimeout(() => {
+      const startBtn = document.querySelector('.btn-g');
+      if (startBtn) startBtn.click();
+    }, 300);
+  }
   setTimeout(()=>refreshFromCloud({ silent: true }), 300);
 } else {
   showAcademySetup();
