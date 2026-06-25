@@ -643,6 +643,7 @@ function home(){
   }
   adminCard.appendChild(adminInner);
   adminCard.onclick=()=>{Q._adminOpen=!Q._adminOpen;render();};
+  adminInner.onclick=e=>{if(Q._adminOpen)e.stopPropagation();};
   bg.appendChild(adminCard);
 }
 
