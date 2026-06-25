@@ -589,6 +589,7 @@ function home(){
 
   if(Q._adminOpen){
     const grid=mks('div','display:flex;flex-direction:column;gap:10px;margin-top:12px;');
+    grid.onclick=e=>e.stopPropagation(); // 클릭 전파 방지
 
     // 원장 섹션
     const ownerBox=mks('div','background:rgba(255,255,255,0.15);border-radius:14px;padding:12px;');
@@ -1252,7 +1253,7 @@ async function aSettings(){
 
   // 비밀번호 변경
   const c=mk('div','card');w2.appendChild(c);
-  c.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:14px;','비밀번호 변경'));
+  c.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:14px;','원장 비밀번호 변경'));
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','현재 비밀번호'));
   const p1=document.createElement('input');p1.className='inp';p1.type='password';p1.placeholder='현재 비밀번호';c.appendChild(p1);
   c.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','새 비밀번호'));
@@ -1270,6 +1271,34 @@ async function aSettings(){
     pmsg.innerHTML='<div class="ok-msg">✓ 비밀번호가 변경되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},1000);
   };c.appendChild(pbtn);
+
+  // 학습리더 비밀번호 설정
+  const lc=mk('div','card');lc.style.marginTop='12px';w2.appendChild(lc);
+  lc.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','학습리더 비밀번호 설정'));
+  lc.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:12px;','각 학습리더의 로그인 코드를 설정하세요'));
+  const lmsg=mks('div','');
+  if(Q.leaders&&Q.leaders.length){
+    Q.leaders.forEach((ldr,i)=>{
+      const row=mks('div','display:flex;gap:8px;align-items:center;margin-bottom:8px;');
+      const label=mks('div','font-size:13px;font-weight:600;color:#111;flex-shrink:0;width:90px;',`학습리더 ${i+1}`);
+      const ni=document.createElement('input');ni.className='inp';ni.style.cssText='margin-bottom:0;flex:1;';
+      ni.placeholder=ldr.name||`리더${i+1}`;ni.value=ldr.name||'';
+      const ci=document.createElement('input');ci.className='inp';ci.type='password';ci.style.cssText='margin-bottom:0;width:90px;';
+      ci.placeholder='비번';ci.value=ldr.code||'';
+      const saveBtn=mk('button','btn-primary','저장');saveBtn.style.cssText='padding:8px 12px;font-size:12px;width:auto;margin-top:0;';
+      saveBtn.onclick=async()=>{
+        const idx=Q.leaders.findIndex(l=>l.id===ldr.id);
+        if(idx>=0){Q.leaders[idx].name=ni.value.trim()||ldr.name;Q.leaders[idx].code=ci.value.trim();}
+        await fbSet('leaders',Q.leaders);
+        saveBtn.textContent='✓';setTimeout(()=>saveBtn.textContent='저장',1000);
+      };
+      row.appendChild(label);row.appendChild(ni);row.appendChild(ci);row.appendChild(saveBtn);
+      lc.appendChild(row);
+    });
+  } else {
+    lc.appendChild(mks('div','font-size:12px;color:#aaa;','등록된 학습리더가 없습니다. 아래 학습리더 관리에서 먼저 추가하세요.'));
+  }
+  lc.appendChild(lmsg);
 
   // Claude API 키 설정
   const ac=mk('div','card');ac.style.marginTop='12px';w2.appendChild(ac);
