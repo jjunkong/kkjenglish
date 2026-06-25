@@ -2317,11 +2317,10 @@ async function lView(){
   const scanBtn=mks('button','','📷 채점');
   scanBtn.style.cssText=`height:38px;padding:0 14px;border-radius:50px;background:linear-gradient(180deg,#a78bfa,#7c3aed 70%,#6d28d9);border:none;box-shadow:0 3px 0 #4c1d95;font-size:13px;color:#fff;cursor:pointer;font-family:${CF};white-space:nowrap;`;
   scanBtn.onclick=()=>{
-    // 채점 앱을 팝업으로 열기
-    const popup=window.open('/grading.html','KKJ_GRADING','width=480,height=800,scrollbars=yes');
+    const gradingUrl='https://kkjenglish.vercel.app/grading.html';
+    const popup=window.open(gradingUrl,'KKJ_GRADING','width=480,height=800,scrollbars=yes');
     if(!popup){
-      // 팝업 차단 시 새 탭으로
-      window.open('/grading.html','_blank');
+      window.open(gradingUrl,'_blank');
     }
     // 결과 수신 리스너
     const handler=(e)=>{
