@@ -2317,7 +2317,7 @@ async function lView(){
   const scanBtn=mks('button','','📷 채점');
   scanBtn.style.cssText=`height:38px;padding:0 14px;border-radius:50px;background:linear-gradient(180deg,#a78bfa,#7c3aed 70%,#6d28d9);border:none;box-shadow:0 3px 0 #4c1d95;font-size:13px;color:#fff;cursor:pointer;font-family:${CF};white-space:nowrap;`;
   scanBtn.onclick=()=>{
-    const gradingUrl='https://kkjenglish.vercel.app/grading';
+    const gradingUrl='https://kkjenglish.vercel.app/grading.html?code=KKJENGLISH&start=1';
     const popup=window.open(gradingUrl,'KKJ_GRADING','width=480,height=800,scrollbars=yes');
     if(!popup){
       window.open(gradingUrl,'_blank');
