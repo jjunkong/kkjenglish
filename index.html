@@ -2314,122 +2314,61 @@ async function lView(){
   enterBtn.style.cssText=`height:38px;padding:0 16px;border-radius:50px;background:linear-gradient(180deg,#5b9ef8,#2060e8 70%,#1a4fd6);border:none;box-shadow:0 3px 0 #1440a0;font-size:13px;color:#fff;cursor:pointer;font-family:${CF};white-space:nowrap;`;
   enterBtn.onclick=()=>{Q._lClass=clsSel.value;Q._scanOpen=false;render();};
 
-  const scanBtn=mks('button','','📷 스캔');
+  const scanBtn=mks('button','','📷 채점');
   scanBtn.style.cssText=`height:38px;padding:0 14px;border-radius:50px;background:linear-gradient(180deg,#a78bfa,#7c3aed 70%,#6d28d9);border:none;box-shadow:0 3px 0 #4c1d95;font-size:13px;color:#fff;cursor:pointer;font-family:${CF};white-space:nowrap;`;
-  scanBtn.onclick=()=>{Q._scanOpen=!Q._scanOpen;render();};
+  scanBtn.onclick=()=>{
+    // 채점 앱을 팝업으로 열기
+    const popup=window.open('/grading.html','KKJ_GRADING','width=480,height=800,scrollbars=yes');
+    if(!popup){
+      // 팝업 차단 시 새 탭으로
+      window.open('/grading.html','_blank');
+    }
+    // 결과 수신 리스너
+    const handler=(e)=>{
+      if(e.data?.type!=='KKJ_GRADE_RESULT')return;
+      const {student,score,total,pct,verdict,keyName}=e.data;
+      // 해당 학생 찾기
+      const stu=Q.students.find(s=>s.name===student);
+      if(!stu){
+        alert(`"${student}" 학생을 찾을 수 없어요. 학생 이름을 확인해주세요.`);
+        return;
+      }
+      // 점수 저장
+      if(!Q._lScores)Q._lScores={};
+      if(!Q._lScores[stu.id])Q._lScores[stu.id]={};
+      // 시험 종류 자동 매핑
+      const kn=(keyName||'').toLowerCase();
+      let key='B';
+      if(kn.includes('단어')||kn.includes('word'))key='word';
+      else if(kn.includes('영작')||kn.includes('writ'))key='write';
+      else if(kn.includes('독해')||kn.includes('read'))key='read';
+      else if(kn.includes('b-test')||kn.includes('btest'))key='B';
+      else if(kn.includes('o-test')||kn.includes('otest'))key='O';
+      else if(kn.includes('d-test')||kn.includes('dtest'))key='D';
+      Q._lScores[stu.id][key]=pct;
+      // Firebase 저장
+      getLesson(stu.id,TODAY).then(l=>{
+        const keyMap={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest',read:'readTest'};
+        l[keyMap[key]]=pct;
+        fbSet(`lessons/${stu.id}/${TODAY.replace(/-/g,'_')}`,l);
+      });
+      // 해당 학생 카드 열기
+      Q[`_lOpen_${stu.id}`]=true;
+      render();
+      // 토스트 메시지
+      const toast=mks('div',`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2f7a;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);`,`✓ ${student} ${key}-test ${pct}점 입력됨`);
+      toast.style.fontFamily=CF;
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),3000);
+      window.removeEventListener('message',handler);
+    };
+    window.addEventListener('message',handler);
+  };
 
   selRow.appendChild(clsSel);selRow.appendChild(enterBtn);selRow.appendChild(scanBtn);
   topCard.appendChild(selRow);
 
   // 스캔 패널
-  if(Q._scanOpen){
-    const scanPanel=mks('div','margin-top:10px;border-radius:12px;background:rgba(255,255,255,0.4);border:1.5px solid rgba(167,139,250,0.5);padding:12px;');
-    const scanTitle=mks('div','font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:8px;','시험 종류 선택');scanTitle.style.fontFamily=CF;
-    scanPanel.appendChild(scanTitle);
-
-    const SCAN_TYPES=[
-      {id:'B',label:'B-test',bg:'#e0e7ff',color:'#3730a3',border:'#6366f1'},
-      {id:'O',label:'O-test',bg:'#dcfce7',color:'#166534',border:'#22c55e'},
-      {id:'D',label:'D-test',bg:'#f3e8ff',color:'#6b21a8',border:'#a855f7'},
-      {id:'word',label:'단어',bg:'#ffedd5',color:'#9a3412',border:'#f97316'},
-      {id:'write',label:'영작',bg:'#ffe4e6',color:'#9f1239',border:'#f43f5e'},
-      {id:'read',label:'독해',bg:'#dbeafe',color:'#1e3a8a',border:'#3b82f6'},
-    ];
-    if(!Q._scanType)Q._scanType='B';
-    const typeRow=mks('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;');
-    SCAN_TYPES.forEach(t=>{
-      const active=Q._scanType===t.id;
-      const tb=mks('button','',t.label);
-      tb.style.cssText=`padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:${CF};cursor:pointer;background:${t.bg};color:${t.color};border:1.5px solid ${t.border};${active?'box-shadow:0 0 0 2px rgba(99,102,241,0.5);':''};`;
-      tb.onclick=()=>{Q._scanType=t.id;render();};
-      typeRow.appendChild(tb);
-    });
-    scanPanel.appendChild(typeRow);
-
-    // 카메라 업로드
-    const camArea=mks('div','border:2px dashed rgba(124,58,237,0.4);border-radius:12px;padding:20px;text-align:center;background:rgba(255,255,255,0.5);cursor:pointer;');
-    const fileInp=document.createElement('input');fileInp.type='file';fileInp.accept='image/*';fileInp.capture='camera';fileInp.style.display='none';
-    camArea.innerHTML='<div style="font-size:32px;margin-bottom:6px;">📸</div>';
-    const camText=mks('div','font-size:11px;color:rgba(91,33,182,0.7);','시험지 사진을 찍거나 업로드하세요');camText.style.fontFamily=CF;
-    camArea.appendChild(camText);camArea.appendChild(fileInp);
-    camArea.onclick=()=>fileInp.click();
-
-    const scanMsg=mks('div','');
-    fileInp.onchange=async()=>{
-      const file=fileInp.files[0];if(!file)return;
-      camArea.innerHTML='<div style="font-size:24px;">⏳</div>';
-      const camText2=mks('div','font-size:11px;color:#7c3aed;','AI가 채점 중...'); camText2.style.fontFamily=CF;
-      camArea.appendChild(camText2);
-
-      // 이미지 base64 변환
-      const b64=await new Promise((res)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.readAsDataURL(file);});
-
-      // Claude Vision API 호출
-      const stuNames=(Q.classes?Q.students.filter(s=>s.classId===Q._lClass):Q.students).map(s=>s.name).join(', ');
-      const typeLabel=SCAN_TYPES.find(t=>t.id===Q._scanType)?.label||Q._scanType;
-
-      try{
-        const res=await fetch('https://api.anthropic.com/v1/messages',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-          body:JSON.stringify({
-            model:'claude-sonnet-4-20250514',max_tokens:500,
-            messages:[{role:'user',content:[
-              {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-              {type:'text',text:`이 시험지(${typeLabel})에서 학생 이름과 점수를 찾아줘. 가능한 학생 이름: ${stuNames}. JSON만 출력: [{"name":"홍길동","score":85}]`}
-            ]}]
-          })
-        });
-        const data=await res.json();
-        const text=data.content[0].text.replace(/```json|```/g,'').trim();
-        const results=JSON.parse(text);
-        Q._scanResults=results;Q._scanResultType=Q._scanType;
-        render();
-      }catch(e){
-        scanMsg.innerHTML=`<div style="color:#dc2626;font-size:11px;margin-top:6px;">인식 실패: ${e.message}</div>`;
-        camArea.innerHTML='<div style="font-size:32px;margin-bottom:6px;">📸</div>';
-        const ct=mks('div','font-size:11px;color:rgba(91,33,182,0.7);','다시 시도해주세요');ct.style.fontFamily=CF;camArea.appendChild(ct);
-      }
-    };
-    scanPanel.appendChild(camArea);
-    scanPanel.appendChild(scanMsg);
-
-    // 스캔 결과
-    if(Q._scanResults&&Q._scanResultType===Q._scanType){
-      const resBox=mks('div','margin-top:10px;border-radius:10px;background:rgba(255,255,255,0.6);padding:10px;border:1px solid rgba(167,139,250,0.3);');
-      const resTitle=mks('div','font-size:10px;color:#5b21b6;margin-bottom:6px;font-weight:700;',`🤖 AI 인식 결과 — ${SCAN_TYPES.find(t=>t.id===Q._scanType)?.label}`);resTitle.style.fontFamily=CF;
-      resBox.appendChild(resTitle);
-      Q._scanResults.forEach((r,i)=>{
-        const row=mks('div',`display:flex;justify-content:space-between;align-items:center;padding:5px 0;${i<Q._scanResults.length-1?'border-bottom:1px solid rgba(200,210,255,0.3);':''}`);
-        const nm=mks('div','font-size:13px;font-weight:700;color:#0B1A38;',r.name);nm.style.fontFamily=CF;
-        const sc=mks('div','font-size:13px;font-weight:700;color:#4f46e5;background:#e0e7ff;padding:2px 10px;border-radius:20px;',r.score+'점');sc.style.fontFamily=CF;
-        row.appendChild(nm);row.appendChild(sc);resBox.appendChild(row);
-      });
-      const applyBtn=mks('button','','✓ 전체 학생에 적용');
-      applyBtn.style.cssText=`width:100%;height:34px;border-radius:20px;background:linear-gradient(180deg,#a78bfa,#7c3aed);border:none;font-size:12px;color:#fff;cursor:pointer;font-family:${CF};margin-top:8px;font-weight:700;`;
-      applyBtn.onclick=async()=>{
-        const key=Q._scanType;
-        for(const r of Q._scanResults){
-          const stu=Q.students.find(s=>s.name===r.name);
-          if(!stu)continue;
-          if(!Q._lScores)Q._lScores={};
-          if(!Q._lScores[stu.id])Q._lScores[stu.id]={};
-          Q._lScores[stu.id][key]=r.score;
-          // Firebase 저장
-          const l=await getLesson(stu.id,TODAY);
-          if(key==='B')l.bTest=r.score;
-          else if(key==='O')l.oTest=r.score;
-          else if(key==='D')l.dTest=r.score;
-          else if(key==='word')l.wordTest=r.score;
-          else if(key==='write')l.writeTest=r.score;
-          else if(key==='read')l.readTest=r.score;
-          await fbSet(`lessons/${stu.id}/${TODAY.replace(/-/g,'_')}`,l);
-        }
-        Q._scanResults=null;Q._scanOpen=false;render();
-      };
-      resBox.appendChild(applyBtn);scanPanel.appendChild(resBox);
-    }
-    topCard.appendChild(scanPanel);
   }
 
   // 학생 리스트
