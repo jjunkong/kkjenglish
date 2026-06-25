@@ -155,15 +155,17 @@ const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[],lead
 
 // 초기 로딩
 const initData=async()=>{
-  const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);
-  const pw=await fbGet('pw');if(pw)MEM.pw=pw;
-  const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);
-  const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);
-  const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);
-  const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);
-  const apikey=await fbGet('apikey');if(apikey)CLAUDE_API_KEY=apikey;
-  const solapiCfg=await fbGet('solapiCfg');
-  if(solapiCfg){SOLAPI_KEY=solapiCfg.key||'';SOLAPI_SECRET=solapiCfg.secret||'';SOLAPI_SENDER=solapiCfg.sender||'';}
+  try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
+  try{const pw=await fbGet('pw');if(pw)MEM.pw=pw;}catch(e){}
+  try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
+  try{const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);}catch(e){}
+  try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
+  try{const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);}catch(e){}
+  try{const apikey=await fbGet('apikey');if(apikey)CLAUDE_API_KEY=apikey;}catch(e){}
+  try{
+    const solapiCfg=await fbGet('solapiCfg');
+    if(solapiCfg){SOLAPI_KEY=solapiCfg.key||'';SOLAPI_SECRET=solapiCfg.secret||'';SOLAPI_SENDER=solapiCfg.sender||'';}
+  }catch(e){}
 };
 
 const saveStu=async()=>{
@@ -3040,7 +3042,11 @@ function quizScreen(){
 }
 (async()=>{
   A.innerHTML='';
-  await initData();
+  try{
+    await initData();
+  }catch(e){
+    console.error('initData 오류:',e);
+  }
   Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;Q.classes=MEM.classes;Q.leaders=MEM.leaders;
   render();
 })();
