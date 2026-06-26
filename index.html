@@ -698,7 +698,6 @@ async function aList(){
   const topRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};topRow.appendChild(bb);
   const rightBtns=mks('div','display:flex;gap:6px;');
-  const smsBtn2=mk('button','btn-ghost-inv','📱 알림발송');smsBtn2.onclick=()=>{Q._smsDate=Q.aDate;Q.scr='smsBulk';render();};rightBtns.appendChild(smsBtn2);
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
