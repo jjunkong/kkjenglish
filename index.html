@@ -1068,9 +1068,6 @@ async function aLessonView(){
   htxt.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;',fd(Q.aDate)));
   hrow.appendChild(htxt);
   const rightBtns=mks('div','display:flex;gap:6px;');
-  const quizBtn=mk('button','btn-ghost-inv','📝 퀴즈');
-  quizBtn.onclick=async()=>{Q._quizResultStu=Q.aStu;Q._quizResultDate=Q.aDate;Q.scr='quizResult';render();};
-  rightBtns.appendChild(quizBtn);
   const profileBtn=mk('button','btn-ghost-inv','👤 학생 정보');
   profileBtn.onclick=()=>{Q._showStuProfile=!Q._showStuProfile;render();};
   rightBtns.appendChild(profileBtn);
@@ -1172,13 +1169,21 @@ async function aLessonView(){
       lData.wordTest?`A-test-단어 : ${lData.wordTest}점`:'A-test-단어 : ',
       lData.writeTest?`A-test-영작 : ${lData.writeTest}점`:'A-test-영작 : ',
     ].join('\n');
-    return `[${name} DAILY REPORT]\n안녕하세요 ${dateStr} ${name} 학생 DAILY REPORT 전달드립니다.\n\n<CLASS 공지>\n${classNotice}\n\n<HOMEWORK>\n${homework}\n\n<TEST>\n${scores}\n\n늘 믿고 맡겨주셔서 감사합니다.\n-김기준영어학원 드림`;
+    return '['+name+' DAILY REPORT]\n'
+      +'안녕하세요 '+dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
+      +'<CLASS 공지>\n'+classNotice+'\n\n'
+      +'<HOMEWORK>\n'+homework+'\n\n'
+      +'<TEST>\n'+scores+'\n\n'
+      +'늘 믿고 맡겨주셔서 감사합니다.\n'
+      +'-김기준영어학원 드림';
   };
 
   const smsBox=mks('div','');
   const refreshSMS=()=>{
     smsBox.innerHTML='';
-    const pre=mks('pre','font-size:12px;color:#333;line-height:1.7;white-space:pre-wrap;word-break:break-all;padding:12px;background:#f8f9ff;border-radius:10px;border:1px solid #e0e7ff;',genSMS());
+    const pre=document.createElement('pre');
+    pre.style.cssText='font-size:12px;color:#333;line-height:1.7;white-space:pre-wrap;word-break:break-all;padding:12px;background:#f8f9ff;border-radius:10px;border:1px solid #e0e7ff;margin:0;';
+    pre.textContent=genSMS();
     smsBox.appendChild(pre);
   };
   refreshSMS();
@@ -1193,20 +1198,20 @@ async function aLessonView(){
 
   // 저장 버튼
   const msg=mks('div','');body.appendChild(msg);
-  const btn=mk('button','btn-primary','수업 계획 저장');
+  const btn=mk('button','btn-primary','문자내용 저장');
   btn.onclick=async()=>{
     btn.textContent='저장 중...';btn.disabled=true;
     if(L.status==='none')L.status='planned';
     await setLesson(Q.aStu.id,Q.aDate,L);
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     refreshSMS();
-    setTimeout(()=>{msg.innerHTML='';btn.textContent='수업 계획 저장';btn.disabled=false;},1500);
+    setTimeout(()=>{msg.innerHTML='';btn.textContent='문자내용 저장';btn.disabled=false;},1500);
   };body.appendChild(btn);
 
   // 학부모 공개 버튼
   const sep2=mks('div','border-top:1px solid #e8e8e6;margin:16px 0 12px;');body.appendChild(sep2);
   const pubMsg=mks('div','');body.appendChild(pubMsg);
-  const pubBtn=mk('button','btn-primary',L.parentVisible?'✓ 학부모 공개 완료':'확인 후 학부모 공개');
+  const pubBtn=mk('button','btn-primary',L.parentVisible?'✓ 알림발송 완료':'📱 알림발송');
   if(L.parentVisible){pubBtn.style.background='#16a34a';}
   pubBtn.onclick=async()=>{
     pubBtn.textContent='저장 중...';pubBtn.disabled=true;
