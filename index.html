@@ -1113,67 +1113,84 @@ async function aLessonView(){
     w.appendChild(panel);
   }
   const body=mk('div','page-body');w.appendChild(body);
-  const tabs=mk('div','tab-wrap');body.appendChild(tabs);
-  ['plan','result'].forEach(t=>{
-    const tb=mk('button','tab-btn'+(Q.aTab===t?' active':''),t==='plan'?'수업 계획 입력':'완료 체크');
-    tb.onclick=()=>{Q.aTab=t;render();};tabs.appendChild(tb);
-  });
   const L=Q.aLesson;
   if(!L.vocab)L.vocab={score:'',comment:''};
-  const msg=mks('div','');
-  if(Q.aTab==='plan'){
-    LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
-    // 학부모 코멘트 표시 (수업계획 탭)
-    if(L.planComment){
-      const pc=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;');
-      pc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학부모 코멘트'));
-      pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.planComment));
-      body.appendChild(pc);
-    }
-    body.appendChild(msg);
-    const btn=mk('button','btn-primary','수업 계획 저장');
-    btn.onclick=async()=>{
-      btn.textContent='저장 중...';btn.disabled=true;
-      if(L.status==='none')L.status='planned';
-      await setLesson(Q.aStu.id,Q.aDate,L);
-      msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
-      setTimeout(()=>{Q.scr='aList';render();},700);
-    };body.appendChild(btn);
-  } else {
-    // sectionBlock에 leaderComments 포함 (각 섹션 아래 표시됨)
-    LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,true,true)));
 
-    // 학부모 코멘트 표시 - 완료 체크 탭 (resultComment)
-    if(L.resultComment){
-      const pc=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:10px;');
-      pc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학부모 코멘트 (수업 결과)'));
-      pc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',L.resultComment));
-      body.appendChild(pc);
+  // 제목
+  body.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:10px;padding:8px 12px;background:#eef2ff;border-radius:10px;','📚 수업내용'));
+
+  // 수업 계획 섹션
+  LK.forEach((k,i)=>body.appendChild(sectionBlock(LABELS[i],L,k,false,false)));
+
+  // 저장 버튼
+  const msg=mks('div','');body.appendChild(msg);
+  const btn=mk('button','btn-primary','수업 계획 저장');
+  btn.onclick=async()=>{
+    btn.textContent='저장 중...';btn.disabled=true;
+    if(L.status==='none')L.status='planned';
+    await setLesson(Q.aStu.id,Q.aDate,L);
+    msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
+    setTimeout(()=>{msg.innerHTML='';btn.textContent='수업 계획 저장';btn.disabled=false;},1500);
+  };body.appendChild(btn);
+
+  // 학습리더 데이터 (오늘 것만)
+  const lData=await getLesson(Q.aStu.id,Q.aDate);
+  const hasLdrData=lData.bTest||lData.oTest||lData.dTest||lData.wordTest||lData.writeTest||lData.readTest||lData.attend||lData.leaderComment;
+  if(hasLdrData){
+    const sep=mks('div','border-top:2px solid #e8e8e6;margin:16px 0 12px;');body.appendChild(sep);
+    body.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border-radius:10px;','📋 학습리더 입력 현황'));
+
+    // 출석/과제
+    const row1=mks('div','display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;');
+    if(lData.attend!==undefined){
+      const ab=mks('div',`font-size:12px;padding:5px 12px;border-radius:20px;background:${lData.attend?'#dcfce7':'#f1f5f9'};color:${lData.attend?'#16a34a':'#94a3b8'};border:1px solid ${lData.attend?'#86efac':'#e2e8f0'};`,'출석 '+(lData.attend?'✓ 완료':'○ 미확인'));
+      row1.appendChild(ab);
+    }
+    if(lData.hw!==undefined){
+      const hb=mks('div',`font-size:12px;padding:5px 12px;border-radius:20px;background:${lData.hw?'#fef3c7':'#f1f5f9'};color:${lData.hw?'#d97706':'#94a3b8'};border:1px solid ${lData.hw?'#fde68a':'#e2e8f0'};`,'과제 '+(lData.hw?'✓ 완료':'○ 미확인'));
+      row1.appendChild(hb);
+    }
+    if(row1.children.length)body.appendChild(row1);
+
+    // 점수 표시
+    const scores=[
+      {label:'B-test',val:lData.bTest,color:'#4f46e5',bg:'#e0e7ff'},
+      {label:'O-test',val:lData.oTest,color:'#166534',bg:'#dcfce7'},
+      {label:'D-test',val:lData.dTest,color:'#6b21a8',bg:'#f3e8ff'},
+      {label:'단어',val:lData.wordTest,color:'#9a3412',bg:'#ffedd5'},
+      {label:'영작',val:lData.writeTest,color:'#9f1239',bg:'#ffe4e6'},
+      {label:'독해',val:lData.readTest,color:'#1e3a8a',bg:'#dbeafe'},
+      {label:'하빵',val:lData.habangTest,color:'#1e3a8a',bg:'#dbeafe'},
+    ].filter(s=>s.val);
+    if(scores.length){
+      const scoreRow=mks('div','display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;');
+      scores.forEach(s=>{
+        scoreRow.appendChild(mks('div',`font-size:12px;padding:5px 12px;border-radius:20px;background:${s.bg};color:${s.color};border:1px solid ${s.color}33;font-weight:700;`,`${s.label} ${s.val}점`));
+      });
+      body.appendChild(scoreRow);
     }
 
-    body.appendChild(msg);
-    // 임시 저장 버튼
-    const saveBtn=mk('button','btn-ghost','임시 저장');
-    saveBtn.style.cssText='width:100%;margin-top:6px;padding:12px;border-radius:10px;';
-    saveBtn.onclick=async()=>{
-      saveBtn.textContent='저장 중...';saveBtn.disabled=true;
-      L.status='completed';L.parentVisible=false;
-      await setLesson(Q.aStu.id,Q.aDate,L);
-      msg.innerHTML='<div class="ok-msg">✓ 임시 저장됐습니다. (학부모에게 아직 미공개)</div>';
-      saveBtn.textContent='임시 저장';saveBtn.disabled=false;
-    };body.appendChild(saveBtn);
-    // 학부모 공개 버튼
-    const pubBtn=mk('button','btn-primary', L.parentVisible?'✓ 학부모 공개 완료':'확인 후 학부모 공개');
-    if(L.parentVisible){pubBtn.style.background='#16a34a';}
-    pubBtn.style.marginTop='8px';
-    pubBtn.onclick=async()=>{
-      pubBtn.textContent='저장 중...';pubBtn.disabled=true;
-      L.status='completed';L.parentVisible=true;
-      await setLesson(Q.aStu.id,Q.aDate,L);
-      msg.innerHTML='<div class="ok-msg">✓ 학부모에게 공개됐습니다!</div>';
-      setTimeout(()=>{Q.scr='aList';render();},700);
-    };body.appendChild(pubBtn);
+    // 학습리더 코멘트
+    if(lData.leaderComment){
+      const cc=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:8px;');
+      cc.appendChild(mks('div','font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;','💬 학습리더 코멘트'));
+      cc.appendChild(mks('div','font-size:13px;color:#333;line-height:1.6;',lData.leaderComment));
+      body.appendChild(cc);
+    }
   }
+
+  // 학부모 공개 버튼
+  const pubMsg=mks('div','');body.appendChild(pubMsg);
+  const sep2=mks('div','border-top:1px solid #e8e8e6;margin:16px 0 12px;');body.appendChild(sep2);
+  const pubBtn=mk('button','btn-primary',L.parentVisible?'✓ 학부모 공개 완료':'확인 후 학부모 공개');
+  if(L.parentVisible){pubBtn.style.background='#16a34a';}
+  pubBtn.onclick=async()=>{
+    pubBtn.textContent='저장 중...';pubBtn.disabled=true;
+    L.status='completed';L.parentVisible=true;
+    await setLesson(Q.aStu.id,Q.aDate,L);
+    pubMsg.innerHTML='<div class="ok-msg">✓ 학부모에게 공개됐습니다!</div>';
+    setTimeout(()=>{Q.scr='aList';render();},700);
+  };body.appendChild(pubBtn);
 }
 
 async function aGroupPlan(){
