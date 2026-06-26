@@ -2387,7 +2387,7 @@ async function lView(){
       Q._lScores[stu.id]={
         attend:l.attend||false,hw:l.hw||false,
         B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',
-        word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||''
+        word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||''
       };
     }
     const sc=Q._lScores[stu.id];
@@ -2419,7 +2419,7 @@ async function lView(){
         inp.oninput=async()=>{
           sc[key]=inp.value;
           const lData=await getLesson(stu.id,TODAY);
-          const keyMap={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest',read:'readTest'};
+          const keyMap={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest',read:'readTest',habang:'habangTest'};
           lData[keyMap[key]]=inp.value;
           await fbSet(`lessons/${stu.id}/${TODAY.replace(/-/g,'_')}`,lData);
         };
@@ -2457,6 +2457,16 @@ async function lView(){
       g3.appendChild(mkItem(mkLbl('영작','#ffe4e6','#9f1239','#f43f5e'),mkInp(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
       g3.appendChild(mkItem(mkLbl('독해','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.read,'rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#2563eb','read')));
       body2.appendChild(g3);
+
+      // 내신 시험 — 하빵
+      const divNas=mks('div','border:none;border-top:1px dashed rgba(180,200,255,0.4);margin:8px 0;');body2.appendChild(divNas);
+      const stNas=mks('div','font-size:13px;font-weight:700;margin-bottom:8px;');stNas.style.fontFamily=CF;
+      stNas.innerHTML='<span style="color:#0B1A38;">내신 </span><span style="color:#2E63E8;">시험</span>';
+      body2.appendChild(stNas);
+      const gNas=mks('div','display:flex;gap:8px;');
+      gNas.appendChild(mkItem(mkLbl('하빵','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.habang||'','rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#1e3a8a','habang')));
+      gNas.appendChild(mks('div','flex:2;'));
+      body2.appendChild(gNas);
 
       card.appendChild(body2);
     }
