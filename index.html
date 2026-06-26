@@ -2373,9 +2373,9 @@ async function lView(){
     return;
   }
 
-  const clsStudents=Q.students.filter(s=>s.classId===Q._lClass&&s.days&&s.days.includes(dowOf(TODAY)));
+  const clsStudents=Q.students.filter(s=>s.classId===Q._lClass);
   if(!clsStudents.length){
-    w.appendChild(mks('div','border-radius:14px;background:rgba(255,255,255,0.3);border:1.5px solid rgba(255,255,255,0.6);padding:24px;text-align:center;color:rgba(10,26,92,0.5);font-size:13px;','오늘 수업 학생이 없어요'));
+    w.appendChild(mks('div','border-radius:14px;background:rgba(255,255,255,0.3);border:1.5px solid rgba(255,255,255,0.6);padding:24px;text-align:center;color:rgba(10,26,92,0.5);font-size:13px;','이 반에 학생이 없어요'));
     return;
   }
 
