@@ -1679,14 +1679,23 @@ async function pView(){
       {id:'A',name:'A-test',desc:'All — 전부 종합하다',bg:'linear-gradient(160deg,rgba(255,225,230,0.85),rgba(255,205,215,0.7))',code:'linear-gradient(135deg,#fda4af,#f43f5e)',panel:'linear-gradient(160deg,rgba(255,225,230,0.7),rgba(255,205,215,0.5))',score_bg:'linear-gradient(135deg,#fda4af,#f43f5e)',bar:'#fecdd3',barToday:'#e11d48',todayColor:'#e11d48'},
     ];
 
-    // 퀴즈 결과 불러오기
+    // 퀴즈 결과 + 오늘 레슨 점수 불러오기
     const quizResults=await fbGet(`quizResults/${stu.id}`)||{};
     const resultDates=Object.keys(quizResults).sort();
+    const todayLesson=await getLesson(stu.id,TODAY);
+    // 레슨 점수 매핑
+    const lessonScores={
+      B:todayLesson.bTest||'',
+      O:todayLesson.oTest||'',
+      D:todayLesson.dTest||'',
+      word:todayLesson.wordTest||'',
+      write:todayLesson.writeTest||'',
+      read:todayLesson.readTest||'',
+    };
 
     TESTS.forEach(t=>{
       const wrap=mks('div','margin-bottom:8px;');
       const isOpen=Q[`_open_${t.id}`];
-      // 버튼
       const btn=mks('div',`border-radius:${isOpen?'14px 14px 0 0':'14px'};padding:12px 14px;border:1.5px solid rgba(255,255,255,0.9);${isOpen?'border-bottom:1px solid rgba(255,255,255,0.4);':''}box-shadow:0 4px 14px rgba(80,100,200,0.08),inset 0 2px 0 rgba(255,255,255,1);display:flex;align-items:center;gap:12px;cursor:pointer;background:${t.bg};`);
       const codeEl=mks('div',`width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,0.12);background:${t.code};`,t.id);
       codeEl.style.fontFamily=CF;
@@ -1704,49 +1713,52 @@ async function pView(){
 
         if(t.id==='A'){
           // A-test: 단어/영작/독해 3개
-          const subTests=[{label:'단어',key:'vocab'},{label:'영작',key:'writing'},{label:'독해',key:'reading'}];
+          const subTests=[
+            {label:'단어',key:'word'},
+            {label:'영작',key:'write'},
+            {label:'독해',key:'read'}
+          ];
           subTests.forEach((st,si)=>{
             if(si>0){const div=mks('div','border:none;border-top:1px solid rgba(255,205,215,0.6);margin:7px 0;');panel.appendChild(div);}
             const col=mks('div','display:flex;flex-direction:column;gap:6px;');
             const topRow=mks('div','display:flex;align-items:center;gap:8px;');
             const slb=mks('div','font-size:10px;font-weight:700;color:rgba(10,26,92,0.6);',st.label);slb.style.fontFamily=CF;
+            const todayScore=lessonScores[st.key]||'-';
             const scoreBox=mks('div',`display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 12px;background:${t.score_bg};`);
             const sl=mks('div','font-size:9px;color:rgba(255,255,255,0.8);','오늘');sl.style.fontFamily=CF;
-            const sv=mks('div','font-size:14px;color:#fff;','-');sv.style.fontFamily=CF;
-            const su=mks('div','font-size:9px;color:rgba(255,255,255,0.7);','점');su.style.fontFamily=CF;
-            scoreBox.appendChild(sl);scoreBox.appendChild(sv);scoreBox.appendChild(su);
+            const sv=mks('div','font-size:14px;color:#fff;',todayScore+(todayScore!=='-'?'점':''));sv.style.fontFamily=CF;
+            scoreBox.appendChild(sl);scoreBox.appendChild(sv);
             topRow.appendChild(slb);topRow.appendChild(scoreBox);
             col.appendChild(topRow);
-            // 그래프 아래에
             const bars=mks('div','display:flex;align-items:flex-end;gap:4px;height:32px;');
             const pastDates=resultDates.slice(-4);
             pastDates.forEach(d=>{const bc=mks('div','display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;');const b=mks('div',`width:100%;border-radius:3px 3px 0 0;min-height:2px;background:${t.bar};height:50%;`);const bl=mks('div','font-size:7px;color:rgba(10,26,92,0.3);',fdShort(d));bl.style.fontFamily=CF;bc.appendChild(b);bc.appendChild(bl);bars.appendChild(bc);});
             const tc=mks('div','display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;');
-            const tb=mks('div',`width:100%;border-radius:3px 3px 0 0;background:${t.barToday};border:1px solid ${t.barToday};height:70%;`);
+            const barH=todayScore!=='-'?Math.min(parseInt(todayScore),100)+'%':'30%';
+            const tb=mks('div',`width:100%;border-radius:3px 3px 0 0;background:${t.barToday};border:1px solid ${t.barToday};height:${barH};`);
             const tl=mks('div','font-size:7px;font-weight:700;','오늘');tl.style.cssText+=`color:${t.todayColor};font-family:${CF};`;
             tc.appendChild(tb);tc.appendChild(tl);bars.appendChild(tc);
             col.appendChild(bars);
             panel.appendChild(col);
           });
         } else {
-          // B/O/D 단일 점수 — 점수 위, 그래프 아래
+          // B/O/D 단일 점수
           const col=mks('div','display:flex;flex-direction:column;gap:8px;');
-          // 점수 행
           const scoreRow=mks('div','display:flex;align-items:center;gap:8px;');
+          const todayScore=lessonScores[t.id]||'-';
           const scoreBox=mks('div',`display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 16px;background:${t.score_bg};`);
           const sl=mks('div','font-size:10px;color:rgba(255,255,255,0.8);','오늘');sl.style.fontFamily=CF;
-          const sv=mks('div','font-size:22px;color:#fff;line-height:1;','-');sv.style.fontFamily=CF;
-          const su=mks('div','font-size:10px;color:rgba(255,255,255,0.7);','점');su.style.fontFamily=CF;
-          scoreBox.appendChild(sl);scoreBox.appendChild(sv);scoreBox.appendChild(su);
+          const sv=mks('div','font-size:22px;color:#fff;line-height:1;',todayScore+(todayScore!=='-'?'점':''));sv.style.fontFamily=CF;
+          scoreBox.appendChild(sl);scoreBox.appendChild(sv);
           scoreRow.appendChild(scoreBox);
           col.appendChild(scoreRow);
-          // 그래프
           const gt=mks('div','font-size:9px;color:rgba(10,26,92,0.4);margin-bottom:4px;','누적 점수');gt.style.fontFamily=CF;
           const bars=mks('div','display:flex;align-items:flex-end;gap:4px;height:44px;');
           const pastDates=resultDates.slice(-4);
           pastDates.forEach(d=>{const bc=mks('div','display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;');const b=mks('div',`width:100%;border-radius:3px 3px 0 0;min-height:3px;background:${t.bar};height:50%;`);const bl=mks('div','font-size:8px;color:rgba(10,26,92,0.35);',fdShort(d));bl.style.fontFamily=CF;bc.appendChild(b);bc.appendChild(bl);bars.appendChild(bc);});
           const tc=mks('div','display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;');
-          const tb=mks('div',`width:100%;border-radius:3px 3px 0 0;background:${t.barToday};border:1.5px solid ${t.barToday};height:70%;`);
+          const barH=todayScore!=='-'?Math.min(parseInt(todayScore),100)+'%':'30%';
+          const tb=mks('div',`width:100%;border-radius:3px 3px 0 0;background:${t.barToday};border:1.5px solid ${t.barToday};height:${barH};`);
           const tl=mks('div','font-size:8px;font-weight:700;','오늘');tl.style.cssText+=`color:${t.todayColor};font-family:${CF};`;
           tc.appendChild(tb);tc.appendChild(tl);bars.appendChild(tc);
           col.appendChild(gt);col.appendChild(bars);
