@@ -497,8 +497,16 @@ function showModal(title,msg,onOk){
 // 모바일 뒤로가기 처리
 const pushState=()=>history.pushState({scr:Q.scr},'','');
 window.addEventListener('popstate',()=>{
+  const adminScreens=['aList','aLessonView','aStuEdit','aSettings','aGroupPlan','noticeList','noticeWrite','smsBulk','quizResult'];
   if(Q.scr==='home'){
     history.pushState({scr:'home'},'','');
+  } else if(adminScreens.includes(Q.scr)&&Q.scr!=='aList'){
+    // 원장 서브화면 → 원장 홈
+    Q.scr='aList';Q.err='';render();
+    history.pushState({scr:'aList'},'','');
+  } else if(Q.scr==='aList'){
+    // 원장 홈 → 유지 (나가지 않음)
+    history.pushState({scr:'aList'},'','');
   } else {
     Q.scr='home';Q.err='';render();
     history.pushState({scr:'home'},'','');
@@ -655,7 +663,6 @@ function aLogin(){
   if(localStorage.getItem('kkj_admin_auth')==='true'){Q.scr='aList';Q.err='';render();return;}
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};hdr.appendChild(bb);
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
   hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력'));
   w.appendChild(hdr);
@@ -691,12 +698,8 @@ async function aList(){
   const topRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='home';Q.err='';render();};topRow.appendChild(bb);
   const rightBtns=mks('div','display:flex;gap:6px;');
-  const noticeBtn=mk('button','btn-ghost-inv','🔔 공지');noticeBtn.onclick=()=>{Q._fromAdmin=true;Q.scr='noticeList';render();};rightBtns.appendChild(noticeBtn);
-  const smsBtn2=mk('button','btn-ghost-inv','📱 문자');smsBtn2.onclick=()=>{Q._smsDate=Q.aDate;Q.scr='smsBulk';render();};rightBtns.appendChild(smsBtn2);
+  const smsBtn2=mk('button','btn-ghost-inv','📱 알림발송');smsBtn2.onclick=()=>{Q._smsDate=Q.aDate;Q.scr='smsBulk';render();};rightBtns.appendChild(smsBtn2);
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
-  const loBtn=mk('button','btn-ghost-inv','로그아웃');
-  loBtn.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='home';render();};
-  rightBtns.appendChild(loBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
 
