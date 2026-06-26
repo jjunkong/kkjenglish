@@ -2402,7 +2402,8 @@ async function lView(){
       Q._lScores[stu.id]={
         attend:l.attend||false,hw:l.hw||false,
         B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',
-        word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||''
+        word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||'',
+        comment:l.leaderComment||''
       };
     }
     const sc=Q._lScores[stu.id];
@@ -2482,6 +2483,23 @@ async function lView(){
       gNas.appendChild(mkItem(mkLbl('하빵','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.habang||'','rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#1e3a8a','habang')));
       gNas.appendChild(mks('div','flex:2;'));
       body2.appendChild(gNas);
+
+      // 코멘트
+      const divCmt=mks('div','border:none;border-top:1px dashed rgba(180,200,255,0.4);margin:8px 0;');body2.appendChild(divCmt);
+      const cmtLabel=mks('div','font-size:12px;font-weight:700;color:rgba(10,26,92,0.5);margin-bottom:6px;','💬 학습리더 코멘트');cmtLabel.style.fontFamily=CF;
+      body2.appendChild(cmtLabel);
+      const cmtInp=document.createElement('textarea');
+      cmtInp.placeholder='학생에 대한 특이사항이나 코멘트를 남겨주세요...';
+      cmtInp.value=sc.comment||'';
+      cmtInp.rows=2;
+      cmtInp.style.cssText=`width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid rgba(180,200,255,0.5);background:rgba(255,255,255,0.8);font-size:13px;color:#0B1A38;outline:none;font-family:${CF};resize:none;box-sizing:border-box;`;
+      cmtInp.oninput=async()=>{
+        sc.comment=cmtInp.value;
+        const lData=await getLesson(stu.id,TODAY);
+        lData.leaderComment=cmtInp.value;
+        await fbSet(`lessons/${stu.id}/${TODAY.replace(/-/g,'_')}`,lData);
+      };
+      body2.appendChild(cmtInp);
 
       card.appendChild(body2);
     }
