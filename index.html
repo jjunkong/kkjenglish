@@ -1789,43 +1789,64 @@ async function pView(){
     const card=mks('div','border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);padding:14px;');
     const title=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:12px;','✅ 출석 현황');title.style.fontFamily=CF;
     card.appendChild(title);
-    // 이번달 달력
+
+    // Firebase에서 전체 레슨 데이터 한번에 불러오기
+    const allLessons=await fbGet(`lessons/${stu.id}`) || {};
+
+    // 이번달 + 지난달 달력 2개 표시
     const now2=new Date();
-    const yrC=now2.getFullYear(),moC=now2.getMonth();
-    const monthLabel=mks('div','font-size:13px;font-weight:700;color:#2E63E8;margin-bottom:8px;text-align:center;',`${yrC}년 ${moC+1}월`);monthLabel.style.fontFamily=CF;
-    card.appendChild(monthLabel);
-    const grid=mks('div','display:grid;grid-template-columns:repeat(7,1fr);gap:4px;');
-    ['일','월','화','수','목','금','토'].forEach(d=>{
-      const h=mks('div','text-align:center;font-size:10px;color:rgba(10,26,92,0.4);padding:2px;',d);h.style.fontFamily=CF;grid.appendChild(h);
-    });
-    const firstDay=new Date(yrC,moC,1).getDay();
-    const dimC=new Date(yrC,moC+1,0).getDate();
-    for(let i=0;i<firstDay;i++){grid.appendChild(mks('div',''));}
-    // 출석 데이터 로드 (간단히 해당 월 모든 날짜 체크)
-    const attendCache={};
-    for(let d=1;d<=dimC;d++){
-      const dd=String(d).padStart(2,'0'),mm=String(moC+1).padStart(2,'0');
-      const dateStr=`${yrC}-${mm}-${dd}`;
-      const cell=mks('div','text-align:center;border-radius:8px;padding:4px 2px;font-size:12px;');
-      cell.style.fontFamily=CF;
-      cell.textContent=d;
-      // 오늘 날짜 강조
-      if(dateStr===TODAY){cell.style.cssText+='background:#2E63E8;color:#fff;font-weight:700;';}
-      else{cell.style.color='#0B1A38';}
-      // 출석 체크는 비동기로 나중에 업데이트
-      attendCache[dateStr]=cell;
-      grid.appendChild(cell);
-    }
-    card.appendChild(grid);
-    bg.appendChild(card);
-    // 출석 데이터 비동기 로드
-    (async()=>{
-      for(const [dateStr,cell] of Object.entries(attendCache)){
-        const l=await getLesson(stu.id,dateStr);
-        if(l.attend===true){cell.style.cssText+='background:#dcfce7;color:#16a34a;font-weight:700;border:1.5px solid #86efac;';}
-        else if(l.attend===false&&l.status!=='none'){cell.style.cssText+='background:#fee2e2;color:#dc2626;';}
+    for(let mOffset=1;mOffset>=0;mOffset--){
+      const tgt=new Date(now2.getFullYear(),now2.getMonth()-mOffset,1);
+      const yrC=tgt.getFullYear(),moC=tgt.getMonth();
+      const monthLabel=mks('div','font-size:13px;font-weight:700;color:#2E63E8;margin:8px 0 6px;text-align:center;',`${yrC}년 ${moC+1}월`);monthLabel.style.fontFamily=CF;
+      card.appendChild(monthLabel);
+      // 출석 통계
+      let attendCount=0,totalClass=0;
+      const grid=mks('div','display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;');
+      ['일','월','화','수','목','금','토'].forEach(d=>{
+        const h=mks('div','text-align:center;font-size:9px;color:rgba(10,26,92,0.4);padding:2px;',d);h.style.fontFamily=CF;grid.appendChild(h);
+      });
+      const firstDay=new Date(yrC,moC,1).getDay();
+      const dimC=new Date(yrC,moC+1,0).getDate();
+      for(let i=0;i<firstDay;i++){grid.appendChild(mks('div',''));}
+      for(let d=1;d<=dimC;d++){
+        const dd=String(d).padStart(2,'0'),mm=String(moC+1).padStart(2,'0');
+        const dateStr=`${yrC}-${mm}-${dd}`;
+        const key=dateStr.replace(/-/g,'_');
+        const cell=mks('div','text-align:center;border-radius:8px;padding:5px 2px;font-size:12px;cursor:default;');
+        cell.style.fontFamily=CF;
+        cell.textContent=d;
+        const l=allLessons[key]||{};
+        if(dateStr===TODAY){
+          cell.style.cssText+='background:#2E63E8;color:#fff;font-weight:700;border-radius:50%;';
+        } else if(l.attend===true){
+          cell.style.cssText+='background:#dcfce7;color:#16a34a;font-weight:700;border:1.5px solid #86efac;border-radius:50%;';
+          attendCount++;totalClass++;
+        } else if(l.status&&l.status!=='none'){
+          cell.style.cssText+='background:#fee2e2;color:#dc2626;border-radius:50%;';
+          totalClass++;
+        } else {
+          cell.style.color='rgba(10,26,92,0.5)';
+        }
+        grid.appendChild(cell);
       }
-    })();
+      card.appendChild(grid);
+      // 출석 통계
+      if(totalClass>0){
+        const stat=mks('div',`font-size:11px;text-align:center;padding:4px;background:rgba(46,99,232,0.08);border-radius:8px;margin-bottom:8px;color:#2E63E8;`,`출석 ${attendCount}/${totalClass}회`);stat.style.fontFamily=CF;
+        card.appendChild(stat);
+      }
+    }
+    // 범례
+    const legend=mks('div','display:flex;gap:10px;justify-content:center;margin-top:4px;');
+    [['#dcfce7','#16a34a','출석'],['#fee2e2','#dc2626','결석/미확인']].forEach(([bg2,c,lbl])=>{
+      const row=mks('div','display:flex;align-items:center;gap:4px;');
+      const dot=mks('div',`width:12px;height:12px;border-radius:50%;background:${bg2};border:1px solid ${c};flex-shrink:0;`);
+      const txt=mks('div','font-size:10px;',lbl);txt.style.cssText+=`color:${c};font-family:${CF};`;
+      row.appendChild(dot);row.appendChild(txt);legend.appendChild(row);
+    });
+    card.appendChild(legend);
+    bg.appendChild(card);
 
   } else if(Q._pTab==='test'){
     // 점수 카드
@@ -2527,7 +2548,13 @@ async function lView(){
       st1.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CLASS</span>';
       body2.appendChild(st1);
       const g1=mks('div','display:flex;gap:8px;margin-bottom:10px;');
-      g1.appendChild(mkItem(mkLbl('출석','#d1fae5','#065f46','#10b981'),mkChk(sc.attend,'#6ee7b7','#10b981',(v)=>{sc.attend=v;Q[`_lOpen_${stu.id}`]=true;render();})));
+      g1.appendChild(mkItem(mkLbl('출석','#d1fae5','#065f46','#10b981'),mkChk(sc.attend,'#6ee7b7','#10b981',async(v)=>{
+        sc.attend=v;
+        const lData=await getLesson(stu.id,(Q._lDate||TODAY));
+        lData.attend=v;
+        await fbSet(`lessons/${stu.id}/${(Q._lDate||TODAY).replace(/-/g,'_')}`,lData);
+        Q[`_lOpen_${stu.id}`]=true;render();
+      })));
       g1.appendChild(mkItem(mkLbl('B-test','#e0e7ff','#3730a3','#6366f1'),mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
       g1.appendChild(mkItem(mkLbl('O-test','#dcfce7','#166534','#22c55e'),mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
       body2.appendChild(g1);
@@ -2539,7 +2566,13 @@ async function lView(){
       body2.appendChild(st2);
       const g2=mks('div','display:flex;gap:8px;margin-bottom:10px;');
       g2.appendChild(mkItem(mkLbl('D-test','#f3e8ff','#6b21a8','#a855f7'),mkInp(sc.D,'rgba(240,225,255,0.8)','rgba(168,85,247,0.4)','#9333ea','D')));
-      g2.appendChild(mkItem(mkLbl('과제','#fef3c7','#92400e','#f59e0b'),mkChk(sc.hw,'#fde68a','#f59e0b',(v)=>{sc.hw=v;Q[`_lOpen_${stu.id}`]=true;render();})));
+      g2.appendChild(mkItem(mkLbl('과제','#fef3c7','#92400e','#f59e0b'),mkChk(sc.hw,'#fde68a','#f59e0b',async(v)=>{
+        sc.hw=v;
+        const lData=await getLesson(stu.id,(Q._lDate||TODAY));
+        lData.hw=v;
+        await fbSet(`lessons/${stu.id}/${(Q._lDate||TODAY).replace(/-/g,'_')}`,lData);
+        Q[`_lOpen_${stu.id}`]=true;render();
+      })));
       const sp=mks('div','flex:2;');g2.appendChild(sp);
       body2.appendChild(g2);
 
