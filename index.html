@@ -1350,9 +1350,6 @@ async function aGroupPlan(){
     let count=0;
     for(const stu of selected){
       const existing=await getLesson(stu.id,date);
-      if(existing.status!=='none'){
-        if(!confirm(`${stu.name} 학생은 이미 수업 계획이 있습니다. 덮어쓸까요?`))continue;
-      }
       const newL={...existing,plan:{...GL.plan},hw:GL.hw,status:'planned'};
       await setLesson(stu.id,date,newL);count++;
     }
