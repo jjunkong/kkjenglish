@@ -1881,18 +1881,87 @@ async function pView(){
     bg.appendChild(card);
 
   } else if(Q._pTab==='hw'){
-    // 과제
-    const card=mks('div','border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);padding:14px;');
-    const title=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:12px;','📋 과제');title.style.fontFamily=CF;
+    // 오늘 과제 내용
+    const card=mks('div','border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);padding:14px;margin-bottom:10px;');
+    const title=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:10px;',`📋 ${fd(Q.pDate)} 과제`);title.style.fontFamily=CF;
     card.appendChild(title);
     const hwContent=lessonData.hw||lessonData.plan?.core||'';
     if(hwContent){
-      const hwBox=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13px;color:#333;line-height:1.7;',hwContent);
+      const hwBox=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13px;color:#333;line-height:1.7;');
+      hwBox.style.fontFamily=CF;
+      hwBox.textContent=hwContent;
       card.appendChild(hwBox);
     } else {
-      card.appendChild(mks('div','font-size:12px;color:rgba(10,26,92,0.4);','등록된 과제가 없어요'));
+      const em=mks('div','font-size:12px;color:rgba(10,26,92,0.4);padding:8px;','등록된 과제가 없어요');em.style.fontFamily=CF;
+      card.appendChild(em);
     }
+    // 과제 완료 여부
+    const hwStatus=mks('div','display:flex;align-items:center;gap:8px;margin-top:10px;');
+    const hwBadge=mks('div',`font-size:12px;padding:5px 14px;border-radius:20px;font-weight:700;background:${lessonData.hw?'#dcfce7':'#f1f5f9'};color:${lessonData.hw?'#16a34a':'#94a3b8'};border:1.5px solid ${lessonData.hw?'#86efac':'#e2e8f0'};`,'과제 '+(lessonData.hw?'✓ 완료':'○ 미완료'));hwBadge.style.fontFamily=CF;
+    hwStatus.appendChild(hwBadge);
+    card.appendChild(hwStatus);
     bg.appendChild(card);
+
+    // 과제 달력 (누적)
+    const calCard=mks('div','border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);padding:14px;');
+    const calTitle=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:10px;','📅 과제 현황');calTitle.style.fontFamily=CF;
+    calCard.appendChild(calTitle);
+
+    // Firebase에서 전체 레슨 데이터 한번에 불러오기
+    const allLessonsHw=await fbGet(`lessons/${stu.id}`) || {};
+
+    // 이번달 + 지난달 2개월
+    const nowHw=new Date();
+    for(let mOffset=1;mOffset>=0;mOffset--){
+      const tgt=new Date(nowHw.getFullYear(),nowHw.getMonth()-mOffset,1);
+      const yrH=tgt.getFullYear(),moH=tgt.getMonth();
+      const ml=mks('div','font-size:13px;font-weight:700;color:#2E63E8;margin:8px 0 6px;text-align:center;',`${yrH}년 ${moH+1}월`);ml.style.fontFamily=CF;
+      calCard.appendChild(ml);
+      let doneCount=0,totalHw=0;
+      const grid=mks('div','display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;');
+      ['일','월','화','수','목','금','토'].forEach(d=>{
+        const h=mks('div','text-align:center;font-size:9px;color:rgba(10,26,92,0.4);padding:2px;',d);h.style.fontFamily=CF;grid.appendChild(h);
+      });
+      const firstDay=new Date(yrH,moH,1).getDay();
+      const dimH=new Date(yrH,moH+1,0).getDate();
+      for(let i=0;i<firstDay;i++){grid.appendChild(mks('div',''));}
+      for(let d=1;d<=dimH;d++){
+        const dd=String(d).padStart(2,'0'),mm=String(moH+1).padStart(2,'0');
+        const dateStr=`${yrH}-${mm}-${dd}`;
+        const key=dateStr.replace(/-/g,'_');
+        const cell=mks('div','text-align:center;border-radius:8px;padding:5px 2px;font-size:12px;');
+        cell.style.fontFamily=CF;
+        cell.textContent=d;
+        const l=allLessonsHw[key]||{};
+        if(dateStr===TODAY){
+          cell.style.cssText+='background:#2E63E8;color:#fff;font-weight:700;border-radius:50%;';
+        } else if(l.hw===true){
+          cell.style.cssText+='background:#fef3c7;color:#d97706;font-weight:700;border:1.5px solid #fde68a;border-radius:50%;';
+          doneCount++;totalHw++;
+        } else if(l.status&&l.status!=='none'){
+          cell.style.cssText+='background:#fef9ee;color:#d97706;border-radius:50%;opacity:0.5;';
+          totalHw++;
+        } else {
+          cell.style.color='rgba(10,26,92,0.5)';
+        }
+        grid.appendChild(cell);
+      }
+      calCard.appendChild(grid);
+      if(totalHw>0){
+        const stat=mks('div',`font-size:11px;text-align:center;padding:4px;background:rgba(245,158,11,0.1);border-radius:8px;margin-bottom:8px;color:#d97706;`,`과제 완료 ${doneCount}/${totalHw}회`);stat.style.fontFamily=CF;
+        calCard.appendChild(stat);
+      }
+    }
+    // 범례
+    const leg=mks('div','display:flex;gap:10px;justify-content:center;margin-top:4px;');
+    [['#fef3c7','#d97706','완료'],['#fef9ee','#d97706','미완료']].forEach(([bg2,c,lbl])=>{
+      const row=mks('div','display:flex;align-items:center;gap:4px;');
+      const dot=mks('div',`width:12px;height:12px;border-radius:50%;background:${bg2};border:1px solid ${c};flex-shrink:0;`);
+      const txt=mks('div','font-size:10px;',lbl);txt.style.cssText+=`color:${c};font-family:${CF};`;
+      row.appendChild(dot);row.appendChild(txt);leg.appendChild(row);
+    });
+    calCard.appendChild(leg);
+    bg.appendChild(calCard);
 
   } else if(Q._pTab==='eval'){
     // 평가 (학습리더 코멘트)
