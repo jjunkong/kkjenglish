@@ -2600,7 +2600,7 @@ async function lView(){
         attend:l.attend||false,hw:l.hw||false,
         B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',
         word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||'',
-        comment:l.leaderComment||''
+        comment:l.leaderComment||'',hw:l.hw||false
       };
     }
     const sc=Q._lScores[stu.id];
@@ -2660,8 +2660,26 @@ async function lView(){
       const st2=mks('div','font-size:13px;font-weight:700;margin-bottom:8px;');st2.style.fontFamily=CF;
       st2.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CARE</span>';
       body2.appendChild(st2);
-      const g2=mks('div','display:flex;gap:8px;margin-bottom:10px;');
-      g2.appendChild(mkItem(mkLbl('D-test','#f3e8ff','#6b21a8','#a855f7'),mkInp(sc.D,'rgba(240,225,255,0.8)','rgba(168,85,247,0.4)','#9333ea','D')));
+      const g2=mks('div','display:flex;gap:6px;margin-bottom:10px;');
+
+      // D-test: 완성/미완성 토글
+      const dItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;');
+      const dLbl=mkLbl('D-test','#f3e8ff','#6b21a8','#a855f7');
+      const dVal=sc.D;  // 'done' or '' or undefined
+      const isDone=dVal==='done'||dVal===true;
+      const dBtn=mks('button','',isDone?'✓ 완성':'○ 미완성');
+      dBtn.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${isDone?'#a855f7':'rgba(168,85,247,0.3)'};background:${isDone?'linear-gradient(135deg,#d8b4fe,#a855f7)':'rgba(240,225,255,0.8)'};color:${isDone?'#fff':'#9333ea'};font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};`;
+      dBtn.onclick=async()=>{
+        const newVal=isDone?'':'done';
+        sc.D=newVal;
+        const lData=await getLesson(stu.id,Q._lDate||TODAY);
+        lData.dTest=newVal;
+        await setLesson(stu.id,Q._lDate||TODAY,lData);
+        Q[`_lOpen_${stu.id}`]=true;render();
+      };
+      dItem.appendChild(dLbl);dItem.appendChild(dBtn);
+      g2.appendChild(dItem);
+
       g2.appendChild(mkItem(mkLbl('과제','#fef3c7','#92400e','#f59e0b'),mkChk(sc.hw,'#fde68a','#f59e0b',async(v)=>{
         sc.hw=v;
         const lData=await getLesson(stu.id,(Q._lDate||TODAY));
