@@ -741,8 +741,15 @@ async function aList(){
     o.textContent=fd(d)+(d===TODAY?' (오늘)':'');
     if(d===Q.aDate)o.selected=true;ds.appendChild(o);
   });
-  ds.onchange=()=>{Q.aDate=ds.value;Q.showAllStu=false;render();};
-  hdr.appendChild(ds);
+  ds.onchange=()=>{};  // 자동 변경 비활성화
+  const dateRow=mks('div','display:flex;gap:6px;align-items:center;margin-top:6px;');
+  dateRow.appendChild(ds);
+  const dateEnterBtn=mks('button','','Enter');
+  dateEnterBtn.style.cssText='height:32px;padding:0 14px;border-radius:50px;background:linear-gradient(180deg,#5b9ef8,#2060e8);border:none;box-shadow:0 2px 0 #1440a0;font-size:12px;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+  dateEnterBtn.style.fontFamily="GmarketSans,sans-serif";
+  dateEnterBtn.onclick=()=>{Q.aDate=ds.value;Q.showAllStu=false;render();};
+  dateRow.appendChild(dateEnterBtn);
+  hdr.appendChild(dateRow);
   w.appendChild(hdr);
 
   const selDow=dowOf(Q.aDate);
