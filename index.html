@@ -1303,13 +1303,24 @@ async function aGroupPlan(){
   stuWrap.insertBefore(allRow,stuWrap.firstChild);
   body.appendChild(stuWrap);
 
+  // 기존 데이터 불러오기 (첫번째 학생 기준)
+  let existingPlan='';let existingHw='';
+  if(students.length>0){
+    const firstLesson=await getLesson(students[0].id,date);
+    existingPlan=firstLesson.plan?.check||firstLesson.plan?.core||'';
+    existingHw=firstLesson.hw||firstLesson.plan?.core||'';
+    // plan.check가 없으면 core에서 가져오기
+    if(!existingPlan&&firstLesson.plan?.core)existingPlan=firstLesson.plan.core;
+  }
+
   // 수업 내용 입력 (단일 칸)
   body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin-bottom:8px;','공통 수업 계획'));
-  const GL={plan:{check:'',core:'',fix:''},hw:''};
+  const GL={plan:{check:existingPlan,core:'',fix:''},hw:existingHw};
   const sb=mk('div','section-block');
   sb.appendChild(mk('div','section-tag','수업내용'));
   const ta=document.createElement('textarea');
   ta.className='section-ta';ta.rows=5;ta.placeholder='오늘 수업 내용을 입력하세요...';
+  ta.value=existingPlan;
   ta.oninput=()=>{GL.plan.check=ta.value;GL.plan.core='';GL.plan.fix='';};
   sb.appendChild(ta);body.appendChild(sb);
 
@@ -1319,6 +1330,7 @@ async function aGroupPlan(){
   hwSb.appendChild(mk('div','section-tag','HOMEWORK'));
   const hwTa=document.createElement('textarea');
   hwTa.className='section-ta';hwTa.rows=3;hwTa.placeholder='과제 내용을 입력하세요...';
+  hwTa.value=existingHw;
   hwTa.oninput=()=>GL.hw=hwTa.value;
   hwSb.appendChild(hwTa);body.appendChild(hwSb);
 
@@ -1885,7 +1897,7 @@ async function pView(){
     const card=mks('div','border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);padding:14px;margin-bottom:10px;');
     const title=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:10px;',`📋 ${fd(Q.pDate)} 과제`);title.style.fontFamily=CF;
     card.appendChild(title);
-    const hwContent=lessonData.hw||lessonData.plan?.core||'';
+    const hwContent=lessonData.hw||(lessonData.plan?.check)||'';
     if(hwContent){
       const hwBox=mks('div','background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13px;color:#333;line-height:1.7;');
       hwBox.style.fontFamily=CF;
@@ -2564,9 +2576,14 @@ async function lView(){
     return;
   }
 
-  const clsStudents=Q.students.filter(s=>s.classId===Q._lClass);
+  const allClsStudents=Q.students.filter(s=>s.classId===Q._lClass);
+  // 이 학습리더에게 배당된 학생만 필터
+  const myStudentIds=Q.lLeader?.students||[];
+  const clsStudents=myStudentIds.length>0
+    ? allClsStudents.filter(s=>myStudentIds.includes(s.id))
+    : allClsStudents;
   if(!clsStudents.length){
-    w.appendChild(mks('div','border-radius:14px;background:rgba(255,255,255,0.3);border:1.5px solid rgba(255,255,255,0.6);padding:24px;text-align:center;color:rgba(10,26,92,0.5);font-size:13px;','이 반에 학생이 없어요'));
+    w.appendChild(mks('div','border-radius:14px;background:rgba(255,255,255,0.3);border:1.5px solid rgba(255,255,255,0.6);padding:24px;text-align:center;color:rgba(10,26,92,0.5);font-size:13px;','배당된 학생이 없어요. 원장 설정에서 학생을 배당해주세요.'));
     return;
   }
 
