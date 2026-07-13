@@ -823,12 +823,27 @@ async function aList(){
         left.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',(cls.name&&cls.id!=='__none__'?cls.name+'_':'')+stu.name));
         left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
         row.appendChild(left);
-        const right=mks('div','display:flex;align-items:center;gap:6px;flex-shrink:0;');
+        const right=mks('div','display:flex;align-items:center;gap:4px;flex-shrink:0;');
         if(l.planComment||l.resultComment)right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
         right.appendChild(mk('span',SL_BADGE[l.status],SL[l.status]));
-        const editBtn=mk('button','btn-sm','✏');
-        editBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
-        right.appendChild(editBtn);row.appendChild(right);sc.appendChild(row);cbody.appendChild(sc);
+        // 문자 버튼
+        const smsBtn=mks('button','','📱');
+        smsBtn.title='문자 발송';
+        smsBtn.style.cssText='font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid #e2e8f0;background:#f8faff;cursor:pointer;';
+        smsBtn.onclick=e=>{e.stopPropagation();
+          const phone=stu.info?.phone||'';
+          if(!phone){alert('학생 정보에 전화번호가 없습니다.');return;}
+          if(!SOLAPI_KEY){alert('설정에서 솔라피 API를 먼저 등록해주세요.');return;}
+          Q.aStu=stu;Q._smsDate=Q.aDate;Q.scr='smsBulk';render();
+        };
+        right.appendChild(smsBtn);
+        // 정보 버튼
+        const infoBtn=mks('button','','👤');
+        infoBtn.title='학생 정보';
+        infoBtn.style.cssText='font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid #e2e8f0;background:#f8faff;cursor:pointer;';
+        infoBtn.onclick=e=>{e.stopPropagation();Q.editStu=JSON.parse(JSON.stringify(stu));Q.scr='aStuEdit';Q.err='';render();};
+        right.appendChild(infoBtn);
+        row.appendChild(right);sc.appendChild(row);cbody.appendChild(sc);
       });
       card.appendChild(cbody);
     }
@@ -976,27 +991,54 @@ async function aStuEdit(){
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;',stuDisplayName(stu)));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학생 이름'));
+
+  const mkLabel=(txt)=>body.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:5px;',txt));
+
+  mkLabel('학생 이름');
   const ni=document.createElement('input');ni.className='inp';ni.value=stu.name;body.appendChild(ni);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','접근 코드 (학부모용)'));
+
+  mkLabel('접근 코드 (학부모용)');
   const ci=document.createElement('input');ci.className='inp';ci.value=stu.code;body.appendChild(ci);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 전용 코드 (학생용)'));
-  body.appendChild(mks('div','font-size:11px;color:#bbb;margin-bottom:5px;margin-top:-4px;','학부모 코드와 다르게 설정하면 학생만 영상 시청 가능'));
+
+  mkLabel('영상 전용 코드 (학생용)');
+  body.appendChild(mks('div','font-size:11px;font-weight:500;color:#666;margin-bottom:5px;margin-top:-4px;','학부모 코드와 다르게 설정하면 학생만 영상 시청 가능'));
   const vci2=document.createElement('input');vci2.className='inp';vci2.value=stu.videoCode||'';vci2.placeholder='예: 9999';body.appendChild(vci2);
+
+  // 교재
+  mkLabel('사용 교재');
+  const bookInp=document.createElement('input');bookInp.className='inp';bookInp.placeholder='예: Grammar Zone 기초편';
+  bookInp.value=stu.info?.book||'';
+  bookInp.oninput=()=>{if(!stu.info)stu.info={};stu.info.book=bookInp.value;};
+  body.appendChild(bookInp);
+
   // 반 선택
   if(Q.classes&&Q.classes.length){
-    body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','반'));
+    mkLabel('반');
     const cs=document.createElement('select');cs.className='inp';
     const opt0=document.createElement('option');opt0.value='';opt0.textContent='반 없음';cs.appendChild(opt0);
     Q.classes.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;if(c.id===stu.classId)o.selected=true;cs.appendChild(o);});
     cs.onchange=()=>stu.classId=cs.value;
     body.appendChild(cs);
   }
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','학부모 연락처'));
+
+  mkLabel('학부모 연락처');
   const phi=document.createElement('input');phi.className='inp';phi.placeholder='010-1234-5678';phi.value=stu.info?.phone||'';
   phi.oninput=()=>{if(!stu.info)stu.info={};stu.info.phone=phi.value;};
   body.appendChild(phi);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영어 수준'));
+
+  mkLabel('학교');
+  const schoolInp=document.createElement('input');schoolInp.className='inp';schoolInp.placeholder='예: 광남중학교';
+  schoolInp.value=stu.info?.school||'';
+  schoolInp.oninput=()=>{if(!stu.info)stu.info={};stu.info.school=schoolInp.value;};
+  body.appendChild(schoolInp);
+
+  mkLabel('성별');
+  const genSel=document.createElement('select');genSel.className='inp';
+  ['선택 안 함','남','여'].forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;if((stu.info?.gender||'선택 안 함')===g)o.selected=true;genSel.appendChild(o);});
+  genSel.onchange=()=>{if(!stu.info)stu.info={};stu.info.gender=genSel.value;};
+  body.appendChild(genSel);
+
+  mkLabel('레벨');
   const lvSelect=document.createElement('select');lvSelect.className='inp';
   ['선택 안 함','M1','M2','M3','H1','H2','H3'].forEach(l=>{
     const o=document.createElement('option');o.value=l;o.textContent=l;
@@ -1005,7 +1047,8 @@ async function aStuEdit(){
   });
   lvSelect.onchange=()=>stu.level=lvSelect.value;
   body.appendChild(lvSelect);
-  body.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','출석 요일'));
+
+  mkLabel('출석 요일');
   const dpWrap=mks('div','');body.appendChild(dpWrap);
   const reRDP=()=>{dpWrap.innerHTML='';dpWrap.appendChild(dayPicker(stu.days||[],ns=>{stu.days=ns;reRDP();}));};reRDP();
 
