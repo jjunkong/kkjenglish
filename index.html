@@ -161,6 +161,17 @@ const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[],lead
 // 초기 로딩
 const initData=async()=>{
   try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
+  // 전화번호(privateInfo)는 원장만 사용 — 별도 로드 후 합치기
+  try{
+    const priv=await fbGet('privateInfo');
+    if(priv&&MEM.stu){
+      MEM.stu=MEM.stu.map(s=>{
+        const p=priv[s.id];
+        if(p?.phone){if(!s.info)s.info={};s.info.phone=p.phone;}
+        return s;
+      });
+    }
+  }catch(e){}
   try{const pw=await fbGet('pw');if(pw)MEM.pw=pw;}catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
   try{const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);}catch(e){}
@@ -175,8 +186,17 @@ const initData=async()=>{
 
 const saveStu=async()=>{
   MEM.stu=Q.students;
-  const obj={};Q.students.forEach(s=>{obj[s.id]=s;});
+  const obj={};
+  const privateObj={};
+  Q.students.forEach(s=>{
+    // 전화번호는 privateInfo로 분리
+    const {info,...rest}=s;
+    const {phone,...safeInfo}=info||{};
+    obj[s.id]={...rest,info:safeInfo};
+    if(phone)privateObj[s.id]={phone};
+  });
   await fbSet('students',obj);
+  if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
 };
 const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
 const saveVideos=async()=>{MEM.videos=Q.videos;await fbSet('videos',Q.videos);};
@@ -2694,8 +2714,8 @@ async function lView(){
         await setLesson(stu.id,(Q._lDate||TODAY),lData);
         Q[`_lOpen_${stu.id}`]=true;render();
       })));
-      g1.appendChild(mkItem(mkLbl('B-test','#e0e7ff','#3730a3','#6366f1'),mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
-      g1.appendChild(mkItem(mkLbl('O-test','#dcfce7','#166534','#22c55e'),mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
+      g1.appendChild(mkItem(mkLbl('복테','#e0e7ff','#3730a3','#6366f1'),mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
+      g1.appendChild(mkItem(mkLbl('확테','#dcfce7','#166534','#22c55e'),mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
       body2.appendChild(g1);
 
       // 보다 CARE
@@ -2707,7 +2727,7 @@ async function lView(){
 
       // D-test: 완성/미완성 토글
       const dItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;');
-      const dLbl=mkLbl('D-test','#f3e8ff','#6b21a8','#a855f7');
+      const dLbl=mkLbl('개테','#f3e8ff','#6b21a8','#a855f7');
       const dVal=sc.D;  // 'done' or '' or undefined
       const isDone=dVal==='done'||dVal===true;
       const dBtn=mks('button','',isDone?'✓ 완성':'○ 미완성');
