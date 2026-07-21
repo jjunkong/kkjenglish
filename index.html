@@ -1743,39 +1743,6 @@ async function aSettings(){
       lc.appendChild(card);
     });
   }
-
-  // 개인정보 분리 마이그레이션
-  const migCard=mk('div','card');migCard.style.marginTop='16px';w2.appendChild(migCard);
-  migCard.appendChild(mks('div','font-size:14px;font-weight:700;color:#1a2f6e;margin-bottom:6px;','🔒 개인정보 보안 분리'));
-  migCard.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:12px;','학생 전화번호를 보안 노드로 분리합니다. 한 번만 실행하면 돼요.'));
-  const migMsg=mks('div','');
-  const migBtn=mk('button','btn-primary','전화번호 보안 분리 실행');
-  migBtn.onclick=async()=>{
-    migBtn.textContent='처리 중...';migBtn.disabled=true;
-    try{
-      const allStu=await fbGet('students')||{};
-      const privateObj={};
-      const cleanStu={};
-      let count=0;
-      Object.entries(allStu).forEach(([id,s])=>{
-        const phone=s.info?.phone||s.phone||'';
-        if(phone){privateObj[id]={phone};count++;}
-        // students에서 전화번호 제거
-        const {info,...rest}=s;
-        const {phone:_p,...safeInfo}=info||{};
-        cleanStu[id]={...rest,info:safeInfo};
-      });
-      await fbSet('students',cleanStu);
-      if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
-      migMsg.innerHTML=`<div class="ok-msg">✓ ${count}명의 전화번호가 보안 분리됐습니다!</div>`;
-      migBtn.textContent='✓ 완료';
-    }catch(e){
-      migMsg.innerHTML=`<div class="err">오류: ${e.message}</div>`;
-      migBtn.textContent='다시 시도';migBtn.disabled=false;
-    }
-  };
-  migCard.appendChild(migBtn);
-  migCard.appendChild(migMsg);
 }
 
 async function pLogin(){
