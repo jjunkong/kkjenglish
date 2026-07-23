@@ -152,7 +152,7 @@ const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:''
 // Firebase REST API
 const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
 const fbGet=async path=>{try{const r=await fetch(`${FB}/${path}.json`);if(!r.ok)return null;const d=await r.json();return d;}catch{return null;}};
-const fbSet=async(path,val)=>{try{await fetch(`${FB}/${path}.json`,{method:'PUT',body:JSON.stringify(val)});return true;}catch{return false;}};
+const fbSet=async(path,val)=>{try{const r=await fetch(`${FB}/${path}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});if(!r.ok){console.error('fbSet 실패:',path,r.status);return false;}return true;}catch(e){console.error('fbSet 오류:',e);return false;}};
 const fbDel=async path=>{try{await fetch(`${FB}/${path}.json`,{method:'DELETE'});return true;}catch{return false;}};
 
 // 메모리 캐시
@@ -199,7 +199,12 @@ const saveStu=async()=>{
   if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
 };
 const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
-const saveVideos=async()=>{MEM.videos=Q.videos;await fbSet('videos',Q.videos);};
+const saveVideos=async()=>{
+  MEM.videos=Q.videos;
+  const ok=await fbSet('videos',Q.videos);
+  if(!ok)alert('영상 저장 실패! Firebase 규칙에서 videos를 허용했는지 확인해주세요.');
+  return ok;
+};
 const saveNotices=async()=>{MEM.notices=Q.notices;await fbSet('notices',Q.notices);};
 const saveClasses=async()=>{MEM.classes=Q.classes;await fbSet('classes',Q.classes);};
 const saveLeaders=async()=>{MEM.leaders=Q.leaders;await fbSet('leaders',Q.leaders);};
