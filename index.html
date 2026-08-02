@@ -280,7 +280,7 @@ const ytId=url=>{
 };
 const vimeoId=url=>{
   if(!url)return'';
-  const m=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  const m=url.match(/vimeo\.com\/(\d+(?:\/[a-zA-Z0-9]+)?)/);
   return m?m[1]:'';
 };
 const parseVideoUrl=url=>{
