@@ -1256,6 +1256,7 @@ async function aGroupPlan(){
 }
 
 async function aSettings(){
+  try{
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{Q.scr='aList';Q.err='';render();};hdr.appendChild(bb);
@@ -1581,6 +1582,7 @@ async function aSettings(){
       lc.appendChild(card);
     });
   }
+  }catch(e){console.error('aSettings 오류:',e);document.getElementById('app').innerHTML+='<div style="color:red;padding:20px;">설정 오류: '+e.message+'</div>';}
 }
 
 async function sendSolapi(messages){
