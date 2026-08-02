@@ -194,8 +194,7 @@ async function mainScreen(){
         watchBtn.style.cssText=`width:100%;height:40px;border-radius:10px;background:linear-gradient(135deg,#5b9ef8,#2060e8);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:${CF};`;
         watchBtn.onclick=()=>{
           if(v.vimeoId){
-            // 비메오 인앱 재생
-            Q._playVideo=v;Q._playType='vimeo';renderPlayer(bg,v);
+            window.open(`https://vimeo.com/${v.vimeoId}`,'_blank');
           } else if(v.ytId){
             window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');
           } else if(v.url){
