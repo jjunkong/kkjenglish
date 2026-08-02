@@ -194,7 +194,7 @@ async function mainScreen(){
         watchBtn.style.cssText=`width:100%;height:40px;border-radius:10px;background:linear-gradient(135deg,#5b9ef8,#2060e8);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:${CF};`;
         watchBtn.onclick=()=>{
           if(v.vimeoId){
-            window.open(`https://vimeo.com/${v.vimeoId}`,'_blank');
+            Q._playVideo=v;renderPlayer(bg,v);
           } else if(v.ytId){
             window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');
           } else if(v.url){
@@ -277,9 +277,12 @@ function renderPlayer(bg,v){
   wrap.style.position='relative';
   wrap.appendChild(backBtn);
 
-  // 비메오 iframe
+  // 비메오 iframe (해시값 포함)
   const iframe=document.createElement('iframe');
-  iframe.src=`https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`;
+  const vimeoSrc=v.vimeoId.includes('/')?
+    `https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`:
+    `https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`;
+  iframe.src=vimeoSrc;
   iframe.style.cssText='width:100%;aspect-ratio:16/9;border:none;display:block;';
   iframe.allow='autoplay; fullscreen; picture-in-picture';
   iframe.allowFullscreen=true;
