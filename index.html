@@ -87,15 +87,6 @@ function loginScreen(){
   };
   pwInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
   card.appendChild(btn);
-
-  // 관리자 버튼
-  const adminBtn=document.createElement('div');
-  adminBtn.style.cssText=`margin-top:12px;padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.35);border:1.5px solid rgba(255,255,255,0.7);cursor:pointer;display:flex;justify-content:space-between;align-items:center;`;
-  const adminTxt=mks('div',`font-size:13px;color:#1a2f7a;font-family:${CF};`,'관리자 BODA');
-  const adminArrow=mks('div','font-size:12px;color:#2E63E8;','>');
-  adminBtn.appendChild(adminTxt);adminBtn.appendChild(adminArrow);
-  adminBtn.onclick=()=>{window.location.href='/admin.html';};
-  bg.appendChild(adminBtn);
 }
 
 // ── 메인 화면 ────────────────────────────────
