@@ -566,7 +566,7 @@ async function aList(){
   // 네이비 헤더
   const hdr=mk('div','page-header');
   const topRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;');
-  const bb=mk('button','btn-back','← 뒤로');bb.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='login';Q.err='';render();};topRow.appendChild(bb);
+  const bb=mk('button','btn-back','로그아웃');bb.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='login';Q.err='';render();};topRow.appendChild(bb);
   const rightBtns=mks('div','display:flex;gap:6px;');
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
@@ -1813,5 +1813,6 @@ const initData=async()=>{
 
 })();
 </script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>
