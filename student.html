@@ -277,11 +277,15 @@ function renderPlayer(bg,v){
   wrap.style.position='relative';
   wrap.appendChild(backBtn);
 
-  // 비메오 iframe (해시값 포함)
+  // 비메오 iframe (해시값 h= 파라미터로 처리)
   const iframe=document.createElement('iframe');
-  const vimeoSrc=v.vimeoId.includes('/')?
-    `https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`:
-    `https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`;
+  let vimeoSrc;
+  if(v.vimeoId.includes('/')){
+    const [vid,hash]=v.vimeoId.split('/');
+    vimeoSrc=`https://player.vimeo.com/video/${vid}?h=${hash}&autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`;
+  } else {
+    vimeoSrc=`https://player.vimeo.com/video/${v.vimeoId}?autoplay=1&color=2E63E8&title=0&byline=0&portrait=0`;
+  }
   iframe.src=vimeoSrc;
   iframe.style.cssText='width:100%;aspect-ratio:16/9;border:none;display:block;';
   iframe.allow='autoplay; fullscreen; picture-in-picture';
