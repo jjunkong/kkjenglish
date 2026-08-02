@@ -278,6 +278,18 @@ const ytId=url=>{
   const m=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
   return m?m[1]:'';
 };
+const vimeoId=url=>{
+  if(!url)return'';
+  const m=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return m?m[1]:'';
+};
+const parseVideoUrl=url=>{
+  const vid=vimeoId(url);
+  if(vid)return{type:'vimeo',id:vid};
+  const yid=ytId(url);
+  if(yid)return{type:'youtube',id:yid};
+  return{type:'url',id:''};
+};
 
 const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
 const mks=(tag,css,html)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(html!==undefined)e.innerHTML=html;return e;};
@@ -1599,8 +1611,9 @@ async function aSettings(){
     const af=mk('div','add-form');vc.appendChild(af);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 제목'));
     const vt=document.createElement('input');vt.id='vt';vt.className='inp';vt.placeholder='예: 1강 - 관계대명사 기초';af.appendChild(vt);
-    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','유튜브 URL'));
-    const vu=document.createElement('input');vu.id='vu';vu.className='inp';vu.placeholder='https://www.youtube.com/watch?v=...';af.appendChild(vu);
+    af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 URL (비메오 또는 유튜브)'));
+    af.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:5px;','예: https://vimeo.com/123456789'));
+    const vu=document.createElement('input');vu.id='vu';vu.className='inp';vu.placeholder='https://vimeo.com/...  또는  https://youtube.com/...';af.appendChild(vu);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','설명 (선택)'));
     const vd=document.createElement('input');vd.id='vd';vd.className='inp';vd.placeholder='예: 관계대명사 who, which 핵심 정리';af.appendChild(vd);
     const vmsg=mks('div','');af.appendChild(vmsg);
@@ -1609,10 +1622,14 @@ async function aSettings(){
       const title=(document.getElementById('vt')?.value||'').trim();
       const url=(document.getElementById('vu')?.value||'').trim();
       const desc=(document.getElementById('vd')?.value||'').trim();
-      const id=ytId(url);
       if(!title){vmsg.innerHTML='<div class="err">제목을 입력하세요.</div>';return;}
-      if(!id){vmsg.innerHTML='<div class="err">올바른 유튜브 URL을 입력하세요.</div>';return;}
-      Q.videos.unshift({id:Date.now().toString(),title,ytId:id,desc});
+      const parsed=parseVideoUrl(url);
+      if(!parsed.id){vmsg.innerHTML='<div class="err">올바른 비메오 또는 유튜브 URL을 입력하세요.</div>';return;}
+      const vidObj={id:Date.now().toString(),title,desc};
+      if(parsed.type==='vimeo')vidObj.vimeoId=parsed.id;
+      else if(parsed.type==='youtube')vidObj.ytId=parsed.id;
+      else vidObj.url=url;
+      Q.videos.unshift(vidObj);
       await saveVideos();Q.showVidAdd=false;render();
     };af.appendChild(vAddBtn);
   }
@@ -2074,12 +2091,22 @@ async function pView(){
           img.src=`https://img.youtube.com/vi/${v.ytId}/mqdefault.jpg`;
           img.style.cssText='width:100%;display:block;';
           card.appendChild(img);
+        } else if(v.vimeoId){
+          const img=document.createElement('img');
+          img.src=`https://vumbnail.com/${v.vimeoId}.jpg`;
+          img.style.cssText='width:100%;display:block;';
+          img.onerror=()=>img.style.display='none';
+          card.appendChild(img);
         }
         const info=mks('div','padding:10px 14px;');
         const t2=mks('div','font-size:14px;font-weight:700;color:#0B1A38;margin-bottom:6px;',v.title||'동영상');t2.style.fontFamily=CF;
         const wBtn=mks('button','','▶ 시청하기');
         wBtn.style.cssText=`width:100%;height:36px;border-radius:8px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};`;
-        wBtn.onclick=()=>{if(v.ytId)window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');else if(v.url)window.open(v.url,'_blank');};
+        wBtn.onclick=()=>{
+          if(v.vimeoId)window.open(`https://vimeo.com/${v.vimeoId}`,'_blank');
+          else if(v.ytId)window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');
+          else if(v.url)window.open(v.url,'_blank');
+        };
         info.appendChild(t2);info.appendChild(wBtn);
         card.appendChild(info);
         bg.appendChild(card);
