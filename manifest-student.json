@@ -1,14 +1,14 @@
 {
-  "name": "BODA 학생",
-  "short_name": "BODA 학생",
-  "description": "김기준영어학원 학생 강의",
+  "name": "기준영어 학생",
+  "short_name": "기준영어 학생",
+  "description": "김기준영어학원 학생",
   "start_url": "/student.html",
   "display": "standalone",
-  "background_color": "#3b5bdb",
-  "theme_color": "#3b5bdb",
+  "background_color": "#f8a8a8",
+  "theme_color": "#dc2626",
   "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-student-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-student-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
