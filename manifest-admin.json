@@ -1,14 +1,14 @@
 {
-  "name": "BODA 원장",
-  "short_name": "BODA 원장",
-  "description": "김기준영어학원 원장 관리",
+  "name": "기준영어 원장",
+  "short_name": "기준영어 원장",
+  "description": "김기준영어학원 원장",
   "start_url": "/admin.html",
   "display": "standalone",
-  "background_color": "#3b5bdb",
-  "theme_color": "#3b5bdb",
+  "background_color": "#c8a8f8",
+  "theme_color": "#6d28d9",
   "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
