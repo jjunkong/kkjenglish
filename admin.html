@@ -530,7 +530,7 @@ function loginScreen(){
 
 function aLogin(){
   // 자동 로그인 확인
-  if(localStorage.getItem('kkj_admin_auth')==='true'){Q.scr='aList';Q.err='';render();return;}
+  if(localStorage.getItem('kkj_admin_auth')==='true'){localStorage.removeItem('kkj_admin_auth');}
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
@@ -1806,8 +1806,7 @@ const initData=async()=>{
   A.innerHTML='';
   try{await initData();}catch(e){}
   Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;Q.classes=MEM.classes;Q.leaders=MEM.leaders;
-  if(localStorage.getItem('kkj_admin_auth')==='true'){Q.scr='aList';}
-  else{Q.scr='login';}
+  Q.scr='login';
   render();
 })();
 
