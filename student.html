@@ -298,8 +298,25 @@ async function mainScreen(){
   }
 }
 
+// ── 전체화면 진입 시 가로 자동 회전 ───────
+function bindFsRotate(){
+  if(window.__fsRotateBound)return;
+  window.__fsRotateBound=true;
+  const onFs=()=>{
+    const fs=document.fullscreenElement||document.webkitFullscreenElement;
+    if(!screen.orientation)return;
+    try{
+      if(fs&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
+      else if(screen.orientation.unlock)screen.orientation.unlock();
+    }catch(e){}
+  };
+  document.addEventListener('fullscreenchange',onFs);
+  document.addEventListener('webkitfullscreenchange',onFs);
+}
+
 // ── 비메오 인앱 플레이어 ─────────────────
 function renderPlayer(bg,v){
+  bindFsRotate();
   bg.innerHTML='';
   const wrap=mks('div','background:#000;width:100%;');
   // 뒤로가기
