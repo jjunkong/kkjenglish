@@ -95,34 +95,39 @@ const A=document.getElementById('app');
 
 function render(){
   A.innerHTML='';
+  if(!Q._playVideo)releaseWake();
   if(Q.scr==='login')loginScreen();
   else if(Q.scr==='main')mainScreen();
 }
 
-// ── 안드로이드 뒤로가기 ─────────────────────
-let _exitAt=0;
-function pushGuard(){history.pushState({boda:1},'');}
-function toast(msg){
-  let t=document.getElementById('boda-toast');
-  if(!t){
-    t=mks('div','position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:99999;background:rgba(11,26,56,0.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;white-space:nowrap;pointer-events:none;transition:opacity .3s;');
-    t.id='boda-toast';document.body.appendChild(t);
-  }
-  t.textContent=msg;t.style.opacity='1';
-  clearTimeout(t._tm);t._tm=setTimeout(()=>{t.style.opacity='0';},1800);
+// ── 영상 재생 중 화면 꺼짐 방지 ─────────────
+let _wakeLock=null;
+async function requestWake(){
+  if(!('wakeLock' in navigator))return;
+  if(_wakeLock)return;
+  try{
+    _wakeLock=await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release',()=>{_wakeLock=null;});
+  }catch(e){_wakeLock=null;}
 }
+function releaseWake(){
+  if(_wakeLock){try{_wakeLock.release();}catch(e){}_wakeLock=null;}
+}
+// 앱을 잠깐 벗어났다 돌아오면 다시 획득
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&Q&&Q._playVideo)requestWake();
+});
+
+// ── 안드로이드 뒤로가기 ─────────────────────
+function pushGuard(){history.pushState({boda:1},'');}
 function bodaBack(){
   // 1) 영상 재생 중 → 영상 목록으로
   if(Q._playVideo){Q._playVideo=null;Q.tab='video';render();return true;}
   // 2) 평가 탭 → 홈(영상 탭)으로
   if(Q.scr==='main'&&Q.tab!=='video'){Q.tab='video';render();return true;}
-  // 3) 홈에서 → 한 번 더 눌러야 종료
-  if(Q.scr==='main'){
-    const now=Date.now();
-    if(now-_exitAt<2000)return false;
-    _exitAt=now;toast('한 번 더 누르면 종료됩니다');
-    return true;
-  }
+  // 3) 홈 → 로그인 화면으로
+  if(Q.scr==='main'){Q.stu=null;Q._playVideo=null;Q.scr='login';render();return true;}
+  // 4) 로그인 화면 → 앱 종료
   return false;
 }
 window.addEventListener('popstate',()=>{
@@ -371,6 +376,7 @@ function bindFsRotate(){
 // ── 비메오 인앱 플레이어 ─────────────────
 function renderPlayer(bg,v){
   bindFsRotate();
+  requestWake();
   bg.innerHTML='';
   const wrap=mks('div','background:#000;width:100%;');
   // 뒤로가기
