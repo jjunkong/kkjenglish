@@ -6,6 +6,7 @@
 <title>BODA 원장 대시보드</title>
 <link rel="manifest" href="/manifest-admin.json?v=2">
 <meta name="theme-color" content="#6d28d9">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
@@ -108,6 +109,19 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .att-set button.on-no{background:var(--no-w);border-color:var(--no);color:var(--no);}
 .att-set button.on-mk{background:var(--mk-w);border-color:var(--mk);color:var(--mk);}
 
+.sub-t{font-size:11px;font-weight:800;color:var(--ink-3);margin:14px 0 7px;letter-spacing:.03em;}
+.warn{margin-top:9px;background:var(--no-w);color:var(--no);font-size:11.5px;font-weight:700;padding:8px 11px;border-radius:8px;}
+.pick{width:100%;height:38px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;font-weight:600;background:var(--card);}
+.pick:focus{border-color:var(--brand);outline:none;}
+.pen{display:flex;align-items:center;gap:8px;margin-top:11px;background:var(--line-2);padding:10px 12px;border-radius:9px;cursor:pointer;}
+.pen input{width:17px;height:17px;accent-color:var(--no);cursor:pointer;}
+.pen span{font-size:12.5px;font-weight:700;color:var(--ink-2);}
+.cyc{font-size:11px;font-weight:700;color:var(--ink-3);margin-bottom:9px;}
+.left-big{background:var(--brand-w);border-radius:12px;padding:14px;text-align:center;margin-bottom:11px;}
+.left-big b{font-size:34px;font-weight:800;color:var(--brand);letter-spacing:-.04em;}
+.left-big span{font-size:12px;font-weight:700;color:var(--brand);margin-left:4px;}
+.left-big.zero{background:var(--line-2);}
+.left-big.zero b,.left-big.zero span{color:var(--ink-3);}
 .score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:9px;}
 .score-grid label{display:block;}
 .score-grid dt{font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:4px;}
@@ -147,6 +161,31 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 .cmt{background:var(--line-2);border-radius:11px;padding:12px 13px;margin-bottom:8px;}
 .cmt time{font-size:10.5px;font-weight:800;color:var(--brand);display:block;margin-bottom:4px;}
 .cmt p{font-size:12.5px;line-height:1.6;color:var(--ink-2);}
+#xmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
+#xmodal.on{display:flex;}
+.xbox{background:var(--card);border-radius:18px;padding:24px;width:560px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(11,26,56,.3);}
+.xbox h3{font-size:19px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;}
+.xdesc{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-bottom:14px;}
+.xdesc b{color:var(--brand);}
+.xtpl{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;}
+.xtpl:hover{border-color:var(--brand);color:var(--brand);}
+.xdrop{display:flex;align-items:center;justify-content:center;height:96px;border:2px dashed var(--line);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-3);text-align:center;padding:10px;}
+.xdrop:hover,.xdrop.over{border-color:var(--brand);background:var(--brand-w);color:var(--brand);}
+.xsum{display:flex;gap:8px;margin:14px 0 10px;}
+.xsum div{flex:1;border-radius:10px;padding:10px;text-align:center;}
+.xsum b{display:block;font-size:20px;font-weight:800;}
+.xsum span{font-size:11px;font-weight:700;}
+.x-ok{background:var(--ok-w);color:var(--ok);}
+.x-no{background:var(--no-w);color:var(--no);}
+table.xtb{width:100%;border-collapse:collapse;font-size:11.5px;}
+table.xtb th{text-align:left;font-size:10.5px;font-weight:800;color:var(--ink-3);padding:0 6px 6px;}
+table.xtb td{padding:6px;border-top:1px solid var(--line-2);font-weight:600;}
+table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
+.xscroll{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:10px;}
+.xfoot{display:flex;gap:8px;margin-top:16px;}
+.xfoot .ghost{flex:1;height:42px;}
+.xgo{flex:2;height:42px;border-radius:10px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;}
+.xgo:disabled{background:var(--line);color:var(--ink-3);cursor:not-allowed;}
 .load{text-align:center;color:var(--ink-3);padding:34px 10px;font-size:13px;}
 </style>
 </head>
@@ -169,12 +208,30 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
     <span class="dow" id="ddow"></span>
     <div class="spacer"></div>
     <button class="ghost" id="reload">새로고침</button>
+    <button class="ghost" id="xlsbtn">진도 일괄 업로드</button>
     <button class="ghost" id="toadmin">원장방</button>
   </div>
   <div class="cols">
     <div class="col col-l" id="colL"></div>
     <div class="col col-c" id="colC"></div>
     <div class="col col-r" id="colR"></div>
+  </div>
+</div>
+
+<div id="xmodal">
+  <div class="xbox">
+    <h3>진도 일괄 업로드</h3>
+    <p class="xdesc">엑셀 파일의 첫 시트를 읽습니다. 열 이름은 <b>이름 · 날짜 · 단원 · 페이지</b> 순서로 맞춰 주세요.</p>
+    <button class="xtpl" id="xtpl">양식 파일 내려받기</button>
+    <label class="xdrop" id="xdrop">
+      <input type="file" id="xfile" accept=".xlsx,.xls,.csv" hidden>
+      <span>엑셀 파일 선택 또는 여기에 끌어다 놓기</span>
+    </label>
+    <div id="xprev"></div>
+    <div class="xfoot">
+      <button class="ghost" id="xclose">닫기</button>
+      <button class="xgo" id="xgo" disabled>반영하기</button>
+    </div>
   </div>
 </div>
 
@@ -211,6 +268,57 @@ const attOf=l=>{
   if(a==='makeup')return 'makeup';
   return '';
 };
+
+// ── 결석 사유 ─────────────────────────────
+const REASONS=[
+  {k:'sick',    n:'질병·경조사', cap:2, c:'#0891B2'},
+  {k:'personal',n:'개인 사정',   cap:1, c:'#E08A00'},
+  {k:'noshow',  n:'무단결석',    cap:0, c:'#E23D5A'},
+];
+const CYCLE_CAP=2; // 사유 무관 월 최대
+
+// billDay 기준 결제주기의 시작일 (월말 보정)
+const lastDay=(y,m)=>new Date(y,m,0).getDate(); // m: 1-based
+const cycleStart=(dateStr,billDay)=>{
+  if(!billDay)return dateStr.slice(0,8)+'01'; // 결제일 미설정 → 달력 월
+  const [y,m,d]=dateStr.split('-').map(Number);
+  let cy=y,cm=m;
+  if(d<Math.min(billDay,lastDay(y,m))){cm--;if(cm<1){cm=12;cy--;}}
+  return `${cy}-${pad(cm)}-${pad(Math.min(billDay,lastDay(cy,cm)))}`;
+};
+const cycleEnd=(startStr,billDay)=>{
+  if(!billDay){const [y,m]=startStr.split('-').map(Number);return `${y}-${pad(m)}-${pad(lastDay(y,m))}`;}
+  const [y,m,d]=startStr.split('-').map(Number);
+  let ny=y,nm=m+1;if(nm>12){nm=1;ny++;}
+  const nd=Math.min(billDay,lastDay(ny,nm));
+  const e=new Date(ny,nm-1,nd);e.setDate(e.getDate()-1);
+  return `${e.getFullYear()}-${pad(e.getMonth()+1)}-${pad(e.getDate())}`;
+};
+
+// 한 결제주기의 보강 정산
+function makeupStat(rows,billDay,refDate){
+  const st=cycleStart(refDate,billDay), en=cycleEnd(st,billDay);
+  const inCycle=d=>d>=st&&d<=en;
+  const cnt={sick:0,personal:0,noshow:0};
+  let used=0,penalty=0;
+  rows.forEach(r=>{
+    const a=attOf(r.l);
+    if(a==='absent'&&inCycle(r.date)){
+      const rs=r.l.reason||'personal';
+      if(cnt[rs]!==undefined)cnt[rs]++;
+    }
+    // 보강은 '원래 결석일'이 속한 주기로 차감 (이월 불가)
+    if(a==='makeup'){
+      const base=r.l.makeupFor||r.date;
+      if(inCycle(base))used++;
+    }
+    if(r.l&&r.l.penalty&&inCycle(r.date))penalty++;
+  });
+  const raw=Math.min(cnt.sick,2)+Math.min(cnt.personal,1);
+  const entitled=Math.min(raw,CYCLE_CAP);
+  return {st,en,cnt,entitled,used,penalty,
+          left:Math.max(0,entitled-used-penalty)};
+}
 
 const S={pw:'',date:today(),students:[],classes:[],leaders:[],
          sel:null,scope:'day',hist:{},chart:['bTest','oTest'],loading:false};
@@ -317,6 +425,7 @@ function paintL(d){
       let st='';
       if(h){const r=h.rows.find(r=>r.date===S.date);st=r?attOf(r.l):'';}
       const cls2={present:'d-ok',absent:'d-no',makeup:'d-mk'}[st]||'d-na';
+      // (사유별 색은 상세에서 확인)
       b.appendChild(el('span','dot '+cls2));
       const w=el('span');
       w.appendChild(el('b','',esc(s.name)));
@@ -351,6 +460,7 @@ function paintC(){
   const meta=el('div','meta');
   [['학교',s.info&&s.info.school],['교재',s.info&&s.info.book],
    ['수업 요일',(s.days||[]).sort((a,b)=>a-b).map(d=>DAYS[d]).join('·')],
+   ['결제일',s.billDay?`매월 ${s.billDay}일`:''],
    ['누적 수업일',h.rows.length+'일']].forEach(([k,v])=>{
     const d=el('div');d.appendChild(el('dt','',k));d.appendChild(el('dd','',esc(v||'—')));meta.appendChild(d);
   });
@@ -368,6 +478,45 @@ function paintC(){
     set.appendChild(b);
   });
   c2.appendChild(set);
+
+  // 결석 → 사유
+  if(cur==='absent'){
+    c2.appendChild(el('div','sub-t','결석 사유'));
+    const rs=el('div','att-set');
+    REASONS.forEach(r=>{
+      const on=(l.reason||'')===r.k;
+      const b=el('button',on?'on-no':'',r.n);
+      if(on)b.style.cssText=`background:${r.c}18;border-color:${r.c};color:${r.c};`;
+      b.onclick=async()=>{await saveField(s.id,S.date,{reason:on?'':r.k});paint();};
+      rs.appendChild(b);
+    });
+    c2.appendChild(rs);
+    if(!l.reason)c2.appendChild(el('div','warn','사유를 선택해야 보강 횟수에 반영됩니다.'));
+  }
+
+  // 보강 → 어느 결석의 보강인지 + 페널티
+  if(cur==='makeup'){
+    c2.appendChild(el('div','sub-t','어느 결석의 보강인가요'));
+    const sel=el('select','pick');
+    const o0=el('option','','선택 안 함 (당일 기준)');o0.value='';sel.appendChild(o0);
+    h.rows.filter(r=>attOf(r.l)==='absent').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12)
+      .forEach(r=>{
+        const o=el('option');o.value=r.date;
+        const rn=(REASONS.find(x=>x.k===r.l.reason)||{}).n||'사유 미입력';
+        o.textContent=`${md(r.date)} 결석 · ${rn}`;
+        if((l.makeupFor||'')===r.date)o.selected=true;
+        sel.appendChild(o);
+      });
+    sel.onchange=async()=>{await saveField(s.id,S.date,{makeupFor:sel.value});paint();};
+    c2.appendChild(sel);
+
+    const pl=el('label','pen');
+    const cb=el('input');cb.type='checkbox';cb.checked=!!l.penalty;
+    cb.onchange=async()=>{await saveField(s.id,S.date,{penalty:cb.checked});paint();};
+    pl.appendChild(cb);
+    pl.appendChild(el('span','','단어·숙제 미이행 — 보강 1회 차감'));
+    c2.appendChild(pl);
+  }
   box.appendChild(c2);
 
   // 점수
@@ -451,10 +600,38 @@ function paintR(){
   const tot=ok+no+mk;
   const rate=tot?Math.round(ok/tot*100):0;
   const bank=el('div','bank');
-  bank.appendChild(el('span','',`출석률 ${rate}%`));
-  bank.appendChild(el('b','',`보강 가능 ${Math.max(0,no-mk)}회`));
+  bank.appendChild(el('span','',`전체 출석률 ${rate}%`));
   s2.appendChild(bank);
   box.appendChild(s2);
+
+  // 2-2. 이번 결제주기 보강 정산
+  const s2b=el('div','r-sec');
+  s2b.appendChild(el('h3','r-t','이번 주기 보강'));
+  const mst=makeupStat(h.rows,s.billDay,S.date);
+  const per=el('div','cyc');
+  per.appendChild(el('span','',s.billDay?`${md(mst.st)} ~ ${md(mst.en)} (결제일 ${s.billDay}일)`
+                                        :`${md(mst.st)} ~ ${md(mst.en)} · 결제일 미설정`));
+  s2b.appendChild(per);
+
+  const big=el('div','left-big'+(mst.left?'':' zero'));
+  big.appendChild(el('b','',mst.left));
+  big.appendChild(el('span','','회 남음'));
+  s2b.appendChild(big);
+
+  const tb=el('table','avg');
+  const rowsHtml=[
+    ['질병·경조사 결석',`${mst.cnt.sick}회`,`인정 ${Math.min(mst.cnt.sick,2)}`],
+    ['개인 사정 결석',`${mst.cnt.personal}회`,`인정 ${Math.min(mst.cnt.personal,1)}`],
+    ['무단결석',`${mst.cnt.noshow}회`,'인정 0'],
+    ['인정 보강','',`${mst.entitled}회`],
+    ['실시한 보강','',`−${mst.used}회`],
+    ['페널티 차감','',`−${mst.penalty}회`],
+  ].map(([a,b,c])=>`<tr><td>${a}</td><td>${b}</td><td>${c}</td></tr>`).join('');
+  tb.innerHTML=rowsHtml;
+  s2b.appendChild(tb);
+  if(mst.entitled>=CYCLE_CAP&&mst.cnt.sick+mst.cnt.personal>CYCLE_CAP)
+    s2b.appendChild(el('div','warn','월 최대 2회 상한이 적용되었습니다.'));
+  box.appendChild(s2b);
 
   // 3. 월별 평균
   const s3=el('div','r-sec');
@@ -501,6 +678,125 @@ function paintR(){
   });
   box.appendChild(s4);
 }
+
+/* ============ 진도 엑셀 일괄 업로드 ============ */
+let XROWS=[];
+const norm=v=>String(v==null?'':v).trim();
+// 엑셀 날짜(직렬번호/문자열) → YYYY-MM-DD
+function toDate(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){
+    const d=XLSX.SSF.parse_date_code(v);
+    if(!d)return '';
+    return `${d.y}-${pad(d.m)}-${pad(d.d)}`;
+  }
+  const t=norm(v).replace(/[.\/]/g,'-').replace(/\s+/g,'');
+  const m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  const m2=t.match(/^(\d{1,2})-(\d{1,2})$/);
+  if(m2)return `${new Date().getFullYear()}-${pad(+m2[1])}-${pad(+m2[2])}`;
+  return '';
+}
+
+$('xlsbtn').onclick=()=>{XROWS=[];$('xprev').innerHTML='';$('xgo').disabled=true;$('xmodal').classList.add('on');};
+$('xclose').onclick=()=>$('xmodal').classList.remove('on');
+$('xmodal').onclick=e=>{if(e.target===$('xmodal'))$('xmodal').classList.remove('on');};
+
+$('xtpl').onclick=()=>{
+  const sample=S.students.slice(0,3).map(s=>({이름:s.name,날짜:S.date,단원:'',페이지:''}));
+  if(!sample.length)sample.push({이름:'',날짜:S.date,단원:'',페이지:''});
+  const ws=XLSX.utils.json_to_sheet(sample,{header:['이름','날짜','단원','페이지']});
+  ws['!cols']=[{wch:12},{wch:13},{wch:20},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'진도');
+  XLSX.writeFile(wb,'BODA_진도_양식.xlsx');
+};
+
+const drop=$('xdrop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)readXls(f);});
+$('xfile').onchange=e=>{const f=e.target.files[0];if(f)readXls(f);};
+
+function readXls(file){
+  const fr=new FileReader();
+  fr.onload=e=>{
+    let wb;
+    try{wb=XLSX.read(e.target.result,{type:'array'});}
+    catch(err){$('xprev').innerHTML='<div class="warn">파일을 읽지 못했습니다. 엑셀(.xlsx) 또는 CSV인지 확인해 주세요.</div>';return;}
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,blankrows:false});
+    if(raw.length<2){$('xprev').innerHTML='<div class="warn">읽을 데이터가 없습니다. 첫 줄은 열 이름, 둘째 줄부터 내용이어야 합니다.</div>';return;}
+    parseRows(raw);
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+function parseRows(raw){
+  const head=raw[0].map(h=>norm(h));
+  const find=(...names)=>{
+    for(const n of names){const i=head.findIndex(h=>h.replace(/\s/g,'')===n);if(i>=0)return i;}
+    return -1;
+  };
+  let iN=find('이름','학생','학생이름'), iD=find('날짜','일자'),
+      iU=find('단원','과','유닛'), iP=find('페이지','쪽','페이지수');
+  // 열 이름을 못 찾으면 순서대로 간주
+  if(iN<0)iN=0; if(iD<0)iD=1; if(iU<0)iU=2; if(iP<0)iP=3;
+
+  XROWS=[];
+  for(let r=1;r<raw.length;r++){
+    const row=raw[r]||[];
+    const nm=norm(row[iN]);
+    if(!nm)continue;
+    const dt=toDate(row[iD]);
+    const unit=norm(row[iU]), page=norm(row[iP]);
+    const hits=S.students.filter(s=>norm(s.name)===nm);
+    let err='';
+    if(!hits.length)err='등록되지 않은 이름';
+    else if(hits.length>1)err='동명이인 — 직접 입력 필요';
+    else if(!dt)err='날짜 형식 오류';
+    else if(!unit&&!page)err='단원·페이지가 모두 비어 있음';
+    XROWS.push({line:r+1,name:nm,date:dt,unit,page,sid:hits.length===1?hits[0].id:null,err});
+  }
+  renderPrev();
+}
+
+function renderPrev(){
+  const ok=XROWS.filter(r=>!r.err), bad=XROWS.filter(r=>r.err);
+  const box=$('xprev');box.innerHTML='';
+  if(!XROWS.length){box.innerHTML='<div class="warn">반영할 줄이 없습니다.</div>';$('xgo').disabled=true;return;}
+  const sum=el('div','xsum');
+  const a=el('div','x-ok');a.appendChild(el('b','',ok.length));a.appendChild(el('span','','반영 가능'));
+  const b=el('div','x-no');b.appendChild(el('b','',bad.length));b.appendChild(el('span','','확인 필요'));
+  sum.appendChild(a);sum.appendChild(b);box.appendChild(sum);
+
+  const sc=el('div','xscroll');
+  const tb=el('table','xtb');
+  tb.innerHTML='<tr><th>줄</th><th>이름</th><th>날짜</th><th>단원</th><th>페이지</th><th>상태</th></tr>'+
+    XROWS.slice(0,200).map(r=>`<tr class="${r.err?'bad':''}"><td>${r.line}</td><td>${esc(r.name)}</td><td>${r.date||'—'}</td><td>${esc(r.unit)}</td><td>${esc(r.page)}</td><td>${r.err||'확인'}</td></tr>`).join('');
+  sc.appendChild(tb);box.appendChild(sc);
+  $('xgo').disabled=!ok.length;
+  $('xgo').textContent=`${ok.length}건 반영하기`;
+}
+
+$('xgo').onclick=async()=>{
+  const ok=XROWS.filter(r=>!r.err);
+  if(!ok.length)return;
+  const btn=$('xgo');btn.disabled=true;
+  let done=0;
+  // 학생별로 묶어 이력을 1회씩만 불러옴
+  const bySid={};
+  ok.forEach(r=>{(bySid[r.sid]=bySid[r.sid]||[]).push(r);});
+  for(const sid of Object.keys(bySid)){
+    await loadHist(sid);
+    for(const r of bySid[sid]){
+      await saveField(sid,r.date,{progress:{unit:r.unit,page:r.page}});
+      done++;btn.textContent=`반영 중… ${done}/${ok.length}`;
+    }
+  }
+  btn.textContent='완료';
+  setTimeout(()=>{$('xmodal').classList.remove('on');paint();},600);
+};
 
 /* ---- 추이 그래프 (SVG) ---- */
 function chart(rows){

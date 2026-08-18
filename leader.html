@@ -21,59 +21,37 @@ html,body{min-height:100%;font-family:'Nanum Gothic',sans-serif;background:linea
 .ok-msg{color:#16a34a;font-size:12px;padding:8px;background:#f0fdf4;border-radius:8px;margin-bottom:8px;}
 </style>
 <script>
-/* ===== PWA 설치 (버튼 상시 노출) ===== */
+/* ===== PWA 설치 ===== */
 let deferredPrompt=null;
-function fbBtn(){return document.getElementById('install-btn');}
-function isStandalone(){
-  return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-}
-function isInApp(){
-  const u=navigator.userAgent;
-  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|wv\)/i.test(u);
-}
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.getElementById('install-btn'); if(b)b.style.display='block';
+});
 window.addEventListener('appinstalled',()=>{
+  const b=document.getElementById('install-btn'); if(b)b.style.display='none';
   deferredPrompt=null;
-  const b=fbBtn(); if(b)b.style.display='none';
 });
 function installApp(){
   if(deferredPrompt){
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(r=>{
+    deferredPrompt.userChoice.then(()=>{
       deferredPrompt=null;
-      if(r&&r.outcome==='accepted'){const b=fbBtn(); if(b)b.style.display='none';}
+      const b=document.getElementById('install-btn'); if(b)b.style.display='none';
     });
-    return;
+  }else{
+    alert('앱 설치 안내\n\n[iPhone] 사파리 하단 공유(⬆️) → "홈 화면에 추가"\n[Android] 크롬 우측 상단 ⋮ → "앱 설치"\n[PC] 주소창 오른쪽 설치 아이콘 클릭');
   }
-  const u=navigator.userAgent;
-  if(isInApp()){
-    const url=location.href;
-    try{navigator.clipboard.writeText(url);}catch(e){}
-    alert('여기서는 설치할 수 없어요.\n\n주소를 복사했습니다.\n크롬이나 삼성 인터넷을 열고\n주소창에 붙여넣은 뒤,\n다시 이 버튼을 눌러주세요.\n\n'+url);
-    return;
-  }
-  if(/iPad|iPhone|iPod/.test(u)){
-    alert('홈 화면에 추가하기\n\n1. 화면 아래 공유 버튼(⬆️)을 누르세요\n2. "홈 화면에 추가"를 선택하세요');
-    return;
-  }
-  let guide='메뉴에서 "홈 화면에 추가"를 선택하세요.';
-  if(/SamsungBrowser/i.test(u))guide='아래쪽 ≡ 메뉴 → "현재 페이지 추가"\n→ "홈 화면"을 선택하세요.';
-  else if(/Whale/i.test(u))guide='아래쪽 ≡ 메뉴 → "홈 화면에 추가"를 선택하세요.';
-  else if(/Firefox|FxiOS/i.test(u))guide='우측 상단 ⋮ 메뉴 → "홈 화면에 추가"를 선택하세요.';
-  else if(/EdgA|Edg/i.test(u))guide='아래쪽 ⋯ 메뉴 → "휴대폰에 추가"를 선택하세요.';
-  else if(/OPR|OPT/i.test(u))guide='메뉴 → "홈 화면에 추가"를 선택하세요.';
-  else if(/Android/i.test(u))guide='우측 상단 ⋮ 메뉴 → "앱 설치" 또는\n"홈 화면에 추가"를 선택하세요.';
-  else guide='주소창 오른쪽의 설치 아이콘을 눌러주세요.';
-  alert('앱 설치 방법\n\n'+guide+'\n\n이미 설치되어 있다면 홈 화면을 확인해 주세요.');
 }
 window.addEventListener('load',()=>{
-  const b=fbBtn(); if(!b)return;
-  b.style.display=isStandalone()?'none':'block';
+  const b=document.getElementById('install-btn'); if(!b)return;
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(standalone){b.style.display='none';return;}
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent))b.style.display='block';
 });
 </script>
 </head>
 <body>
-<button id="install-btn" onclick="installApp()" style="display:block;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#16a34a;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
+<button id="install-btn" onclick="installApp()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#16a34a;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
 <div id="app"></div>
 <script>
 (()=>{
@@ -268,7 +246,7 @@ async function mainScreen(){
     if(!Q._lScores)Q._lScores={};
     if(!Q._lScores[stu.id]){
       Q._lScores[stu.id]={
-        attend:l.attend||false,hw:l.hw||false,
+        attend:(l.attend===true?'present':(l.attend||'')),hw:l.hw||false,
         B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',
         word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||'',
         comment:l.leaderComment||''
@@ -313,10 +291,27 @@ async function mainScreen(){
       st1.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CLASS</span>';
       body2.appendChild(st1);
       const g1=mks('div','display:flex;gap:8px;margin-bottom:10px;');
-      g1.appendChild(mkItem(mkLbl('출석','#d1fae5','#065f46','#10b981'),mkChk(sc.attend,'#6ee7b7','#10b981',async(v)=>{
-        sc.attend=v;const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.attend=v;
-        await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
-      })));
+      // 출석 / 결석 (보강 처리는 원장 대시보드에서)
+      const mkAtt=cur=>{
+        const w=mks('div','display:flex;gap:4px;width:100%;');
+        [['present','출석','#10b981','#6ee7b7'],['absent','결석','#e23d5a','#f2889a']].forEach(([k,t,c1,c2])=>{
+          const on=cur===k;
+          const b=mks('button','',t);
+          b.style.cssText=`flex:1;height:38px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:${CF};box-shadow:0 2px 6px rgba(0,0,0,0.1);color:${on?'#fff':'#9aa5bd'};background:${on?`linear-gradient(135deg,${c2},${c1})`:'rgba(200,210,230,0.5)'};`;
+          b.onclick=async()=>{
+            const nv=on?'':k;
+            sc.attend=nv;
+            const lData=await getLesson(stu.id,Q._lDate||TODAY);
+            lData.attend=nv;
+            await setLesson(stu.id,Q._lDate||TODAY,lData);
+            Q[`_lOpen_${stu.id}`]=true;render();
+          };
+          w.appendChild(b);
+        });
+        return w;
+      };
+      const curAtt=sc.attend===true?'present':(sc.attend||'');
+      g1.appendChild(mkItem(mkLbl('출결','#d1fae5','#065f46','#10b981'),mkAtt(curAtt)));
       g1.appendChild(mkItem(mkLbl('복테','#e0e7ff','#3730a3','#6366f1'),mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
       g1.appendChild(mkItem(mkLbl('확테','#dcfce7','#166534','#22c55e'),mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
       body2.appendChild(g1);
