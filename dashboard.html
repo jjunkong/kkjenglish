@@ -167,8 +167,6 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 .xbox h3{font-size:19px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;}
 .xdesc{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-bottom:14px;}
 .xdesc b{color:var(--brand);}
-.xtpl{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;}
-.xtpl:hover{border-color:var(--brand);color:var(--brand);}
 .xdrop{display:flex;align-items:center;justify-content:center;height:96px;border:2px dashed var(--line);border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-3);text-align:center;padding:10px;}
 .xdrop:hover,.xdrop.over{border-color:var(--brand);background:var(--brand-w);color:var(--brand);}
 .xsum{display:flex;gap:8px;margin:14px 0 10px;}
@@ -186,6 +184,25 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
 .xfoot .ghost{flex:1;height:42px;}
 .xgo{flex:2;height:42px;border-radius:10px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;}
 .xgo:disabled{background:var(--line);color:var(--ink-3);cursor:not-allowed;}
+.xdesc2{font-size:12px;color:var(--ink-3);font-weight:600;margin-bottom:10px;}
+.maprow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);}
+.maprow:last-child{border-bottom:none;}
+.mapl{flex:1;min-width:0;}
+.mapl b{font-size:13px;font-weight:700;}
+.mapl em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:600;}
+.maprow .pick{width:150px;flex:none;height:34px;}
+.xex{margin-top:14px;}
+.xline{font-size:11.5px;color:var(--ink-2);padding:4px 0;border-bottom:1px solid var(--line-2);}
+.xline span{font-weight:800;color:var(--brand);margin-right:6px;}
+.pnow{background:var(--line-2);border-radius:10px;padding:11px 13px;margin-bottom:13px;}
+.pnow.ov{background:var(--brand-w);}
+.pnow .tag{display:inline-block;font-size:10px;font-weight:800;color:var(--ink-3);background:var(--card);padding:2px 7px;border-radius:5px;margin-right:8px;}
+.pnow.ov .tag{color:var(--brand);}
+.pnow b{font-size:14px;font-weight:700;}
+.pnow em{font-style:normal;font-size:12.5px;color:var(--ink-3);font-weight:600;}
+.prog-row.ov{background:var(--brand-w);border-radius:8px;padding-left:8px;padding-right:8px;}
+.pbase{grid-column:span 2;font-size:13px;font-weight:600;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pbase em{font-style:normal;color:var(--ink-3);}
 .load{text-align:center;color:var(--ink-3);padding:34px 10px;font-size:13px;}
 </style>
 </head>
@@ -220,9 +237,8 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
 
 <div id="xmodal">
   <div class="xbox">
-    <h3>진도 일괄 업로드</h3>
-    <p class="xdesc">엑셀 파일의 첫 시트를 읽습니다. 열 이름은 <b>이름 · 날짜 · 단원 · 페이지</b> 순서로 맞춰 주세요.</p>
-    <button class="xtpl" id="xtpl">양식 파일 내려받기</button>
+    <h3>반 진도 업로드</h3>
+    <p class="xdesc">영상업로드 캘린더 엑셀을 그대로 올리면 됩니다. 모든 시트를 읽어 <b>날짜별 항목</b>을 뽑아내고, 항목 앞의 구분(중급·고1·스타트 등)을 반에 연결합니다.</p>
     <label class="xdrop" id="xdrop">
       <input type="file" id="xfile" accept=".xlsx,.xls,.csv" hidden>
       <span>엑셀 파일 선택 또는 여기에 끌어다 놓기</span>
@@ -321,7 +337,7 @@ function makeupStat(rows,billDay,refDate){
 }
 
 const S={pw:'',date:today(),students:[],classes:[],leaders:[],
-         sel:null,scope:'day',hist:{},chart:['bTest','oTest'],loading:false};
+         sel:null,scope:'day',hist:{},chart:['bTest','oTest'],loading:false,cprog:{},pmap:{}};
 
 const $=id=>document.getElementById(id);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
@@ -360,7 +376,8 @@ async function boot(){
   paint();
 }
 async function loadBase(){
-  const [st,cl,ld]=await Promise.all([fbGet('students'),fbGet('classes'),fbGet('leaders')]);
+  const [st,cl,ld,cp]=await Promise.all([fbGet('students'),fbGet('classes'),fbGet('leaders'),fbGet('classProgress')]);
+  S.cprog=cp||{};
   S.students=st?(Array.isArray(st)?st.filter(Boolean):Object.values(st)):[];
   S.classes=cl?(Array.isArray(cl)?cl.filter(Boolean):Object.values(cl)):[];
   S.leaders=ld?(Array.isArray(ld)?ld.filter(Boolean):Object.values(ld)):[];
@@ -384,6 +401,15 @@ async function saveField(sid,date,patch){
   if(i>=0)h.rows[i].l=next;
   else{h.rows.push({date,l:next});h.rows.sort((a,b)=>a.date.localeCompare(b.date));}
   await fbSet(`lessons/${sid}/${key}`,next);
+}
+
+// 반 진도 조회 (개별 조정이 없을 때의 기본값)
+function clsProg(cid,date){
+  const m=S.cprog[cid];
+  if(!m)return {unit:'',page:''};
+  const v=m[und(date)];
+  if(!v)return {unit:'',page:''};
+  return {unit:v.unit||v.title||'',page:v.page||''};
 }
 
 /* ============ 렌더 ============ */
@@ -534,30 +560,63 @@ function paintC(){
   c3.appendChild(g);
   box.appendChild(c3);
 
-  // 진도 이력
+  // 진도
   const c4=el('div','card');
-  const t4=el('div','card-t','진도 이력');
+  const t4=el('div','card-t','진도');
   t4.appendChild(el('div','spacer'));
-  const add=el('button','mini','오늘 진도 추가');
-  add.onclick=async()=>{await saveField(s.id,S.date,{progress:{unit:'',page:''}});paintC();};
+  const add=el('button','mini','이 날짜 개별 조정');
+  add.onclick=async()=>{
+    const base=clsProg(s.classId,S.date);
+    await saveField(s.id,S.date,{progress:{unit:base.unit||'',page:base.page||''}});
+    paintC();
+  };
   t4.appendChild(add);
   c4.appendChild(t4);
 
-  const withP=h.rows.filter(r=>r.l&&r.l.progress).sort((a,b)=>b.date.localeCompare(a.date));
-  if(!withP.length){
-    c4.appendChild(el('div','empty','아직 기록된 진도가 없습니다. 오늘 진도부터 추가해 보세요.'));
+  // 오늘 기준 진도
+  const baseT=clsProg(s.classId,S.date);
+  const ownT=l.progress;
+  const now=el('div','pnow'+(ownT?' ov':''));
+  now.appendChild(el('span','tag',ownT?'개별 조정':'반 진도'));
+  now.appendChild(el('b','',esc((ownT||baseT).unit||'—')));
+  if((ownT||baseT).page)now.appendChild(el('em','',' · '+esc((ownT||baseT).page)));
+  if(!ownT&&!baseT.unit&&!baseT.page)now.lastChild.textContent='아직 등록된 진도가 없습니다';
+  c4.appendChild(now);
+
+  // 이력 (반 진도 + 개별 조정 병합)
+  const dates={};
+  h.rows.forEach(r=>{if(r.l&&r.l.progress)dates[r.date]=1;});
+  Object.keys(S.cprog[s.classId]||{}).forEach(k=>{dates[dsh(k)]=1;});
+  const dl=Object.keys(dates).sort().reverse().slice(0,16);
+
+  if(!dl.length){
+    c4.appendChild(el('div','empty','반 진도를 엑셀로 올리거나, 이 날짜를 개별 조정해 보세요.'));
   }else{
-    withP.slice(0,14).forEach(r=>{
-      const row=el('div','prog-row');
-      row.appendChild(el('span','dt',md(r.date)));
-      const u=el('input');u.placeholder='단원 (예: Lesson 5)';u.value=r.l.progress.unit||'';
-      const p=el('input');p.placeholder='페이지 (예: 72-80)';p.value=r.l.progress.page||'';
-      const save=async()=>{await saveField(s.id,r.date,{progress:{unit:u.value,page:p.value}});};
-      u.onchange=save;p.onchange=save;
-      row.appendChild(u);row.appendChild(p);
-      const del=el('button','mini q','삭제');
-      del.onclick=async()=>{await saveField(s.id,r.date,{progress:null});paintC();};
-      row.appendChild(del);
+    dl.forEach(d=>{
+      const base=clsProg(s.classId,d);
+      const rec=h.rows.find(r=>r.date===d);
+      const own=rec&&rec.l&&rec.l.progress;
+      const row=el('div','prog-row'+(own?' ov':''));
+      row.appendChild(el('span','dt',md(d)));
+      if(own){
+        const u=el('input');u.placeholder='단원';u.value=own.unit||'';
+        const p=el('input');p.placeholder='페이지';p.value=own.page||'';
+        const save=async()=>{await saveField(s.id,d,{progress:{unit:u.value,page:p.value}});};
+        u.onchange=save;p.onchange=save;
+        row.appendChild(u);row.appendChild(p);
+        const del=el('button','mini q','반 진도로');
+        del.title='개별 조정을 지우고 반 진도를 따릅니다';
+        del.onclick=async()=>{await saveField(s.id,d,{progress:null});paintC();};
+        row.appendChild(del);
+      }else{
+        const w=el('div','pbase');
+        w.appendChild(el('span','',esc(base.unit||'—')));
+        if(base.page)w.appendChild(el('em','',' · '+esc(base.page)));
+        row.appendChild(w);
+        const ed=el('button','mini q','조정');
+        ed.onclick=async()=>{await saveField(s.id,d,{progress:{unit:base.unit||'',page:base.page||''}});paintC();};
+        row.appendChild(ed);
+      }
       c4.appendChild(row);
     });
   }
@@ -679,38 +738,13 @@ function paintR(){
   box.appendChild(s4);
 }
 
-/* ============ 진도 엑셀 일괄 업로드 ============ */
-let XROWS=[];
+/* ============ 반 진도 캘린더 업로드 ============ */
+let XITEMS=[];   // {date,prefix,title}
 const norm=v=>String(v==null?'':v).trim();
-// 엑셀 날짜(직렬번호/문자열) → YYYY-MM-DD
-function toDate(v){
-  if(v==null||v==='')return '';
-  if(typeof v==='number'){
-    const d=XLSX.SSF.parse_date_code(v);
-    if(!d)return '';
-    return `${d.y}-${pad(d.m)}-${pad(d.d)}`;
-  }
-  const t=norm(v).replace(/[.\/]/g,'-').replace(/\s+/g,'');
-  const m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
-  const m2=t.match(/^(\d{1,2})-(\d{1,2})$/);
-  if(m2)return `${new Date().getFullYear()}-${pad(+m2[1])}-${pad(+m2[2])}`;
-  return '';
-}
 
-$('xlsbtn').onclick=()=>{XROWS=[];$('xprev').innerHTML='';$('xgo').disabled=true;$('xmodal').classList.add('on');};
+$('xlsbtn').onclick=()=>{XITEMS=[];$('xprev').innerHTML='';$('xgo').disabled=true;$('xmodal').classList.add('on');};
 $('xclose').onclick=()=>$('xmodal').classList.remove('on');
 $('xmodal').onclick=e=>{if(e.target===$('xmodal'))$('xmodal').classList.remove('on');};
-
-$('xtpl').onclick=()=>{
-  const sample=S.students.slice(0,3).map(s=>({이름:s.name,날짜:S.date,단원:'',페이지:''}));
-  if(!sample.length)sample.push({이름:'',날짜:S.date,단원:'',페이지:''});
-  const ws=XLSX.utils.json_to_sheet(sample,{header:['이름','날짜','단원','페이지']});
-  ws['!cols']=[{wch:12},{wch:13},{wch:20},{wch:14}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'진도');
-  XLSX.writeFile(wb,'BODA_진도_양식.xlsx');
-};
 
 const drop=$('xdrop');
 ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
@@ -723,76 +757,119 @@ function readXls(file){
   fr.onload=e=>{
     let wb;
     try{wb=XLSX.read(e.target.result,{type:'array'});}
-    catch(err){$('xprev').innerHTML='<div class="warn">파일을 읽지 못했습니다. 엑셀(.xlsx) 또는 CSV인지 확인해 주세요.</div>';return;}
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const raw=XLSX.utils.sheet_to_json(ws,{header:1,blankrows:false});
-    if(raw.length<2){$('xprev').innerHTML='<div class="warn">읽을 데이터가 없습니다. 첫 줄은 열 이름, 둘째 줄부터 내용이어야 합니다.</div>';return;}
-    parseRows(raw);
+    catch(err){$('xprev').innerHTML='<div class="warn">파일을 읽지 못했습니다. 엑셀(.xlsx)인지 확인해 주세요.</div>';return;}
+    XITEMS=[];
+    wb.SheetNames.forEach(n=>parseSheet(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,blankrows:false})));
+    if(!XITEMS.length){
+      $('xprev').innerHTML='<div class="warn">읽을 항목이 없습니다. 월 캘린더 형식(제목 → 요일 → 날짜/내용 반복)인지 확인해 주세요.</div>';
+      $('xgo').disabled=true;return;
+    }
+    renderMap();
   };
   fr.readAsArrayBuffer(file);
 }
 
-function parseRows(raw){
-  const head=raw[0].map(h=>norm(h));
-  const find=(...names)=>{
-    for(const n of names){const i=head.findIndex(h=>h.replace(/\s/g,'')===n);if(i>=0)return i;}
-    return -1;
-  };
-  let iN=find('이름','학생','학생이름'), iD=find('날짜','일자'),
-      iU=find('단원','과','유닛'), iP=find('페이지','쪽','페이지수');
-  // 열 이름을 못 찾으면 순서대로 간주
-  if(iN<0)iN=0; if(iD<0)iD=1; if(iU<0)iU=2; if(iP<0)iP=3;
-
-  XROWS=[];
-  for(let r=1;r<raw.length;r++){
-    const row=raw[r]||[];
-    const nm=norm(row[iN]);
-    if(!nm)continue;
-    const dt=toDate(row[iD]);
-    const unit=norm(row[iU]), page=norm(row[iP]);
-    const hits=S.students.filter(s=>norm(s.name)===nm);
-    let err='';
-    if(!hits.length)err='등록되지 않은 이름';
-    else if(hits.length>1)err='동명이인 — 직접 입력 필요';
-    else if(!dt)err='날짜 형식 오류';
-    else if(!unit&&!page)err='단원·페이지가 모두 비어 있음';
-    XROWS.push({line:r+1,name:nm,date:dt,unit,page,sid:hits.length===1?hits[0].id:null,err});
+// 월 캘린더 시트 → 항목 목록
+function parseSheet(rows){
+  let y=0,mo=0;
+  for(const r of rows){
+    const t=(r||[]).map(norm).join(' ');
+    const m=t.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
+    if(m){y=+m[1];mo=+m[2];break;}
   }
-  renderPrev();
+  if(!y){const n=new Date();y=n.getFullYear();mo=n.getMonth()+1;}
+
+  for(let i=0;i<rows.length;i++){
+    const row=rows[i]||[];
+    // 날짜 줄: 1~31 숫자가 2개 이상, 항목 기호 없음
+    const nums=row.map(c=>{const v=norm(c).replace(/\.0$/,'');return /^\d{1,2}$/.test(v)?+v:null;});
+    const cnt=nums.filter(v=>v&&v>=1&&v<=31).length;
+    if(cnt<2)continue;
+    const body=rows[i+1]||[];
+    if(!body.some(c=>norm(c)))continue;
+    nums.forEach((d,col)=>{
+      if(!d||d<1||d>31)return;
+      const cell=norm(body[col]);
+      if(!cell)return;
+      const date=`${y}-${pad(mo)}-${pad(d)}`;
+      cell.split(/\r?\n/).forEach(line=>{
+        const t=line.replace(/^[•·\-\s]+/,'').trim();
+        if(!t)return;
+        const pm=t.match(/^([^_]+?)[_\-]/);
+        const prefix=pm?pm[1].trim():'(구분 없음)';
+        XITEMS.push({date,prefix,title:t});
+      });
+    });
+    i++; // 내용 줄 건너뜀
+  }
 }
 
-function renderPrev(){
-  const ok=XROWS.filter(r=>!r.err), bad=XROWS.filter(r=>r.err);
+// 접두어 → 반 매핑 화면
+function renderMap(){
   const box=$('xprev');box.innerHTML='';
-  if(!XROWS.length){box.innerHTML='<div class="warn">반영할 줄이 없습니다.</div>';$('xgo').disabled=true;return;}
-  const sum=el('div','xsum');
-  const a=el('div','x-ok');a.appendChild(el('b','',ok.length));a.appendChild(el('span','','반영 가능'));
-  const b=el('div','x-no');b.appendChild(el('b','',bad.length));b.appendChild(el('span','','확인 필요'));
-  sum.appendChild(a);sum.appendChild(b);box.appendChild(sum);
+  const pre={};
+  XITEMS.forEach(it=>{pre[it.prefix]=(pre[it.prefix]||0)+1;});
+  const keys=Object.keys(pre).sort();
+
+  box.appendChild(el('div','sub-t','어느 반의 진도인가요'));
+  box.appendChild(el('div','xdesc2',`항목 ${XITEMS.length}건 · 구분 ${keys.length}종. 반을 고른 것만 반영됩니다.`));
 
   const sc=el('div','xscroll');
-  const tb=el('table','xtb');
-  tb.innerHTML='<tr><th>줄</th><th>이름</th><th>날짜</th><th>단원</th><th>페이지</th><th>상태</th></tr>'+
-    XROWS.slice(0,200).map(r=>`<tr class="${r.err?'bad':''}"><td>${r.line}</td><td>${esc(r.name)}</td><td>${r.date||'—'}</td><td>${esc(r.unit)}</td><td>${esc(r.page)}</td><td>${r.err||'확인'}</td></tr>`).join('');
-  sc.appendChild(tb);box.appendChild(sc);
-  $('xgo').disabled=!ok.length;
-  $('xgo').textContent=`${ok.length}건 반영하기`;
+  keys.forEach(k=>{
+    const row=el('div','maprow');
+    const lft=el('div','mapl');
+    lft.appendChild(el('b','',esc(k)));
+    lft.appendChild(el('em','',` ${pre[k]}건`));
+    row.appendChild(lft);
+    const sel=el('select','pick');
+    const o0=el('option');o0.value='';o0.textContent='반영 안 함';sel.appendChild(o0);
+    S.classes.forEach(c=>{
+      const o=el('option');o.value=c.id;o.textContent=c.name;
+      if(String(S.pmap[k]||'')===String(c.id))o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.onchange=()=>{S.pmap[k]=sel.value;updGo();};
+    row.appendChild(sel);
+    sc.appendChild(row);
+  });
+  box.appendChild(sc);
+
+  const ex=el('div','xex');
+  ex.appendChild(el('div','sub-t','읽어들인 내용 (앞 8건)'));
+  XITEMS.slice(0,8).forEach(it=>{
+    ex.appendChild(el('div','xline',`<span>${md(it.date)}</span> ${esc(it.title)}`));
+  });
+  box.appendChild(ex);
+  updGo();
+}
+
+function updGo(){
+  const n=XITEMS.filter(it=>S.pmap[it.prefix]).length;
+  $('xgo').disabled=!n;
+  $('xgo').textContent=n?`${n}건 반영하기`:'반을 선택하세요';
 }
 
 $('xgo').onclick=async()=>{
-  const ok=XROWS.filter(r=>!r.err);
-  if(!ok.length)return;
+  const use=XITEMS.filter(it=>S.pmap[it.prefix]);
+  if(!use.length)return;
   const btn=$('xgo');btn.disabled=true;
+
+  // 반+날짜로 묶기 (같은 날 여러 편이면 줄바꿈으로 합침)
+  const bag={};
+  use.forEach(it=>{
+    const cid=S.pmap[it.prefix];
+    const k=cid+'|'+it.date;
+    (bag[k]=bag[k]||[]).push(it.title);
+  });
+  const keys=Object.keys(bag);
   let done=0;
-  // 학생별로 묶어 이력을 1회씩만 불러옴
-  const bySid={};
-  ok.forEach(r=>{(bySid[r.sid]=bySid[r.sid]||[]).push(r);});
-  for(const sid of Object.keys(bySid)){
-    await loadHist(sid);
-    for(const r of bySid[sid]){
-      await saveField(sid,r.date,{progress:{unit:r.unit,page:r.page}});
-      done++;btn.textContent=`반영 중… ${done}/${ok.length}`;
-    }
+  for(const k of keys){
+    const [cid,date]=k.split('|');
+    const val={unit:bag[k].join(' / '),page:''};
+    S.cprog[cid]=S.cprog[cid]||{};
+    S.cprog[cid][und(date)]=val;
+    await fbSet(`classProgress/${cid}/${und(date)}`,val);
+    done++;btn.textContent=`반영 중… ${done}/${keys.length}`;
   }
   btn.textContent='완료';
   setTimeout(()=>{$('xmodal').classList.remove('on');paint();},600);
