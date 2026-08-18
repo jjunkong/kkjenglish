@@ -169,6 +169,7 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
     <span class="dow" id="ddow"></span>
     <div class="spacer"></div>
     <button class="ghost" id="reload">새로고침</button>
+    <button class="ghost" id="toadmin">원장방</button>
   </div>
   <div class="cols">
     <div class="col col-l" id="colL"></div>
@@ -219,6 +220,13 @@ const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==u
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
 /* ============ 로그인 ============ */
+// 원장방에서 '로그인 유지'를 켜 둔 경우 비밀번호를 다시 묻지 않음
+if(localStorage.getItem('kkj_admin_auth')==='true'){
+  $('gate').style.display='none';
+  $('shell').classList.add('on');
+  window.addEventListener('DOMContentLoaded',()=>{});
+  setTimeout(()=>boot(),0);
+}
 $('gbtn').onclick=async()=>{
   const v=$('gpw').value.trim();
   if(!v){$('gerr').textContent='비밀번호를 입력하세요.';return;}
@@ -239,6 +247,7 @@ async function boot(){
   $('dsel').value=S.date;
   $('dsel').onchange=()=>{S.date=$('dsel').value;S.sel=null;paint();};
   $('reload').onclick=async()=>{S.hist={};await loadBase();paint();};
+  $('toadmin').onclick=()=>{location.href='/admin.html';};
   await loadBase();
   paint();
 }
