@@ -697,6 +697,69 @@ async function aList(){
       groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=stuList;Q._groupClassName=cls.name;render();};
       cbody.appendChild(groupBtn);
 
+      // 반 전체 영상 배정
+      const vidOpen=Q._clsVidOpen===cls.id;
+      const vBtn=mks('div','background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:10px 12px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;');
+      const vl0=mks('div','');
+      vl0.appendChild(mks('div','font-size:12px;font-weight:700;color:#5b21b6;','🎬 반 전체 영상 배정'));
+      const commonIds=(Q.videos||[]).filter(v=>stuList.length&&stuList.every(st=>(st.videos||[]).includes(v.id))).map(v=>v.id);
+      vl0.appendChild(mks('div','font-size:10px;color:#8b5cf6;margin-top:2px;',`반 전원 공통 ${commonIds.length}개 · ${stuList.length}명에게 한 번에 적용`));
+      vBtn.appendChild(vl0);vBtn.appendChild(mks('span','font-size:14px;color:#8b5cf6;',vidOpen?'▲':'▼'));
+      vBtn.onclick=()=>{Q._clsVidOpen=vidOpen?null:cls.id;Q._clsVidSel=vidOpen?null:[...commonIds];render();};
+      cbody.appendChild(vBtn);
+
+      if(vidOpen){
+        if(!Q._clsVidSel)Q._clsVidSel=[...commonIds];
+        const vWrap=mks('div','border:1.5px solid #ddd6fe;border-radius:10px;overflow:hidden;margin-bottom:10px;');
+        if(!(Q.videos||[]).length){
+          vWrap.appendChild(mks('div','padding:16px;font-size:12px;color:#aaa;text-align:center;','등록된 영상이 없습니다. 설정 → 영상관리에서 추가해 주세요.'));
+        }else{
+          const tools=mks('div','display:flex;gap:6px;padding:10px 12px;background:#faf9ff;border-bottom:1px solid #ede9fe;');
+          const bAll=mks('button','flex:1;height:30px;border-radius:7px;border:1px solid #ddd6fe;background:#fff;font-size:11px;font-weight:700;color:#5b21b6;cursor:pointer;','전체 선택');
+          const bNone=mks('button','flex:1;height:30px;border-radius:7px;border:1px solid #ddd6fe;background:#fff;font-size:11px;font-weight:700;color:#5b21b6;cursor:pointer;','전체 해제');
+          bAll.onclick=()=>{Q._clsVidSel=Q.videos.map(v=>v.id);render();};
+          bNone.onclick=()=>{Q._clsVidSel=[];render();};
+          tools.appendChild(bAll);tools.appendChild(bNone);
+          vWrap.appendChild(tools);
+
+          Q.videos.forEach((v,i)=>{
+            const row=mks('div',`display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;${i>0?'border-top:1px solid #f0f0ee;':''}`);
+            const cb=document.createElement('input');cb.type='checkbox';
+            cb.style.cssText='width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#6d28d9;';
+            cb.checked=Q._clsVidSel.includes(v.id);
+            const partial=!cb.checked&&stuList.some(st=>(st.videos||[]).includes(v.id));
+            cb.onchange=()=>{
+              if(cb.checked){if(!Q._clsVidSel.includes(v.id))Q._clsVidSel.push(v.id);}
+              else Q._clsVidSel=Q._clsVidSel.filter(id=>id!==v.id);
+            };
+            const lb=mks('div','flex:1;');
+            lb.appendChild(mks('div','font-size:13px;color:#111;',v.title||'제목 없음'));
+            if(partial)lb.appendChild(mks('div','font-size:10px;color:#f59e0b;margin-top:2px;','일부 학생만 배정됨'));
+            else if(v.desc)lb.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
+            row.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;cb.onchange();}};
+            row.appendChild(cb);row.appendChild(lb);
+            vWrap.appendChild(row);
+          });
+
+          const applyWrap=mks('div','padding:10px 12px;background:#faf9ff;border-top:1px solid #ede9fe;');
+          const applyBtn=mks('button','width:100%;height:38px;border-radius:9px;border:none;background:#6d28d9;color:#fff;font-size:13px;font-weight:700;cursor:pointer;',`${stuList.length}명에게 적용`);
+          applyBtn.onclick=async()=>{
+            if(!confirm(`${cls.name} ${stuList.length}명의 영상 목록을 선택한 ${Q._clsVidSel.length}개로 교체합니다.\n\n개별로 조정해 둔 내용은 사라집니다. 진행할까요?`))return;
+            applyBtn.textContent='적용 중...';applyBtn.disabled=true;
+            stuList.forEach(st=>{
+              const idx=Q.students.findIndex(x=>x.id===st.id);
+              if(idx>=0)Q.students[idx].videos=[...Q._clsVidSel];
+            });
+            await saveStu();
+            applyBtn.textContent='✓ 적용 완료';
+            setTimeout(()=>{Q._clsVidOpen=null;Q._clsVidSel=null;render();},900);
+          };
+          applyWrap.appendChild(applyBtn);
+          vWrap.appendChild(applyWrap);
+        }
+        cbody.appendChild(vWrap);
+      }
+
       // 학생 목록
       const SL_BADGE={none:'badge badge-none',planned:'badge badge-plan',completed:'badge badge-done'};
       stuList.forEach(stu=>{
@@ -904,6 +967,18 @@ async function aStuEdit(){
     cs.onchange=()=>stu.classId=cs.value;
     body.appendChild(cs);
   }
+
+  mkLabel('수강 결제일');
+  body.appendChild(mks('div','font-size:11px;font-weight:500;color:#666;margin-bottom:5px;margin-top:-4px;','보강 횟수는 이 날짜 기준 1개월로 계산됩니다'));
+  const billSel=document.createElement('select');billSel.className='inp';
+  const o0=document.createElement('option');o0.value='';o0.textContent='설정 안 함';billSel.appendChild(o0);
+  for(let d=1;d<=31;d++){
+    const o=document.createElement('option');o.value=String(d);o.textContent='매월 '+d+'일';
+    if(String(stu.billDay||'')===String(d))o.selected=true;
+    billSel.appendChild(o);
+  }
+  billSel.onchange=()=>{stu.billDay=billSel.value?Number(billSel.value):'';};
+  body.appendChild(billSel);
 
   mkLabel('학부모 연락처');
   const phi=document.createElement('input');phi.className='inp';phi.placeholder='010-1234-5678';phi.value=stu.info?.phone||'';

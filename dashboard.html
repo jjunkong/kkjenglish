@@ -194,6 +194,29 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 .cmt p{font-size:12.5px;line-height:1.6;color:var(--ink-2);}
 .xtpl2{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;}
 .xtpl2:hover{border-color:var(--brand);color:var(--brand);}
+.ghost.pri{background:var(--brand);color:#fff;border-color:var(--brand);}
+.ghost.pri:hover{background:var(--brand-d);color:#fff;}
+#mmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
+#mmodal.on{display:flex;}
+.xbox.wide{width:720px;}
+.mrow{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line-2);align-items:flex-start;}
+.mrow:last-child{border-bottom:none;}
+.mrow>input{width:17px;height:17px;accent-color:var(--brand);cursor:pointer;margin-top:2px;flex:none;}
+.mrow .mi{flex:none;width:118px;}
+.mrow .mi b{display:block;font-size:13.5px;font-weight:800;}
+.mrow .mi em{font-style:normal;font-size:11px;color:var(--ink-3);font-weight:600;}
+.mrow .mi .bad{color:var(--no);font-weight:700;}
+.mrow pre{flex:1;min-width:0;margin:0;font-family:inherit;font-size:11px;line-height:1.65;color:var(--ink-2);
+  background:var(--line-2);border-radius:9px;padding:10px 11px;white-space:pre-wrap;word-break:break-all;max-height:150px;overflow-y:auto;}
+.mrow.off{opacity:.4;}
+.mhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.mhead button{height:30px;padding:0 12px;border-radius:8px;border:1.5px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-2);}
+.mhead button:hover{border-color:var(--brand);color:var(--brand);}
+.mhead .sp{flex:1;}
+.mhead .n{font-size:12.5px;font-weight:700;color:var(--ink-3);}
+.mlog{margin-top:12px;font-size:12px;font-weight:700;padding:10px 12px;border-radius:9px;}
+.mlog.ok{background:var(--ok-w);color:var(--ok);}
+.mlog.er{background:var(--no-w);color:var(--no);}
 #smodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #smodal.on{display:flex;}
 .tabs{display:flex;gap:5px;background:var(--line-2);padding:4px;border-radius:11px;margin-bottom:16px;}
@@ -277,6 +300,7 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <span class="dow" id="ddow"></span>
     <div class="spacer"></div>
     <button class="ghost" id="reload">새로고침</button>
+    <button class="ghost pri" id="smsbtn">문자 일괄 발송</button>
     <button class="ghost" id="stubtn">학생 정보 업로드</button>
     <button class="ghost" id="xlsbtn">진도 업로드</button>
     <button class="ghost" id="toadmin">원장방</button>
@@ -285,6 +309,18 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <div class="col col-l" id="colL"></div>
     <div class="col col-c" id="colC"></div>
     <div class="col col-r" id="colR"></div>
+  </div>
+</div>
+
+<div id="mmodal">
+  <div class="xbox wide">
+    <h3>DAILY REPORT 일괄 발송</h3>
+    <p class="xdesc" id="mdesc"></p>
+    <div id="mprev"></div>
+    <div class="xfoot">
+      <button class="ghost" id="mclose">닫기</button>
+      <button class="xgo" id="mgo" disabled>발송하기</button>
+    </div>
   </div>
 </div>
 
@@ -713,6 +749,150 @@ function paintC(){
   });
   box.appendChild(c5);
 }
+
+/* ============ DAILY REPORT 일괄 발송 ============ */
+let MROWS=[];
+function genSMS(stu,l,dateStr){
+  const sc=[
+    `B-test(리뷰테스트) : ${l.bTest!==''&&l.bTest!=null?l.bTest+'점':''}`,
+    `O-test(수업후 테스트) : ${l.oTest!==''&&l.oTest!=null?l.oTest+'점':''}`,
+    `D-test(개념테스트) : ${l.dTest!==''&&l.dTest!=null?l.dTest+'점':''}`,
+    `A-test-단어 : ${l.wordTest!==''&&l.wordTest!=null?l.wordTest+'점':''}`,
+    `A-test-영작 : ${l.writeTest!==''&&l.writeTest!=null?l.writeTest+'점':''}`,
+  ].join('\n');
+  return `[${stu.name} DAILY REPORT]\n`
+    +`안녕하세요 ${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
+    +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
+    +`<HOMEWORK>\n${(l.plan&&l.plan.core)||''}\n\n`
+    +`<TEST>\n${sc}\n\n`
+    +`늘 믿고 맡겨주셔서 감사합니다.\n-김기준영어학원 드림`;
+}
+
+$('smsbtn').onclick=async()=>{
+  $('mmodal').classList.add('on');
+  $('mprev').innerHTML='<div class="load">불러오는 중…</div>';
+  $('mgo').disabled=true;
+
+  const cfg=await fbGet('solapiCfg');
+  const priv=await fbGet('privateInfo')||{};
+  const d=dow(S.date);
+  const targets=S.selCls
+    ? S.students.filter(st=>String(st.classId)===String(S.selCls))
+    : S.students.filter(st=>st.days&&st.days.includes(d));
+
+  const [y,m,dd]=S.date.split('-').map(Number);
+  const dateStr=`${y}년 ${m}월 ${dd}일`;
+  const cls=S.classes.find(c=>String(c.id)===String(S.selCls));
+  $('mdesc').innerHTML=S.selCls
+    ? `<b>${esc(cls?cls.name:'')}</b> 전체 · ${dateStr} 기준입니다.`
+    : `<b>${dateStr} (${DAYS[d]}요일)</b> 수업 학생 전체입니다. 왼쪽에서 반을 고르면 그 반만 보냅니다.`;
+
+  MROWS=[];
+  for(const st of targets){
+    const h=await loadHist(st.id);
+    const rec=h.rows.find(r=>r.date===S.date);
+    const l=rec?rec.l:{};
+    const phone=(priv[st.id]&&priv[st.id].phone)||(st.info&&st.info.phone)||'';
+    const att=attOf(l);
+    let warn='';
+    if(!phone)warn='연락처 없음';
+    else if(att==='absent')warn='결석';
+    else if(!rec)warn='기록 없음';
+    MROWS.push({stu:st,phone:String(phone).replace(/[^\d]/g,''),text:genSMS(st,l,dateStr),
+                warn,on:!!phone&&att!=='absent'});
+  }
+  renderM(cfg);
+};
+$('mclose').onclick=()=>$('mmodal').classList.remove('on');
+$('mmodal').onclick=e=>{if(e.target===$('mmodal'))$('mmodal').classList.remove('on');};
+
+function renderM(cfg){
+  const box=$('mprev');box.innerHTML='';
+  if(!MROWS.length){box.innerHTML='<div class="warn">해당하는 학생이 없습니다.</div>';return;}
+  if(!cfg||!cfg.key||!cfg.secret||!cfg.sender){
+    box.appendChild(el('div','warn','솔라피 설정이 없습니다. 원장방 → 설정 → SMS에서 API 키와 발신번호를 먼저 등록해 주세요.'));
+  }
+  S._cfg=cfg;
+
+  const head=el('div','mhead');
+  const ba=el('button','','전체 선택');
+  const bn=el('button','','전체 해제');
+  head.appendChild(ba);head.appendChild(bn);
+  head.appendChild(el('div','sp'));
+  const n=el('div','n');
+  head.appendChild(n);
+  box.appendChild(head);
+
+  const sc=el('div','xscroll');
+  sc.style.maxHeight='380px';
+  box.appendChild(sc);
+
+  const upd=()=>{
+    const c=MROWS.filter(r=>r.on).length;
+    n.textContent=`${MROWS.length}명 중 ${c}명 선택`;
+    $('mgo').disabled=!c||!cfg||!cfg.key;
+    $('mgo').textContent=c?`${c}명에게 발송하기`:'발송하기';
+  };
+  const draw=()=>{
+    sc.innerHTML='';
+    MROWS.forEach((r,i)=>{
+      const row=el('div','mrow'+(r.on?'':' off'));
+      const cb=el('input');cb.type='checkbox';cb.checked=r.on;cb.disabled=!r.phone;
+      cb.onchange=()=>{r.on=cb.checked;row.classList.toggle('off',!cb.checked);upd();};
+      const mi=el('div','mi');
+      mi.appendChild(el('b','',esc(r.stu.name)));
+      mi.appendChild(el('em','',r.phone?r.phone.replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3'):''));
+      if(r.warn)mi.appendChild(el('em','bad',r.warn));
+      const pre=document.createElement('pre');pre.textContent=r.text;
+      row.appendChild(cb);row.appendChild(mi);row.appendChild(pre);
+      sc.appendChild(row);
+    });
+    upd();
+  };
+  ba.onclick=()=>{MROWS.forEach(r=>{if(r.phone)r.on=true;});draw();};
+  bn.onclick=()=>{MROWS.forEach(r=>r.on=false);draw();};
+  draw();
+}
+
+async function sendSolapi(messages,cfg){
+  const date=new Date().toISOString();
+  const salt=Math.random().toString(36).slice(2,12);
+  const enc=new TextEncoder();
+  const key=await crypto.subtle.importKey('raw',enc.encode(cfg.secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const sig=await crypto.subtle.sign('HMAC',key,enc.encode(date+salt));
+  const hex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const res=await fetch('https://api.solapi.com/messages/v4/send-many',{
+    method:'POST',
+    headers:{'Content-Type':'application/json',
+      'Authorization':`HMAC-SHA256 apiKey=${cfg.key}, date=${date}, salt=${salt}, signature=${hex}`},
+    body:JSON.stringify({messages})
+  });
+  return res.json();
+}
+
+$('mgo').onclick=async()=>{
+  const use=MROWS.filter(r=>r.on&&r.phone);
+  if(!use.length)return;
+  const cfg=S._cfg;
+  if(!confirm(`${use.length}명에게 문자를 발송합니다. 진행할까요?`))return;
+  const btn=$('mgo');btn.disabled=true;btn.textContent='발송 중…';
+  const msgs=use.map(r=>({to:r.phone,from:String(cfg.sender).replace(/[^\d]/g,''),text:r.text,type:'LMS',
+                          subject:`${r.stu.name} DAILY REPORT`}));
+  try{
+    const out=await sendSolapi(msgs,cfg);
+    const fail=(out&&out.failedMessageList&&out.failedMessageList.length)||0;
+    const log=el('div','mlog '+(fail?'er':'ok'));
+    log.textContent=fail?`${use.length}건 중 ${fail}건 실패했습니다. 발신번호와 잔액을 확인해 주세요.`
+                        :`${use.length}건 발송을 요청했습니다.`;
+    $('mprev').prepend(log);
+    // 학부모 앱 공개 처리
+    for(const r of use)await saveField(r.stu.id,S.date,{parentVisible:true});
+    btn.textContent='발송 완료';
+  }catch(e){
+    const log=el('div','mlog er');log.textContent='발송에 실패했습니다: '+e.message;
+    $('mprev').prepend(log);btn.textContent='다시 시도';btn.disabled=false;
+  }
+};
 
 /* ============ 학생 정보 일괄 업로드 ============ */
 let SROWS=[];
