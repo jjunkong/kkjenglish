@@ -192,6 +192,27 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 .cmt{background:var(--line-2);border-radius:11px;padding:12px 13px;margin-bottom:8px;}
 .cmt time{font-size:10.5px;font-weight:800;color:var(--brand);display:block;margin-bottom:4px;}
 .cmt p{font-size:12.5px;line-height:1.6;color:var(--ink-2);}
+.xtpl2{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;}
+.xtpl2:hover{border-color:var(--brand);color:var(--brand);}
+#smodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
+#smodal.on{display:flex;}
+.tabs{display:flex;gap:5px;background:var(--line-2);padding:4px;border-radius:11px;margin-bottom:16px;}
+.tabs button{flex:1;height:34px;border-radius:8px;font-size:13px;font-weight:700;color:var(--ink-3);}
+.tabs button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 3px rgba(11,26,56,.1);}
+.vrow{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;}
+.vrow:hover{background:var(--line-2);}
+.vrow input{width:17px;height:17px;accent-color:var(--brand);cursor:pointer;flex:none;}
+.vrow input:indeterminate{opacity:.6;}
+.vrow div{flex:1;min-width:0;}
+.vrow b{display:block;font-size:13px;font-weight:700;}
+.vrow em{font-style:normal;font-size:11px;color:var(--ink-3);}
+.vrow .cnt{font-size:11px;font-weight:700;color:var(--ink-3);background:var(--line-2);padding:2px 8px;border-radius:20px;}
+.vbar{display:flex;gap:7px;margin-bottom:12px;}
+.vbar button{height:32px;padding:0 12px;border-radius:8px;border:1.5px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-2);}
+.vbar button:hover{border-color:var(--brand);color:var(--brand);}
+.vsave{position:sticky;bottom:0;background:var(--card);padding-top:12px;margin-top:8px;border-top:1px solid var(--line);}
+.vsave button{width:100%;height:42px;border-radius:10px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;}
+.vsave button:disabled{background:var(--line);color:var(--ink-3);}
 #xmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #xmodal.on{display:flex;}
 .xbox{background:var(--card);border-radius:18px;padding:24px;width:560px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(11,26,56,.3);}
@@ -256,13 +277,31 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <span class="dow" id="ddow"></span>
     <div class="spacer"></div>
     <button class="ghost" id="reload">새로고침</button>
-    <button class="ghost" id="xlsbtn">진도 일괄 업로드</button>
+    <button class="ghost" id="stubtn">학생 정보 업로드</button>
+    <button class="ghost" id="xlsbtn">진도 업로드</button>
     <button class="ghost" id="toadmin">원장방</button>
   </div>
   <div class="cols">
     <div class="col col-l" id="colL"></div>
     <div class="col col-c" id="colC"></div>
     <div class="col col-r" id="colR"></div>
+  </div>
+</div>
+
+<div id="smodal">
+  <div class="xbox">
+    <h3>학생 정보 일괄 업로드</h3>
+    <p class="xdesc">열 이름은 <b>이름 · 학부모코드 · 영상코드 · 반 · 레벨 · 학교 · 성별 · 교재 · 연락처 · 결제일 · 수업요일</b>. 이름이 이미 있으면 덮어쓰고, 없으면 새로 만듭니다. 빈 칸은 기존 값을 그대로 둡니다.</p>
+    <button class="xtpl2" id="stpl">양식 파일 내려받기</button>
+    <label class="xdrop" id="sdrop">
+      <input type="file" id="sfile" accept=".xlsx,.xls,.csv" hidden>
+      <span>엑셀 파일 선택 또는 여기에 끌어다 놓기</span>
+    </label>
+    <div id="sprev"></div>
+    <div class="xfoot">
+      <button class="ghost" id="sclose">닫기</button>
+      <button class="xgo" id="sgo" disabled>반영하기</button>
+    </div>
   </div>
 </div>
 
@@ -368,7 +407,7 @@ function makeupStat(rows,billDay,refDate){
 }
 
 const S={pw:'',date:today(),students:[],classes:[],leaders:[],
-         sel:null,selCls:null,calM:'',scope:'day',hist:{},chart:['bTest','oTest'],loading:false,cprog:{},pmap:{}};
+         sel:null,selCls:null,calM:'',scope:'day',hist:{},chart:['bTest','oTest'],loading:false,cprog:{},pmap:{},videos:[],calTab:'prog'};
 
 const $=id=>document.getElementById(id);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
@@ -409,6 +448,8 @@ async function boot(){
 async function loadBase(){
   const [st,cl,ld,cp]=await Promise.all([fbGet('students'),fbGet('classes'),fbGet('leaders'),fbGet('classProgress')]);
   S.cprog=cp||{};
+  const vd=await fbGet('videos');
+  S.videos=vd?(Array.isArray(vd)?vd.filter(Boolean):Object.values(vd)):[];
   S.students=st?(Array.isArray(st)?st.filter(Boolean):Object.values(st)):[];
   S.classes=cl?(Array.isArray(cl)?cl.filter(Boolean):Object.values(cl)):[];
   S.leaders=ld?(Array.isArray(ld)?ld.filter(Boolean):Object.values(ld)):[];
@@ -662,6 +703,201 @@ function paintC(){
     });
   }
   box.appendChild(c4);
+
+  // 개별 영상 배정
+  const c5=el('div','card');
+  c5.appendChild(el('div','card-t','시청 가능 영상 — 개별 조정'));
+  paintVideo(c5,s.videos||[],'개별',async ids=>{
+    s.videos=[...ids];
+    await saveStudents();
+  });
+  box.appendChild(c5);
+}
+
+/* ============ 학생 정보 일괄 업로드 ============ */
+let SROWS=[];
+const DOWMAP={'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+function parseDays(v){
+  const t=norm(v);if(!t)return null;
+  const out=[];
+  t.replace(/요일/g,'').split(/[,\s·\/]+/).join('').split('').forEach(ch=>{
+    if(DOWMAP[ch]!==undefined&&!out.includes(DOWMAP[ch]))out.push(DOWMAP[ch]);
+  });
+  return out.length?out.sort((a,b)=>a-b):null;
+}
+async function saveStudents(){
+  const obj={},priv={};
+  S.students.forEach(st=>{
+    const {info,...rest}=st;
+    const {phone,...safe}=info||{};
+    obj[st.id]={...rest,info:safe};
+    if(phone)priv[st.id]={phone};
+  });
+  await fbSet('students',obj);
+  if(Object.keys(priv).length)await fbSet('privateInfo',priv);
+}
+
+$('stubtn').onclick=()=>{SROWS=[];$('sprev').innerHTML='';$('sgo').disabled=true;$('smodal').classList.add('on');};
+$('sclose').onclick=()=>$('smodal').classList.remove('on');
+$('smodal').onclick=e=>{if(e.target===$('smodal'))$('smodal').classList.remove('on');};
+
+$('stpl').onclick=()=>{
+  const H=['이름','학부모코드','영상코드','반','레벨','학교','성별','교재','연락처','결제일','수업요일'];
+  const data=(S.students.length?S.students:[{name:''}]).map(st=>{
+    const c=S.classes.find(c=>String(c.id)===String(st.classId));
+    return {이름:st.name||'',학부모코드:st.code||'',영상코드:st.videoCode||'',반:c?c.name:'',
+      레벨:(st.level&&st.level!=='선택 안 함')?st.level:'',학교:(st.info&&st.info.school)||'',
+      성별:(st.info&&st.info.gender&&st.info.gender!=='선택 안 함')?st.info.gender:'',
+      교재:(st.info&&st.info.book)||'',연락처:'',결제일:st.billDay||'',
+      수업요일:(st.days||[]).sort((a,b)=>a-b).map(d=>DAYS[d]).join('')};
+  });
+  const ws=XLSX.utils.json_to_sheet(data,{header:H});
+  ws['!cols']=H.map(h=>({wch:h==='교재'?20:h==='연락처'?14:10}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'학생정보');
+  XLSX.writeFile(wb,'BODA_학생정보_양식.xlsx');
+};
+
+const sdrop=$('sdrop');
+['dragover','dragenter'].forEach(ev=>sdrop.addEventListener(ev,e=>{e.preventDefault();sdrop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>sdrop.addEventListener(ev,e=>{e.preventDefault();sdrop.classList.remove('over');}));
+sdrop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)readStu(f);});
+$('sfile').onchange=e=>{const f=e.target.files[0];if(f)readStu(f);};
+
+function readStu(file){
+  const fr=new FileReader();
+  fr.onload=e=>{
+    let wb;
+    try{wb=XLSX.read(e.target.result,{type:'array'});}
+    catch(err){$('sprev').innerHTML='<div class="warn">파일을 읽지 못했습니다.</div>';return;}
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false});
+    if(raw.length<2){$('sprev').innerHTML='<div class="warn">읽을 데이터가 없습니다. 첫 줄은 열 이름이어야 합니다.</div>';return;}
+    const head=raw[0].map(h=>norm(h).replace(/\s/g,''));
+    const col=(...ns)=>{for(const n of ns){const i=head.indexOf(n);if(i>=0)return i;}return -1;};
+    const C={name:col('이름','학생','학생이름'),code:col('학부모코드','코드','비밀번호'),
+      vcode:col('영상코드','학생코드'),cls:col('반','반이름','클래스'),lv:col('레벨'),
+      sch:col('학교'),gen:col('성별'),book:col('교재','사용교재'),
+      ph:col('연락처','전화번호','학부모연락처'),bill:col('결제일','수강결제일'),days:col('수업요일','요일')};
+    if(C.name<0){$('sprev').innerHTML='<div class="warn">\'이름\' 열을 찾을 수 없습니다. 첫 줄의 열 이름을 확인해 주세요.</div>';return;}
+
+    SROWS=[];
+    const seen={};
+    for(let r=1;r<raw.length;r++){
+      const row=raw[r]||[];
+      const nm=norm(row[C.name]);
+      if(!nm)continue;
+      const g=v=>C[v]>=0?norm(row[C[v]]):'';
+      const hits=S.students.filter(st=>norm(st.name)===nm);
+      let err='';
+      if(hits.length>1)err='동명이인 — 앱에서 직접 수정';
+      else if(seen[nm])err='엑셀 안에 이름 중복';
+      seen[nm]=1;
+      const clsName=g('cls');
+      let cid='';
+      if(clsName){
+        const c=S.classes.find(c=>norm(c.name)===clsName);
+        if(c)cid=c.id; else if(!err)err=`'${clsName}' 반이 없습니다`;
+      }
+      const bill=g('bill').replace(/[^\d]/g,'');
+      if(bill&&(+bill<1||+bill>31)&&!err)err='결제일은 1~31 사이여야 합니다';
+      SROWS.push({line:r+1,name:nm,exist:hits.length===1?hits[0]:null,err,
+        code:g('code'),vcode:g('vcode'),cid,clsName,lv:g('lv'),sch:g('sch'),gen:g('gen'),
+        book:g('book'),ph:g('ph'),bill:bill?+bill:'',days:parseDays(g('days'))});
+    }
+    renderSPrev();
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+function renderSPrev(){
+  const ok=SROWS.filter(r=>!r.err), bad=SROWS.filter(r=>r.err);
+  const nw=ok.filter(r=>!r.exist).length, up=ok.filter(r=>r.exist).length;
+  const box=$('sprev');box.innerHTML='';
+  if(!SROWS.length){box.innerHTML='<div class="warn">반영할 줄이 없습니다.</div>';$('sgo').disabled=true;return;}
+  const sum=el('div','xsum');
+  [[`${up}`,'수정','x-ok'],[`${nw}`,'신규','x-ok'],[`${bad.length}`,'확인 필요','x-no']].forEach(([v,t,c])=>{
+    const d=el('div',c);d.appendChild(el('b','',v));d.appendChild(el('span','',t));sum.appendChild(d);
+  });
+  box.appendChild(sum);
+  const sc=el('div','xscroll');
+  const tb=el('table','xtb');
+  tb.innerHTML='<tr><th>줄</th><th>이름</th><th>반</th><th>요일</th><th>결제일</th><th>상태</th></tr>'+
+    SROWS.slice(0,200).map(r=>`<tr class="${r.err?'bad':''}"><td>${r.line}</td><td>${esc(r.name)}</td><td>${esc(r.clsName)}</td><td>${r.days?r.days.map(d=>DAYS[d]).join(''):'—'}</td><td>${r.bill||'—'}</td><td>${r.err||(r.exist?'수정':'신규')}</td></tr>`).join('');
+  sc.appendChild(tb);box.appendChild(sc);
+  $('sgo').disabled=!ok.length;
+  $('sgo').textContent=`${ok.length}명 반영하기`;
+}
+
+$('sgo').onclick=async()=>{
+  const ok=SROWS.filter(r=>!r.err);
+  if(!ok.length)return;
+  const btn=$('sgo');btn.disabled=true;btn.textContent='반영 중…';
+  ok.forEach(r=>{
+    let st=r.exist;
+    if(!st){
+      st={id:Date.now().toString()+'_'+Math.random().toString(36).slice(2),
+          name:r.name,code:'',videoCode:'',days:[],classId:'',level:'',info:{},videos:[]};
+      S.students.push(st);
+    }
+    if(r.code)st.code=r.code;
+    if(r.vcode)st.videoCode=r.vcode;
+    if(r.cid)st.classId=r.cid;
+    if(r.lv)st.level=r.lv;
+    if(r.bill)st.billDay=r.bill;
+    if(r.days)st.days=r.days;
+    st.info=st.info||{};
+    if(r.sch)st.info.school=r.sch;
+    if(r.gen)st.info.gender=r.gen;
+    if(r.book)st.info.book=r.book;
+    if(r.ph)st.info.phone=r.ph;
+    if(!st.code&&r.code)st.code=r.code;
+    if(!st.videoCode)st.videoCode=st.code;
+  });
+  await saveStudents();
+  btn.textContent='완료';
+  setTimeout(()=>{$('smodal').classList.remove('on');paint();},600);
+};
+
+/* ============ 영상 배정 ============ */
+function paintVideo(box,ids,label,onSave){
+  if(!S.videos.length){box.appendChild(el('div','empty','등록된 영상이 없습니다. 원장방 설정에서 먼저 추가해 주세요.'));return;}
+  const sel=new Set(ids);
+  const bar=el('div','vbar');
+  const ba=el('button','','전체 선택');
+  const bn=el('button','','전체 해제');
+  bar.appendChild(ba);bar.appendChild(bn);
+  box.appendChild(bar);
+
+  const list=el('div');
+  box.appendChild(list);
+  const foot=el('div','vsave');
+  const sv=el('button','','변경사항 저장');
+  sv.disabled=true;
+  foot.appendChild(sv);
+
+  const draw=()=>{
+    list.innerHTML='';
+    S.videos.forEach(v=>{
+      const row=el('label','vrow');
+      const cb=el('input');cb.type='checkbox';cb.checked=sel.has(v.id);
+      cb.onchange=()=>{cb.checked?sel.add(v.id):sel.delete(v.id);sv.disabled=false;};
+      const d=el('div');
+      d.appendChild(el('b','',esc(v.title||'제목 없음')));
+      if(v.desc)d.appendChild(el('em','',esc(v.desc)));
+      row.appendChild(cb);row.appendChild(d);
+      list.appendChild(row);
+    });
+  };
+  ba.onclick=()=>{S.videos.forEach(v=>sel.add(v.id));sv.disabled=false;draw();};
+  bn.onclick=()=>{sel.clear();sv.disabled=false;draw();};
+  sv.onclick=async()=>{
+    sv.disabled=true;sv.textContent='저장 중…';
+    await onSave([...sel]);
+    sv.textContent='저장됨';
+    setTimeout(()=>{sv.textContent='변경사항 저장';},1200);
+  };
+  draw();
+  box.appendChild(foot);
 }
 
 /* ---- 반 진도 달력 ---- */
@@ -679,8 +915,28 @@ function paintCal(box){
   const head=el('div','cal-head');
   const ttl=el('div','cal-t');
   ttl.appendChild(el('b','',esc(cls?cls.name:'반 미배정')));
-  ttl.appendChild(el('span','',`${cy}년 ${cm}월 진도`));
+  ttl.appendChild(el('span','',S.calTab==='prog'?`${cy}년 ${cm}월 진도`:'반 전체 영상 배정'));
   head.appendChild(ttl);
+  if(S.calTab!=='prog'){
+    box.appendChild(head);
+    const tabs=el('div','tabs');
+    [['prog','진도 달력'],['vid','영상 배정']].forEach(([k,t])=>{
+      const b=el('button',S.calTab===k?'on':'',t);
+      b.onclick=()=>{S.calTab=k;paintC();};
+      tabs.appendChild(b);
+    });
+    box.appendChild(tabs);
+    const mem=S.students.filter(st=>String(st.classId)===String(cid));
+    box.appendChild(el('div','xdesc2',`저장하면 이 반 ${mem.length}명 전원의 영상 목록이 아래 선택으로 교체됩니다.`));
+    // 반 전원이 공통으로 가진 영상만 체크 상태로 시작
+    const common=S.videos.filter(v=>mem.length&&mem.every(st=>(st.videos||[]).includes(v.id))).map(v=>v.id);
+    paintVideo(box,common,'반',async ids=>{
+      mem.forEach(st=>{st.videos=[...ids];});
+      await saveStudents();
+    });
+    return;
+  }
+
   const nav=el('div','cal-nav');
   const mv=n=>{let y=cy,m=cm+n;if(m<1){m=12;y--;}if(m>12){m=1;y++;}S.calM=`${y}-${pad(m)}`;paintC();};
   const bp=el('button','','‹');bp.onclick=()=>mv(-1);
@@ -689,6 +945,14 @@ function paintCal(box){
   nav.appendChild(bp);nav.appendChild(bt);nav.appendChild(bn);
   head.appendChild(nav);
   box.appendChild(head);
+
+  const tabs=el('div','tabs');
+  [['prog','진도 달력'],['vid','영상 배정']].forEach(([k,t])=>{
+    const b=el('button',S.calTab===k?'on':'',t);
+    b.onclick=()=>{S.calTab=k;paintC();};
+    tabs.appendChild(b);
+  });
+  box.appendChild(tabs);
 
   const grid=el('div','cal');
   DAYS.forEach((d,i)=>grid.appendChild(el('div','cal-dow'+(i===0?' sun':i===6?' sat':''),d)));
