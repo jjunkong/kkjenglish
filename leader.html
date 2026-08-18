@@ -21,37 +21,59 @@ html,body{min-height:100%;font-family:'Nanum Gothic',sans-serif;background:linea
 .ok-msg{color:#16a34a;font-size:12px;padding:8px;background:#f0fdf4;border-radius:8px;margin-bottom:8px;}
 </style>
 <script>
-/* ===== PWA 설치 ===== */
+/* ===== PWA 설치 (버튼 상시 노출) ===== */
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e;
-  const b=document.getElementById('install-btn'); if(b)b.style.display='block';
-});
+function fbBtn(){return document.getElementById('install-btn');}
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+}
+function isInApp(){
+  const u=navigator.userAgent;
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|wv\)/i.test(u);
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
 window.addEventListener('appinstalled',()=>{
-  const b=document.getElementById('install-btn'); if(b)b.style.display='none';
   deferredPrompt=null;
+  const b=fbBtn(); if(b)b.style.display='none';
 });
 function installApp(){
   if(deferredPrompt){
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(()=>{
+    deferredPrompt.userChoice.then(r=>{
       deferredPrompt=null;
-      const b=document.getElementById('install-btn'); if(b)b.style.display='none';
+      if(r&&r.outcome==='accepted'){const b=fbBtn(); if(b)b.style.display='none';}
     });
-  }else{
-    alert('앱 설치 안내\n\n[iPhone] 사파리 하단 공유(⬆️) → "홈 화면에 추가"\n[Android] 크롬 우측 상단 ⋮ → "앱 설치"\n[PC] 주소창 오른쪽 설치 아이콘 클릭');
+    return;
   }
+  const u=navigator.userAgent;
+  if(isInApp()){
+    const url=location.href;
+    try{navigator.clipboard.writeText(url);}catch(e){}
+    alert('여기서는 설치할 수 없어요.\n\n주소를 복사했습니다.\n크롬이나 삼성 인터넷을 열고\n주소창에 붙여넣은 뒤,\n다시 이 버튼을 눌러주세요.\n\n'+url);
+    return;
+  }
+  if(/iPad|iPhone|iPod/.test(u)){
+    alert('홈 화면에 추가하기\n\n1. 화면 아래 공유 버튼(⬆️)을 누르세요\n2. "홈 화면에 추가"를 선택하세요');
+    return;
+  }
+  let guide='메뉴에서 "홈 화면에 추가"를 선택하세요.';
+  if(/SamsungBrowser/i.test(u))guide='아래쪽 ≡ 메뉴 → "현재 페이지 추가"\n→ "홈 화면"을 선택하세요.';
+  else if(/Whale/i.test(u))guide='아래쪽 ≡ 메뉴 → "홈 화면에 추가"를 선택하세요.';
+  else if(/Firefox|FxiOS/i.test(u))guide='우측 상단 ⋮ 메뉴 → "홈 화면에 추가"를 선택하세요.';
+  else if(/EdgA|Edg/i.test(u))guide='아래쪽 ⋯ 메뉴 → "휴대폰에 추가"를 선택하세요.';
+  else if(/OPR|OPT/i.test(u))guide='메뉴 → "홈 화면에 추가"를 선택하세요.';
+  else if(/Android/i.test(u))guide='우측 상단 ⋮ 메뉴 → "앱 설치" 또는\n"홈 화면에 추가"를 선택하세요.';
+  else guide='주소창 오른쪽의 설치 아이콘을 눌러주세요.';
+  alert('앱 설치 방법\n\n'+guide+'\n\n이미 설치되어 있다면 홈 화면을 확인해 주세요.');
 }
 window.addEventListener('load',()=>{
-  const b=document.getElementById('install-btn'); if(!b)return;
-  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-  if(standalone){b.style.display='none';return;}
-  if(/iPad|iPhone|iPod/.test(navigator.userAgent))b.style.display='block';
+  const b=fbBtn(); if(!b)return;
+  b.style.display=isStandalone()?'none':'block';
 });
 </script>
 </head>
 <body>
-<button id="install-btn" onclick="installApp()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#16a34a;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
+<button id="install-btn" onclick="installApp()" style="display:block;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#16a34a;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
 <div id="app"></div>
 <script>
 (()=>{
