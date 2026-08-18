@@ -160,8 +160,10 @@ const saveStu=async()=>{
     obj[s.id]={...rest,info:safeInfo};
     if(phone)privateObj[s.id]={phone};
   });
-  await fbSet('students',obj);
+  const ok=await fbSet('students',obj);
+  if(!ok)alert('학생 저장에 실패했습니다.\n\nFirebase 규칙에서 students 쓰기가 허용되어 있는지 확인해 주세요.');
   if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
+  return ok;
 };
 const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
 const saveVideos=async()=>{
@@ -215,6 +217,7 @@ const stuDisplayName=stu=>{
   return cls?`${cls.name}_${stu.name}`:stu.name;
 };
 
+const gid=id=>document.getElementById(id);
 const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
 const mks=(tag,css,html)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(html!==undefined)e.innerHTML=html;return e;};
 
@@ -855,7 +858,8 @@ async function aList(){
       const classId=gid('acls')?.value||'';
       if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
       if(Q.students.find(s=>s.name===n)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
-      Q.students.push({id:Date.now().toString(),name:n,code:c2,days:selDays2,classId});
+      Q.students.push({id:Date.now().toString(),name:n,code:c2,videoCode:c2,
+        days:selDays2,classId,level:'',info:{},videos:[],sCode:'',billDay:''});
       await saveStu();Q.showAdd=false;Q.err='';render();
     };af.appendChild(addBtn);
   }
@@ -920,7 +924,7 @@ async function aList(){
       bulkSaveBtn.textContent='저장 중...';bulkSaveBtn.disabled=true;
       const classId=bcs.value;const level=blvl.value;
       valid.forEach(r=>{
-        Q.students.push({id:Date.now().toString()+'_'+Math.random().toString(36).slice(2),name:r.name.trim(),code:r.code.trim(),days:bulkDays,classId,level});
+        Q.students.push({id:Date.now().toString()+'_'+Math.random().toString(36).slice(2),name:r.name.trim(),code:r.code.trim(),videoCode:r.code.trim(),days:bulkDays,classId,level,info:{},videos:[],sCode:'',billDay:''});
       });
       await saveStu();
       bmsg.innerHTML=`<div class="ok-msg">✓ ${valid.length}명 추가됐습니다!</div>`;
