@@ -82,7 +82,16 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .seg{display:flex;gap:4px;margin-top:9px;background:var(--line-2);padding:3px;border-radius:9px;}
 .seg button{flex:1;height:28px;border-radius:7px;font-size:12px;font-weight:700;color:var(--ink-3);}
 .seg button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 3px rgba(11,26,56,.1);}
-.cls-h{padding:13px 16px 5px;font-size:11px;font-weight:800;color:var(--ink-3);letter-spacing:.04em;}
+.cls-h{width:100%;display:flex;align-items:center;gap:8px;padding:11px 14px;margin:10px 8px 4px;width:calc(100% - 16px);
+  background:var(--line-2);border-radius:10px;text-align:left;transition:background .15s;}
+.cls-h:hover{background:var(--brand-w);}
+.cls-h.on{background:var(--ink);}
+.cls-h .cn{flex:1;font-size:14px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+.cls-h.on .cn{color:#fff;}
+.cls-h .cc{font-size:11px;font-weight:700;color:var(--ink-3);background:var(--card);padding:2px 7px;border-radius:20px;}
+.cls-h.on .cc{background:rgba(255,255,255,.2);color:#fff;}
+.stu-row b{font-weight:700;font-size:14px;}
+.dot{width:9px;height:9px;}
 .stu-row{width:100%;text-align:left;padding:9px 16px;display:flex;align-items:center;gap:9px;border-left:3px solid transparent;}
 .stu-row:hover{background:var(--line-2);}
 .stu-row.on{background:var(--brand-w);border-left-color:var(--brand);}
@@ -92,6 +101,28 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .d-ok{background:var(--ok);} .d-no{background:var(--no);} .d-mk{background:var(--mk);} .d-na{background:var(--line);}
 
 /* ---------- 중앙 ---------- */
+.cal-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.cal-t{flex:1;min-width:0;}
+.cal-t b{display:block;font-size:21px;font-weight:800;letter-spacing:-.03em;}
+.cal-t span{font-size:12.5px;font-weight:600;color:var(--ink-3);}
+.cal-nav{display:flex;gap:5px;align-items:center;}
+.cal-nav button{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line);font-size:17px;font-weight:700;color:var(--ink-2);}
+.cal-nav button.today{width:auto;padding:0 12px;font-size:12.5px;}
+.cal-nav button:hover{border-color:var(--brand);color:var(--brand);}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;}
+.cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--ink-3);padding:5px 0 7px;}
+.cal-dow.sun{color:var(--no);} .cal-dow.sat{color:var(--brand);}
+.cal-c{min-height:88px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px;overflow:hidden;}
+.cal-c.off{background:transparent;border:none;}
+.cal-c.now{border-color:var(--brand);border-width:2px;background:var(--brand-w);}
+.cal-n{font-size:11.5px;font-weight:800;color:var(--ink-3);margin-bottom:4px;}
+.cal-c.sun .cal-n{color:var(--no);} .cal-c.sat .cal-n{color:var(--brand);}
+.cal-i{font-size:10.5px;font-weight:700;line-height:1.35;color:var(--ink);background:var(--brand-w);
+  border-left:2.5px solid var(--brand);border-radius:0 5px 5px 0;padding:3px 4px;margin-bottom:3px;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+.cal-p{font-size:10px;font-weight:700;color:var(--ink-3);}
+.cal-f{margin-top:14px;font-size:12.5px;font-weight:600;color:var(--ink-3);text-align:center;}
+@media (max-width:900px){.cal-c{min-height:64px;} .cal-i{-webkit-line-clamp:2;}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
 .card-t{font-size:12px;font-weight:800;color:var(--ink-3);letter-spacing:.04em;margin-bottom:13px;display:flex;align-items:center;gap:8px;}
 .card-t .spacer{flex:1;}
@@ -337,7 +368,7 @@ function makeupStat(rows,billDay,refDate){
 }
 
 const S={pw:'',date:today(),students:[],classes:[],leaders:[],
-         sel:null,scope:'day',hist:{},chart:['bTest','oTest'],loading:false,cprog:{},pmap:{}};
+         sel:null,selCls:null,calM:'',scope:'day',hist:{},chart:['bTest','oTest'],loading:false,cprog:{},pmap:{}};
 
 const $=id=>document.getElementById(id);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
@@ -444,7 +475,16 @@ function paintL(d){
   list.forEach(s=>{(byCls[s.classId||'_']=byCls[s.classId||'_']||[]).push(s);});
   Object.keys(byCls).forEach(cid=>{
     const cls=S.classes.find(c=>String(c.id)===String(cid));
-    box.appendChild(el('div','cls-h',esc(cls?cls.name:'반 미배정')));
+    const ch=el('button','cls-h'+(S.selCls===String(cid)?' on':''));
+    ch.appendChild(el('span','cn',esc(cls?cls.name:'반 미배정')));
+    ch.appendChild(el('span','cc',byCls[cid].length+'명'));
+    ch.title='반 진도를 달력으로 보기';
+    ch.onclick=()=>{
+      S.selCls=S.selCls===String(cid)?null:String(cid);
+      if(S.selCls)S.sel=null;
+      paint();
+    };
+    box.appendChild(ch);
     byCls[cid].sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(s=>{
       const b=el('button','stu-row'+(S.sel===s.id?' on':''));
       const h=S.hist[s.id];
@@ -455,9 +495,9 @@ function paintL(d){
       b.appendChild(el('span','dot '+cls2));
       const w=el('span');
       w.appendChild(el('b','',esc(s.name)));
-      if(s.level)w.appendChild(el('em','',' '+esc(s.level)));
+      if(s.level&&s.level!=='선택 안 함')w.appendChild(el('em','',' '+esc(s.level)));
       b.appendChild(w);
-      b.onclick=async()=>{S.sel=s.id;S.loading=true;paint();await loadHist(s.id);S.loading=false;paint();};
+      b.onclick=async()=>{S.sel=s.id;S.selCls=null;S.loading=true;paint();await loadHist(s.id);S.loading=false;paint();};
       box.appendChild(b);
     });
   });
@@ -466,7 +506,8 @@ function paintL(d){
 /* ---- 중앙: 학생 상세 ---- */
 function paintC(){
   const box=$('colC');box.innerHTML='';
-  if(!S.sel){box.appendChild(el('div','load','왼쪽에서 학생을 선택하면 상세 정보가 열립니다.'));return;}
+  if(S.selCls){return paintCal(box);}
+  if(!S.sel){box.appendChild(el('div','load','왼쪽에서 학생을 선택하면 상세 정보가 열립니다. 반 이름을 누르면 반 진도를 달력으로 봅니다.'));return;}
   const s=S.students.find(x=>x.id===S.sel);
   if(!s){box.appendChild(el('div','load','학생 정보를 찾을 수 없습니다.'));return;}
   if(S.loading||!S.hist[s.id]){box.appendChild(el('div','load','불러오는 중…'));return;}
@@ -623,9 +664,69 @@ function paintC(){
   box.appendChild(c4);
 }
 
+/* ---- 반 진도 달력 ---- */
+function paintCal(box){
+  const cid=S.selCls;
+  const cls=S.classes.find(c=>String(c.id)===String(cid));
+  const map=S.cprog[cid]||{};
+
+  if(!S.calM){
+    const ks=Object.keys(map).sort();
+    S.calM=ks.length?dsh(ks[ks.length-1]).slice(0,7):S.date.slice(0,7);
+  }
+  const [cy,cm]=S.calM.split('-').map(Number);
+
+  const head=el('div','cal-head');
+  const ttl=el('div','cal-t');
+  ttl.appendChild(el('b','',esc(cls?cls.name:'반 미배정')));
+  ttl.appendChild(el('span','',`${cy}년 ${cm}월 진도`));
+  head.appendChild(ttl);
+  const nav=el('div','cal-nav');
+  const mv=n=>{let y=cy,m=cm+n;if(m<1){m=12;y--;}if(m>12){m=1;y++;}S.calM=`${y}-${pad(m)}`;paintC();};
+  const bp=el('button','','‹');bp.onclick=()=>mv(-1);
+  const bn=el('button','','›');bn.onclick=()=>mv(1);
+  const bt=el('button','today','이번 달');bt.onclick=()=>{S.calM=today().slice(0,7);paintC();};
+  nav.appendChild(bp);nav.appendChild(bt);nav.appendChild(bn);
+  head.appendChild(nav);
+  box.appendChild(head);
+
+  const grid=el('div','cal');
+  DAYS.forEach((d,i)=>grid.appendChild(el('div','cal-dow'+(i===0?' sun':i===6?' sat':''),d)));
+
+  const first=new Date(cy,cm-1,1).getDay();
+  const last=lastDay(cy,cm);
+  for(let i=0;i<first;i++)grid.appendChild(el('div','cal-c off'));
+
+  let filled=0;
+  for(let d=1;d<=last;d++){
+    const ds=`${cy}-${pad(cm)}-${pad(d)}`;
+    const dw=new Date(cy,cm-1,d).getDay();
+    const c=el('div','cal-c'+(ds===today()?' now':'')+(dw===0?' sun':dw===6?' sat':''));
+    c.appendChild(el('div','cal-n',d));
+    const v=map[und(ds)];
+    if(v&&(v.unit||v.page)){
+      filled++;
+      String(v.unit||'').split(' / ').filter(Boolean).forEach(t=>{
+        const it=el('div','cal-i',esc(t));
+        it.title=t;
+        c.appendChild(it);
+      });
+      if(v.page)c.appendChild(el('div','cal-p',esc(v.page)));
+    }
+    grid.appendChild(c);
+  }
+  box.appendChild(grid);
+
+  const ft=el('div','cal-f');
+  ft.textContent=filled?`${cm}월 ${filled}일치 진도가 등록되어 있습니다.`
+                       :`${cm}월에 등록된 진도가 없습니다. 상단 '진도 업로드'로 캘린더 파일을 올려 보세요.`;
+  box.appendChild(ft);
+}
+
 /* ---- 우: 누적 통계 ---- */
 function paintR(){
   const box=$('colR');box.innerHTML='';
+  if(S.selCls){box.appendChild(el('div','load','학생을 선택하면 성적·출석 통계가 표시됩니다.'));return;}
   if(!S.sel||!S.hist[S.sel]){box.appendChild(el('div','load','학생을 선택하세요.'));return;}
   const h=S.hist[S.sel];
   const s=S.students.find(x=>x.id===S.sel);
