@@ -303,6 +303,7 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <button class="ghost pri" id="smsbtn">문자 일괄 발송</button>
     <button class="ghost" id="stubtn">학생 정보 업로드</button>
     <button class="ghost" id="xlsbtn">진도 업로드</button>
+    <button class="ghost" id="extbtn" title="외부 성적 연동 설정">연동</button>
     <button class="ghost" id="toadmin">원장방</button>
   </div>
   <div class="cols">
@@ -478,6 +479,7 @@ async function boot(){
   $('dsel').onchange=()=>{S.date=$('dsel').value;S.sel=null;paint();};
   $('reload').onclick=async()=>{S.hist={};await loadBase();paint();};
   $('toadmin').onclick=()=>{location.href='/admin.html';};
+  $('extbtn').onclick=cfgExt;
   await loadBase();
   paint();
 }
@@ -750,6 +752,112 @@ function paintC(){
   box.appendChild(c5);
 }
 
+/* ============ 외부 연동: 월간 평가 (kkjgenerator) ============ */
+// 받아오는 형식
+// { period:'2026-08', students:[ {code:'S1027', name:'강리원',
+//     grammar:82, writing:41, vocab:45, total:168, weakUnits:['관계사','분사']} ] }
+const MR={};           // period -> {byCode, byName}
+let EXT=null;          // {base, token}
+
+async function loadExt(){
+  if(EXT)return EXT;
+  EXT=(await fbGet('extApi'))||{base:'',token:''};
+  return EXT;
+}
+async function loadMonthly(period){
+  if(MR[period]!==undefined)return MR[period];
+  const cfg=await loadExt();
+  if(!cfg.base){MR[period]=null;return null;}
+  try{
+    const u=`${cfg.base.replace(/\/$/,'')}/api/boda/monthly?period=${period}`;
+    const r=await fetch(u,{headers:cfg.token?{'Authorization':'Bearer '+cfg.token}:{}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    const byCode={},byName={};
+    (j.students||[]).forEach(x=>{
+      if(x.code)byCode[String(x.code).trim().toUpperCase()]=x;
+      if(x.name)byName[String(x.name).trim()]=x;
+    });
+    MR[period]={byCode,byName,raw:j};
+  }catch(e){
+    MR[period]={err:e.message};
+  }
+  return MR[period];
+}
+function extFind(period,stu){
+  const m=MR[period];
+  if(!m||m.err)return null;
+  if(stu.sCode&&m.byCode[String(stu.sCode).trim().toUpperCase()])
+    return m.byCode[String(stu.sCode).trim().toUpperCase()];
+  return m.byName[String(stu.name).trim()]||null;
+}
+
+// 우측 '월간 평가' 섹션
+function paintMonthly(box,stu){
+  const period=S.date.slice(0,7);
+  const sec=el('div','r-sec');
+  sec.appendChild(el('h3','r-t','월간 평가 (200점)'));
+  box.appendChild(sec);
+
+  const draw=()=>{
+    [...sec.querySelectorAll('.mbody')].forEach(n=>n.remove());
+    const b=el('div','mbody');
+    const m=MR[period];
+    if(m===undefined){b.appendChild(el('div','empty','불러오는 중…'));}
+    else if(m===null){
+      b.appendChild(el('div','empty','외부 연동이 설정되지 않았습니다.'));
+      const cf=el('button','mini q','연동 설정');
+      cf.onclick=cfgExt;b.appendChild(cf);
+    }
+    else if(m.err){
+      b.appendChild(el('div','warn','불러오지 못했습니다: '+esc(m.err)));
+      const cf=el('button','mini q','연동 설정');
+      cf.onclick=cfgExt;b.appendChild(cf);
+    }
+    else{
+      const d=extFind(period,stu);
+      if(!d)b.appendChild(el('div','empty',`${+period.slice(5)}월 평가 기록이 없습니다.`));
+      else{
+        const tot=el('div','left-big');
+        tot.appendChild(el('b','',d.total!=null?d.total:'—'));
+        tot.appendChild(el('span','','/ 200점'));
+        b.appendChild(tot);
+        const tb=el('table','avg');
+        tb.innerHTML=[['문법',d.grammar,100],['영작',d.writing,50],['단어',d.vocab,50]]
+          .map(([n,v,mx])=>`<tr><td>${n}</td><td>${v!=null?v:'—'}</td><td>/ ${mx}</td></tr>`).join('');
+        b.appendChild(tb);
+        if(d.weakUnits&&d.weakUnits.length){
+          b.appendChild(el('div','sub-t','약점 단원'));
+          const w=el('div','chips');
+          d.weakUnits.slice(0,8).forEach(u=>{const c=el('button','on',esc(u));c.disabled=true;w.appendChild(c);});
+          b.appendChild(w);
+        }
+      }
+      const lk=el('button','mini q','원본 리포트 열기');
+      lk.onclick=async()=>{
+        const cfg=await loadExt();
+        window.open(`${cfg.base.replace(/\/$/,'')}/admin/monthly-report?period=${period}`,'_blank');
+      };
+      b.appendChild(lk);
+    }
+    sec.appendChild(b);
+  };
+  draw();
+  if(MR[period]===undefined)loadMonthly(period).then(draw);
+}
+
+async function cfgExt(){
+  const cfg=await loadExt();
+  const base=prompt('연동할 주소를 입력하세요 (예: https://kkjgenerator.vercel.app)',cfg.base||'https://kkjgenerator.vercel.app');
+  if(base===null)return;
+  const token=prompt('API 토큰 (없으면 비워 두세요)',cfg.token||'');
+  if(token===null)return;
+  EXT={base:base.trim(),token:(token||'').trim()};
+  await fbSet('extApi',EXT);
+  Object.keys(MR).forEach(k=>delete MR[k]);
+  paintR();
+}
+
 /* ============ DAILY REPORT 일괄 발송 ============ */
 let MROWS=[];
 function genSMS(stu,l,dateStr){
@@ -922,10 +1030,10 @@ $('sclose').onclick=()=>$('smodal').classList.remove('on');
 $('smodal').onclick=e=>{if(e.target===$('smodal'))$('smodal').classList.remove('on');};
 
 $('stpl').onclick=()=>{
-  const H=['이름','학부모코드','영상코드','반','레벨','학교','성별','교재','연락처','결제일','수업요일'];
+  const H=['이름','학생코드','학부모코드','영상코드','반','레벨','학교','성별','교재','연락처','결제일','수업요일'];
   const data=(S.students.length?S.students:[{name:''}]).map(st=>{
     const c=S.classes.find(c=>String(c.id)===String(st.classId));
-    return {이름:st.name||'',학부모코드:st.code||'',영상코드:st.videoCode||'',반:c?c.name:'',
+    return {이름:st.name||'',학생코드:st.sCode||'',학부모코드:st.code||'',영상코드:st.videoCode||'',반:c?c.name:'',
       레벨:(st.level&&st.level!=='선택 안 함')?st.level:'',학교:(st.info&&st.info.school)||'',
       성별:(st.info&&st.info.gender&&st.info.gender!=='선택 안 함')?st.info.gender:'',
       교재:(st.info&&st.info.book)||'',연락처:'',결제일:st.billDay||'',
@@ -954,7 +1062,7 @@ function readStu(file){
     if(raw.length<2){$('sprev').innerHTML='<div class="warn">읽을 데이터가 없습니다. 첫 줄은 열 이름이어야 합니다.</div>';return;}
     const head=raw[0].map(h=>norm(h).replace(/\s/g,''));
     const col=(...ns)=>{for(const n of ns){const i=head.indexOf(n);if(i>=0)return i;}return -1;};
-    const C={name:col('이름','학생','학생이름'),code:col('학부모코드','코드','비밀번호'),
+    const C={name:col('이름','학생','학생이름'),scode:col('학생코드','학원코드'),code:col('학부모코드','코드','비밀번호'),
       vcode:col('영상코드','학생코드'),cls:col('반','반이름','클래스'),lv:col('레벨'),
       sch:col('학교'),gen:col('성별'),book:col('교재','사용교재'),
       ph:col('연락처','전화번호','학부모연락처'),bill:col('결제일','수강결제일'),days:col('수업요일','요일')};
@@ -981,7 +1089,7 @@ function readStu(file){
       const bill=g('bill').replace(/[^\d]/g,'');
       if(bill&&(+bill<1||+bill>31)&&!err)err='결제일은 1~31 사이여야 합니다';
       SROWS.push({line:r+1,name:nm,exist:hits.length===1?hits[0]:null,err,
-        code:g('code'),vcode:g('vcode'),cid,clsName,lv:g('lv'),sch:g('sch'),gen:g('gen'),
+        scode:g('scode'),code:g('code'),vcode:g('vcode'),cid,clsName,lv:g('lv'),sch:g('sch'),gen:g('gen'),
         book:g('book'),ph:g('ph'),bill:bill?+bill:'',days:parseDays(g('days'))});
     }
     renderSPrev();
@@ -1019,6 +1127,7 @@ $('sgo').onclick=async()=>{
           name:r.name,code:'',videoCode:'',days:[],classId:'',level:'',info:{},videos:[]};
       S.students.push(st);
     }
+    if(r.scode)st.sCode=r.scode;
     if(r.code)st.code=r.code;
     if(r.vcode)st.videoCode=r.vcode;
     if(r.cid)st.classId=r.cid;
@@ -1190,6 +1299,9 @@ function paintR(){
   s1.appendChild(chips);
   s1.appendChild(chart(h.rows));
   box.appendChild(s1);
+
+  // 1-2. 월간 평가 (외부 연동)
+  paintMonthly(box,s);
 
   // 2. 출석
   const s2=el('div','r-sec');

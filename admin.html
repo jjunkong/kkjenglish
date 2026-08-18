@@ -968,6 +968,11 @@ async function aStuEdit(){
     body.appendChild(cs);
   }
 
+  mkLabel('학생코드 (문항 스튜디오 연동)');
+  const scInp=mk('input','inp');scInp.value=stu.sCode||'';scInp.placeholder='예: S1027';
+  scInp.oninput=()=>{stu.sCode=scInp.value.trim().toUpperCase();};
+  body.appendChild(scInp);
+
   mkLabel('수강 결제일');
   body.appendChild(mks('div','font-size:11px;font-weight:500;color:#666;margin-bottom:5px;margin-top:-4px;','보강 횟수는 이 날짜 기준 1개월로 계산됩니다'));
   const billSel=document.createElement('select');billSel.className='inp';
@@ -1058,7 +1063,7 @@ async function aStuEdit(){
     if(!n||!c2){Q.err='이름과 코드를 입력하세요.';render();return;}
     if(Q.students.find(s=>s.name===n&&s.id!==stu.id)){Q.err='같은 이름의 학생이 이미 있습니다.';render();return;}
     const idx=Q.students.findIndex(s=>s.id===stu.id);
-    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,videoCode:vc2||c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||'',info:stu.info||{},level:stu.level||''};
+    if(idx>=0)Q.students[idx]={...Q.students[idx],name:n,code:c2,videoCode:vc2||c2,days:stu.days,videos:stu.videos||[],classId:stu.classId||'',info:stu.info||{},level:stu.level||'',sCode:stu.sCode||'',billDay:stu.billDay||''};
     await saveStu();
     msg.innerHTML='<div class="ok-msg">✓ 저장되었습니다!</div>';
     setTimeout(()=>{Q.scr='aList';render();},700);
