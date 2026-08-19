@@ -503,7 +503,21 @@ const LK=['check','core','fix'];
 const LABELS=['Learning — 학습 및 확인','Acquisition — 핵심 습득','Maintenance — 교정 및 유지'];
 
 const ytId=url=>{if(!url)return'';const m=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);return m?m[1]:'';}; 
-const vimeoId=url=>{if(!url)return'';const m=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);return m?m[1]:'';};
+const vimeoId=url=>{
+  if(!url)return'';
+  // player.vimeo.com/video/123?h=abc  형태
+  const p=url.match(/player\.vimeo\.com\/video\/(\d+)/);
+  if(p){const h=url.match(/[?&]h=([a-zA-Z0-9]+)/);return h?`${p[1]}/${h[1]}`:p[1];}
+  // vimeo.com/123/abc  (임베드 전용 = 비공개 해시)
+  const m2=url.match(/vimeo\.com\/(\d+)\/([a-zA-Z0-9]+)/);
+  if(m2)return `${m2[1]}/${m2[2]}`;
+  // vimeo.com/123?h=abc
+  const m3=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if(m3){const h=url.match(/[?&]h=([a-zA-Z0-9]+)/);return h?`${m3[1]}/${h[1]}`:m3[1];}
+  return'';
+};
+// 저장된 값 → 원래 URL 복원
+const vimeoUrl=id=>id?(String(id).includes('/')?`https://vimeo.com/${id}`:`https://vimeo.com/${id}`):'';
 const parseVideoUrl=url=>{const vid=vimeoId(url);if(vid)return{type:'vimeo',id:vid};const yid=ytId(url);if(yid)return{type:'youtube',id:yid};return{type:'url',id:''};};
 
 function render(){
@@ -1544,7 +1558,7 @@ async function aSettings(){
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 제목'));
     const vt=document.createElement('input');vt.id='vt';vt.className='inp';vt.placeholder='예: 1강 - 관계대명사 기초';af.appendChild(vt);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','영상 URL (비메오 또는 유튜브)'));
-    af.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:5px;','예: https://vimeo.com/123456789'));
+    af.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:5px;','비공개 영상: https://vimeo.com/1234567890/abc123def (해시까지 그대로)'));
     const vu=document.createElement('input');vu.id='vu';vu.className='inp';vu.placeholder='https://vimeo.com/...  또는  https://youtube.com/...';af.appendChild(vu);
     af.appendChild(mks('div','font-size:12px;color:#888;margin-bottom:5px;','설명 (선택)'));
     const vd=document.createElement('input');vd.id='vd';vd.className='inp';vd.placeholder='예: 관계대명사 who, which 핵심 정리';af.appendChild(vd);
@@ -1576,7 +1590,11 @@ async function aSettings(){
       // 드롭다운 헤더
       const chdr=mks('div','display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;background:#fafafa;');
       const cl=mks('div','flex:1;');
-      cl.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',v.title));
+      const tw=mks('div','display:flex;align-items:center;gap:6px;');
+      const kind=v.vimeoId?['비메오','#1ab7ea']:(v.ytId?['유튜브','#ff0000']:['링크','#888']);
+      tw.appendChild(mks('span',`font-size:9px;font-weight:800;color:#fff;background:${kind[1]};padding:2px 6px;border-radius:4px;flex-shrink:0;`,kind[0]));
+      tw.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',v.title));
+      cl.appendChild(tw);
       if(v.desc&&!expanded)cl.appendChild(mks('div','font-size:11px;color:#aaa;margin-top:2px;',v.desc));
       chdr.appendChild(cl);
       chdr.appendChild(mks('span','font-size:13px;color:#aaa;margin-left:8px;',expanded?'▲':'▼'));
@@ -1589,8 +1607,15 @@ async function aSettings(){
         // 수정 폼
         cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','제목'));
         const ti=document.createElement('input');ti.className='inp';ti.value=v.title;cbody.appendChild(ti);
-        cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','유튜브 URL'));
-        const ui=document.createElement('input');ui.className='inp';ui.value=`https://www.youtube.com/watch?v=${v.ytId}`;cbody.appendChild(ui);
+        const isVim=!!v.vimeoId;
+        cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;',
+          isVim?'비메오 URL':(v.ytId?'유튜브 URL':'영상 URL')));
+        const ui=document.createElement('input');ui.className='inp';
+        ui.value=isVim?vimeoUrl(v.vimeoId):(v.ytId?`https://www.youtube.com/watch?v=${v.ytId}`:(v.url||''));
+        cbody.appendChild(ui);
+        cbody.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:8px;margin-top:-6px;',
+          isVim?'비공개(임베드 전용) 영상은 vimeo.com/숫자/해시 형태 그대로 넣어주세요.'
+               :'비메오 주소를 넣으면 비메오 영상으로 바뀝니다.'));
         cbody.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;','설명'));
         const di=document.createElement('input');di.className='inp';di.style.marginBottom='10px';di.value=v.desc||'';cbody.appendChild(di);
 
@@ -1601,11 +1626,18 @@ async function aSettings(){
         const saveBtn=mk('button','btn-primary','저장');saveBtn.style.flex='1';
         saveBtn.onclick=async()=>{
           const newTitle=ti.value.trim();
-          const newId=ytId(ui.value.trim());
           if(!newTitle){emsg.innerHTML='<div class="err">제목을 입력하세요.</div>';return;}
-          if(!newId){emsg.innerHTML='<div class="err">올바른 유튜브 URL을 입력하세요.</div>';return;}
+          const parsed2=parseVideoUrl(ui.value.trim());
+          if(!parsed2.id){emsg.innerHTML='<div class="err">올바른 비메오 또는 유튜브 URL을 입력하세요.</div>';return;}
           const idx=Q.videos.findIndex(x=>x.id===v.id);
-          if(idx>=0)Q.videos[idx]={...Q.videos[idx],title:newTitle,ytId:newId,desc:di.value.trim()};
+          if(idx>=0){
+            const {ytId:_a,vimeoId:_b,url:_c,...keep}=Q.videos[idx];
+            const nv={...keep,title:newTitle,desc:di.value.trim()};
+            if(parsed2.type==='vimeo')nv.vimeoId=parsed2.id;
+            else if(parsed2.type==='youtube')nv.ytId=parsed2.id;
+            else nv.url=ui.value.trim();
+            Q.videos[idx]=nv;
+          }
           await saveVideos();Q._expandedVid=null;render();
         };
 
