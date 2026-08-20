@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BODA 영상 진단</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:#f4f6fb;color:#0B1A38;padding:18px;font-size:14px;line-height:1.5;}
+h1{font-size:20px;margin-bottom:4px;}
+.sub{color:#8A97B4;font-size:12px;margin-bottom:18px;}
+.box{background:#fff;border:1px solid #E3E8F4;border-radius:12px;padding:16px;margin-bottom:14px;}
+.box h2{font-size:14px;margin-bottom:10px;}
+.k{display:inline-block;font-size:10px;font-weight:800;color:#fff;padding:2px 7px;border-radius:4px;margin-right:6px;}
+.vi{background:#1ab7ea;} .yt{background:#e11;} .no{background:#888;}
+code{background:#f0f3fa;padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all;}
+.row{padding:8px 0;border-top:1px solid #f0f3fa;font-size:13px;}
+.ok{color:#0EA96B;font-weight:700;}
+.bad{color:#E23D5A;font-weight:700;}
+.warn{background:#FDECEF;color:#E23D5A;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;margin-top:8px;}
+.good{background:#E6F7F0;color:#0EA96B;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;margin-top:8px;}
+iframe{width:100%;aspect-ratio:16/9;border:1px solid #E3E8F4;border-radius:8px;margin-top:10px;background:#000;}
+button{height:34px;padding:0 14px;border-radius:8px;border:1.5px solid #E3E8F4;background:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px;margin-top:8px;}
+button:hover{border-color:#2E63E8;color:#2E63E8;}
+.load{color:#8A97B4;padding:20px;text-align:center;}
+</style>
+</head>
+<body>
+<h1>BODA 영상 진단</h1>
+<div class="sub">문제 원인을 자동으로 찾습니다. 이 페이지는 아무것도 수정하지 않습니다.</div>
+<div id="out"><div class="load">불러오는 중…</div></div>
+
+<script>
+(async()=>{
+const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
+const g=async p=>{try{const r=await fetch(`${FB}/${p}.json`);if(!r.ok)return {__err:r.status};return await r.json();}catch(e){return {__err:e.message};}};
+const out=document.getElementById('out');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const H=h=>{const d=document.createElement('div');d.innerHTML=h;return d;};
+
+const [vraw,sraw]=await Promise.all([g('videos'),g('students')]);
+out.innerHTML='';
+
+// ── 1. 연결
+if(vraw&&vraw.__err){
+  out.appendChild(H(`<div class="box"><h2>① 연결</h2><div class="warn">videos를 읽지 못했습니다 (${esc(vraw.__err)}). Firebase 규칙을 확인하세요.</div></div>`));
+  return;
+}
+const videos=vraw?(Array.isArray(vraw)?vraw.filter(Boolean):Object.values(vraw)):[];
+const students=sraw&&!sraw.__err?(Array.isArray(sraw)?sraw.filter(Boolean):Object.values(sraw)):[];
+out.appendChild(H(`<div class="box"><h2>① 연결</h2>
+  <div class="good">정상 · 영상 ${videos.length}개 / 학생 ${students.length}명</div></div>`));
+
+// ── 2. 영상 목록
+const vb=H('<div class="box"><h2>② 등록된 영상</h2></div>').firstChild;
+if(!videos.length){
+  vb.appendChild(H('<div class="warn">등록된 영상이 없습니다. 원장방 → 설정 → 영상관리에서 추가하세요.</div>').firstChild);
+}
+videos.forEach(v=>{
+  const kind=v.vimeoId?['vi','비메오']:(v.ytId?['yt','유튜브']:['no','링크']);
+  const asg=students.filter(s=>(s.videos||[]).includes(v.id)).length;
+  let embed='';
+  if(v.vimeoId){
+    const [id,h]=String(v.vimeoId).split('/');
+    embed=`https://player.vimeo.com/video/${id}${h?'?h='+h:''}`;
+  }
+  const r=H(`<div class="row">
+    <span class="k ${kind[0]}">${kind[1]}</span><b>${esc(v.title||'제목없음')}</b>
+    <div style="margin-top:6px;">ID <code>${esc(v.id)}</code></div>
+    ${v.vimeoId?`<div>vimeoId <code>${esc(v.vimeoId)}</code> ${String(v.vimeoId).includes('/')?'<span class="ok">해시 있음</span>':'<span class="bad">해시 없음 — 비공개 영상이면 재생 불가</span>'}</div>`:''}
+    ${v.ytId?`<div>ytId <code>${esc(v.ytId)}</code></div>`:''}
+    <div>배정 <b class="${asg?'ok':'bad'}">${asg}명</b> / ${students.length}명</div>
+  </div>`).firstChild;
+  if(embed){
+    const btn=document.createElement('button');
+    btn.textContent='여기서 재생 테스트';
+    btn.onclick=()=>{
+      btn.disabled=true;
+      const f=document.createElement('iframe');
+      f.src=embed;f.allow='fullscreen';f.allowFullscreen=true;
+      r.appendChild(f);
+      r.appendChild(H(`<div style="font-size:12px;color:#8A97B4;margin-top:6px;">위 화면이 검거나 오류가 뜨면 Vimeo 쪽 설정 문제입니다.</div>`).firstChild);
+    };
+    r.appendChild(btn);
+    const b2=document.createElement('button');
+    b2.textContent='비메오에서 직접 열기';
+    b2.onclick=()=>window.open('https://vimeo.com/'+v.vimeoId,'_blank');
+    r.appendChild(b2);
+  }
+  vb.appendChild(r);
+});
+out.appendChild(vb);
+
+// ── 3. 배정 상태
+const ids=new Set(videos.map(v=>v.id));
+let none=0,orphan=0,fine=0;
+const orphanNames=[];
+students.forEach(s=>{
+  const sv=s.videos||[];
+  if(!sv.length){none++;return;}
+  const dead=sv.filter(id=>!ids.has(id));
+  if(dead.length===sv.length){orphan++;orphanNames.push(s.name);}
+  else fine++;
+});
+const sb=H(`<div class="box"><h2>③ 학생 배정 상태</h2>
+  <div class="row">영상이 하나도 배정 안 됨 <b class="${none?'bad':'ok'}">${none}명</b></div>
+  <div class="row">삭제된 영상 ID만 갖고 있음 <b class="${orphan?'bad':'ok'}">${orphan}명</b></div>
+  <div class="row">정상 배정 <b class="${fine?'ok':'bad'}">${fine}명</b></div>
+</div>`).firstChild;
+if(orphanNames.length)sb.appendChild(H(`<div class="warn">끊긴 학생: ${esc(orphanNames.slice(0,20).join(', '))}${orphanNames.length>20?' 외':''}</div>`).firstChild);
+out.appendChild(sb);
+
+// ── 4. 결론
+let msg='',cls='good';
+if(!videos.length){msg='영상을 먼저 등록하세요.';cls='warn';}
+else if(fine===0&&(none||orphan)){msg='영상은 있지만 학생에게 연결되지 않았습니다. 원장방 → 설정 → 영상관리에서 영상을 펼치고 「전체 학생에게 배정」을 누르세요.';cls='warn';}
+else if(videos.some(v=>v.vimeoId&&!String(v.vimeoId).includes('/'))){msg='비공개(임베드 전용) 영상인데 해시가 없는 항목이 있습니다. 영상관리에서 vimeo.com/숫자/해시 전체 주소로 다시 저장하세요.';cls='warn';}
+else{msg='데이터는 정상입니다. 위에서 「재생 테스트」를 눌러 보세요. 검게 나오면 Vimeo 임베드 도메인 설정 문제입니다.';cls='good';}
+out.appendChild(H(`<div class="box"><h2>④ 결론</h2><div class="${cls}">${esc(msg)}</div></div>`));
+})();
+</script>
+</body>
+</html>
