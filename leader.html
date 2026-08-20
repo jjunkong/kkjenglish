@@ -86,6 +86,18 @@ const setLesson=async(sid,date,l)=>{
 const mks=(tag,css,html)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(html!==undefined)e.innerHTML=html;return e;};
 const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
 
+
+// ── 로그인 세션 (새로고침해도 유지) ─────────
+const SKEY='kkj_sess_leader';
+const SDAYS=30;
+const sesSave=v=>{try{localStorage.setItem(SKEY,JSON.stringify({v,exp:Date.now()+SDAYS*864e5}));}catch(e){}};
+const sesLoad=()=>{try{
+  const r=JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(!r||!r.exp||Date.now()>r.exp){localStorage.removeItem(SKEY);return null;}
+  return r.v;
+}catch(e){return null;}};
+const sesClear=()=>{try{localStorage.removeItem(SKEY);}catch(e){}};
+
 let Q={scr:'login',students:[],classes:[],leaders:[],lLeader:null,err:'',_lClass:'',_lDate:TODAY,_lScores:null};
 const A=document.getElementById('app');
 
@@ -145,7 +157,7 @@ function loginScreen(){
       setTimeout(()=>pwInp.style.borderColor='rgba(180,200,255,0.6)',1500);
       errMsg.textContent='비밀번호가 맞지 않습니다.';return;
     }
-    Q.lLeader=ldr;Q.students=MEM.stu;Q.classes=MEM.classes;Q.scr='main';render();
+    Q.lLeader=ldr;Q.students=MEM.stu;Q.classes=MEM.classes;Q.scr='main';sesSave(ldr.id);render();
   };
   pwInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
   card.appendChild(btn);
@@ -165,7 +177,7 @@ async function mainScreen(){
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
-  loBtn.onclick=()=>{Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
+  loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
 
   // 반 선택 + 날짜 + Enter
@@ -386,6 +398,8 @@ async function mainScreen(){
 (async()=>{
   await initData();
   Q.students=MEM.stu;Q.classes=MEM.classes;
+  const lid=sesLoad();
+  if(lid){const ld=(MEM.leaders||[]).find(x=>String(x.id)===String(lid));if(ld){Q.lLeader=ld;Q.scr='main';}else sesClear();}
   render();
 })();
 

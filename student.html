@@ -90,6 +90,18 @@ const getLesson=async(sid,date)=>{
   return emL();
 };
 
+
+// ── 로그인 세션 (새로고침해도 유지) ─────────
+const SKEY='kkj_sess_student';
+const SDAYS=30;
+const sesSave=v=>{try{localStorage.setItem(SKEY,JSON.stringify({v,exp:Date.now()+SDAYS*864e5}));}catch(e){}};
+const sesLoad=()=>{try{
+  const r=JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(!r||!r.exp||Date.now()>r.exp){localStorage.removeItem(SKEY);return null;}
+  return r.v;
+}catch(e){return null;}};
+const sesClear=()=>{try{localStorage.removeItem(SKEY);}catch(e){}};
+
 let Q={scr:'login',stu:null,tab:'video',err:''};
 const A=document.getElementById('app');
 
@@ -126,7 +138,7 @@ function bodaBack(){
   // 2) 평가 탭 → 홈(영상 탭)으로
   if(Q.scr==='main'&&Q.tab!=='video'){Q.tab='video';render();return true;}
   // 3) 홈 → 로그인 화면으로
-  if(Q.scr==='main'){Q.stu=null;Q._playVideo=null;Q.scr='login';render();return true;}
+  if(Q.scr==='main'){sesClear();Q.stu=null;Q._playVideo=null;Q.scr='login';render();return true;}
   // 4) 로그인 화면 → 앱 종료
   return false;
 }
@@ -180,7 +192,7 @@ function loginScreen(){
       setTimeout(()=>{codeInp.style.borderColor='rgba(180,200,255,0.6)';errMsg.textContent='';},2000);
       return;
     }
-    Q.stu=stu;Q.scr='main';Q.tab='video';Q._playVideo=null;render();
+    Q.stu=stu;Q.scr='main';Q.tab='video';Q._playVideo=null;sesSave(stu.id);render();
   };
   codeInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
 
@@ -218,7 +230,7 @@ async function mainScreen(){
   if(cls)tagRow.appendChild(mkTag(cls.name));
   if(stu.level)tagRow.appendChild(mkTag(stu.level));
   const loBtn=mks('button','font-size:10px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;margin-left:auto;','로그아웃');
-  loBtn.style.fontFamily=CF;loBtn.onclick=()=>{Q.stu=null;Q._playVideo=null;Q.scr='login';render();};
+  loBtn.style.fontFamily=CF;loBtn.onclick=()=>{sesClear();Q.stu=null;Q._playVideo=null;Q.scr='login';render();};
   tagRow.appendChild(loBtn);
   infoCard.appendChild(tagRow);
   bg.appendChild(infoCard);
@@ -414,6 +426,8 @@ function renderPlayer(bg,v){
   try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
+  const sid=sesLoad();
+  if(sid){const st=MEM.stu.find(x=>x.id===sid);if(st){Q.stu=st;Q.scr='main';Q.tab='video';}else sesClear();}
   render();
 })();
 

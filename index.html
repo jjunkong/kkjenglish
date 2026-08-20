@@ -90,6 +90,18 @@ const getLesson=async(sid,date)=>{
   return emL();
 };
 
+
+// ── 로그인 세션 (새로고침해도 유지) ─────────
+const SKEY='kkj_sess_parent';
+const SDAYS=30;
+const sesSave=v=>{try{localStorage.setItem(SKEY,JSON.stringify({v,exp:Date.now()+SDAYS*864e5}));}catch(e){}};
+const sesLoad=()=>{try{
+  const r=JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(!r||!r.exp||Date.now()>r.exp){localStorage.removeItem(SKEY);return null;}
+  return r.v;
+}catch(e){return null;}};
+const sesClear=()=>{try{localStorage.removeItem(SKEY);}catch(e){}};
+
 let Q={scr:'login',stu:null,pDate:TODAY,_pTab:'test',err:''};
 const A=document.getElementById('app');
 
@@ -135,7 +147,7 @@ function loginScreen(){
     const n=nameInp.value.trim(),c=pwInp.value.trim();
     const stu=(MEM.stu||[]).find(s=>s.name===n&&s.code===c);
     if(!stu){errMsg.textContent='이름 또는 비밀번호가 맞지 않습니다.';pwInp.style.borderColor='#f87171';setTimeout(()=>{pwInp.style.borderColor='rgba(180,200,255,0.6)';errMsg.textContent='';},2000);return;}
-    Q.stu=stu;Q.scr='main';render();
+    Q.stu=stu;Q.scr='main';sesSave(stu.id);render();
   };
   pwInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
   card.appendChild(btn);
@@ -159,7 +171,7 @@ async function mainScreen(){
   if(stu.level)tagRow.appendChild(mkTag(stu.level));
   if(stu.info?.book)tagRow.appendChild(mkTag('📖 '+stu.info.book));
   const loBtn=mks('button','font-size:10px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;margin-left:auto;','로그아웃');loBtn.style.fontFamily=CF;
-  loBtn.onclick=()=>{Q.stu=null;Q.scr='login';render();};
+  loBtn.onclick=()=>{sesClear();Q.stu=null;Q.scr='login';render();};
   tagRow.appendChild(loBtn);infoCard.appendChild(tagRow);
   bg.appendChild(infoCard);
 
@@ -335,6 +347,8 @@ async function mainScreen(){
 (async()=>{
   try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
+  const sid=sesLoad();
+  if(sid){const st=MEM.stu.find(x=>x.id===sid);if(st){Q.stu=st;Q.scr='main';}else sesClear();}
   render();
 })();
 

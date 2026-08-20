@@ -452,7 +452,12 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;',
 
 /* ============ 로그인 ============ */
 // 원장방에서 '로그인 유지'를 켜 둔 경우 비밀번호를 다시 묻지 않음
-if(localStorage.getItem('kkj_admin_auth')==='true'){
+function dashAuthed(){try{
+  if(sessionStorage.getItem('kkj_admin_auth')==='1')return true;
+  const r=JSON.parse(localStorage.getItem('kkj_admin_auth')||'null');
+  if(r&&r.exp&&Date.now()<r.exp){sessionStorage.setItem('kkj_admin_auth','1');return true;}
+}catch(e){}return false;}
+if(dashAuthed()){
   $('gate').style.display='none';
   $('shell').classList.add('on');
   window.addEventListener('DOMContentLoaded',()=>{});
@@ -467,6 +472,8 @@ $('gbtn').onclick=async()=>{
     $('gerr').textContent='비밀번호가 맞지 않습니다.';
     $('gbtn').textContent='들어가기';$('gpw').select();return;
   }
+  try{sessionStorage.setItem('kkj_admin_auth','1');
+      localStorage.setItem('kkj_admin_auth',JSON.stringify({exp:Date.now()+7*864e5}));}catch(e){}
   $('gate').style.display='none';
   $('shell').classList.add('on');
   await boot();

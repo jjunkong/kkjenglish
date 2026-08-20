@@ -217,6 +217,21 @@ const stuDisplayName=stu=>{
   return cls?`${cls.name}_${stu.name}`:stu.name;
 };
 
+
+// ── 로그인 세션 (새로고침해도 유지) ─────────
+const SKEY='kkj_admin_auth';
+const sesSave=keep=>{try{
+  sessionStorage.setItem(SKEY,'1');
+  if(keep)localStorage.setItem(SKEY,JSON.stringify({exp:Date.now()+7*864e5}));
+  else localStorage.removeItem(SKEY);
+}catch(e){}};
+const sesLoad=()=>{try{
+  if(sessionStorage.getItem(SKEY)==='1')return true;
+  const r=JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(r&&r.exp&&Date.now()<r.exp){sessionStorage.setItem(SKEY,'1');return true;}
+  localStorage.removeItem(SKEY);return false;
+}catch(e){return false;}};
+const sesClear=()=>{try{sessionStorage.removeItem(SKEY);localStorage.removeItem(SKEY);}catch(e){}};
 const gid=id=>document.getElementById(id);
 const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
 const mks=(tag,css,html)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(html!==undefined)e.innerHTML=html;return e;};
@@ -559,7 +574,7 @@ function loginScreen(){
   btn.textContent='Enter';
   btn.style.cssText=`display:block;width:100%;height:46px;border-radius:50px;background:linear-gradient(180deg,#5b9ef8,#2060e8 70%,#1a4fd6);border:none;box-shadow:0 4px 0 #1440a0,inset 0 1px 0 rgba(255,255,255,0.3);font-size:16px;color:#fff;cursor:pointer;font-family:${CF};font-weight:700;box-sizing:border-box;`;
   btn.onclick=()=>{
-    if(pwInp.value===Q.pw){localStorage.setItem('kkj_admin_auth','true');Q.scr='aList';Q.err='';render();}
+    if(pwInp.value===Q.pw){sesSave(true);Q.scr='aList';Q.err='';render();}
     else{errMsg.textContent='비밀번호가 맞지 않습니다.';pwInp.style.borderColor='#f87171';setTimeout(()=>{pwInp.style.borderColor='rgba(180,200,255,0.7)';errMsg.textContent='';pwInp.value='';pwInp.focus();},1500);}
   };
   pwInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
@@ -567,8 +582,6 @@ function loginScreen(){
 }
 
 function aLogin(){
-  // 자동 로그인 확인
-  if(localStorage.getItem('kkj_admin_auth')==='true'){localStorage.removeItem('kkj_admin_auth');}
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
@@ -587,7 +600,7 @@ function aLogin(){
   c.appendChild(keepRow);
   const doL=()=>{
     if(pi.value===Q.pw){
-      if(keepCb.checked)localStorage.setItem('kkj_admin_auth','true');
+      sesSave(keepCb.checked);
       Q.scr='aList';Q.err='';render();
     }else{
       const errEl=document.getElementById('a-err');
@@ -604,7 +617,7 @@ async function aList(){
   // 네이비 헤더
   const hdr=mk('div','page-header');
   const topRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;');
-  const bb=mk('button','btn-back','로그아웃');bb.onclick=()=>{localStorage.removeItem('kkj_admin_auth');Q.scr='login';Q.err='';render();};topRow.appendChild(bb);
+  const bb=mk('button','btn-back','로그아웃');bb.onclick=()=>{sesClear();Q.scr='login';Q.err='';render();};topRow.appendChild(bb);
   const rightBtns=mks('div','display:flex;gap:6px;');
   const dashBtn=mk('button','btn-ghost-inv','🖥 대시보드');
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
@@ -1947,7 +1960,7 @@ const initData=async()=>{
   A.innerHTML='';
   try{await initData();}catch(e){}
   Q.students=MEM.stu;Q.pw=MEM.pw;Q.videos=MEM.videos;Q.notices=MEM.notices;Q.classes=MEM.classes;Q.leaders=MEM.leaders;
-  Q.scr='login';
+  Q.scr=sesLoad()?'aList':'login';
   render();
 })();
 
