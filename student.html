@@ -268,9 +268,9 @@ async function mainScreen(){
         if(v.vimeoId){
           // 비메오 썸네일
           const img=document.createElement('img');
-          img.src=`https://vumbnail.com/${v.vimeoId}.jpg`;
+          img.src=`https://vumbnail.com/${String(v.vimeoId).split('/')[0]}.jpg`;
           img.style.cssText='width:100%;display:block;opacity:0.85;';
-          img.onerror=()=>{img.style.display='none';};
+          img.onerror=()=>{img.style.display='none';thumb.style.minHeight='150px';};
           thumb.appendChild(img);
         } else if(v.ytId){
           const img=document.createElement('img');
@@ -412,6 +412,14 @@ function renderPlayer(bg,v){
   iframe.allowFullscreen=true;
   wrap.appendChild(iframe);
   bg.appendChild(wrap);
+
+  // 재생이 안 될 때 안내
+  const hint=mks('div','padding:10px 14px;background:rgba(255,255,255,0.9);text-align:center;');
+  const hb=mks('button','','화면이 검게 나오면 여기를 눌러 주세요');
+  hb.style.cssText=`background:none;border:none;color:#2060e8;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:${CF};`;
+  hb.onclick=()=>{window.open(`https://vimeo.com/${v.vimeoId}`,'_blank');};
+  hint.appendChild(hb);
+  bg.appendChild(hint);
 
   // 영상 제목
   const titleBox=mks('div','padding:16px 14px;background:rgba(255,255,255,0.95);');

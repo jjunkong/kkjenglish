@@ -1702,11 +1702,67 @@ async function aSettings(){
         const delBtn=mk('button','btn-sm','삭제');
         delBtn.style.color='#dc2626';delBtn.style.borderColor='#fca5a5';
         delBtn.onclick=()=>showModal('영상 삭제',`"${v.title}" 영상을 삭제합니다.`,async()=>{
-          Q.videos=Q.videos.filter(x=>x.id!==v.id);await saveVideos();Q._expandedVid=null;render();
+          Q.videos=Q.videos.filter(x=>x.id!==v.id);
+          // 학생 배정에서도 함께 제거 (끊긴 ID가 남지 않도록)
+          let touched=false;
+          Q.students.forEach(st=>{
+            if((st.videos||[]).includes(v.id)){st.videos=st.videos.filter(id=>id!==v.id);touched=true;}
+          });
+          await saveVideos();
+          if(touched)await saveStu();
+          Q._expandedVid=null;render();
         });
 
         btnRow.appendChild(saveBtn);btnRow.appendChild(delBtn);
         cbody.appendChild(btnRow);
+
+        // ── 배정 현황 / 일괄 배정 ──
+        const asg=Q.students.filter(st=>(st.videos||[]).includes(v.id)).length;
+        const abox=mks('div','margin-top:12px;padding:12px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;');
+        abox.appendChild(mks('div','font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:8px;',
+          `현재 ${asg}명에게 배정됨 (전체 ${Q.students.length}명)`));
+
+        const arow=mks('div','display:flex;gap:6px;flex-wrap:wrap;');
+        const mkA=(txt,fn2)=>{
+          const b=mks('button','',txt);
+          b.style.cssText='flex:1;min-width:110px;height:34px;border-radius:8px;border:1px solid #ddd6fe;background:#fff;font-size:12px;font-weight:700;color:#5b21b6;cursor:pointer;';
+          b.onclick=fn2;return b;
+        };
+        arow.appendChild(mkA('전체 학생에게 배정',()=>showModal('전체 배정',
+          `"${v.title}" 을(를) 전체 ${Q.students.length}명에게 배정합니다.`,async()=>{
+            Q.students.forEach(st=>{st.videos=st.videos||[];if(!st.videos.includes(v.id))st.videos.push(v.id);});
+            await saveStu();render();
+          })));
+        arow.appendChild(mkA('전체 배정 해제',()=>showModal('배정 해제',
+          `"${v.title}" 을(를) 전체 학생에게서 제외합니다.`,async()=>{
+            Q.students.forEach(st=>{st.videos=(st.videos||[]).filter(id=>id!==v.id);});
+            await saveStu();render();
+          })));
+        abox.appendChild(arow);
+
+        // 반별 배정
+        if(Q.classes.length){
+          const crow=mks('div','display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;');
+          Q.classes.forEach(c=>{
+            const mem=Q.students.filter(st=>String(st.classId)===String(c.id));
+            if(!mem.length)return;
+            const has=mem.filter(st=>(st.videos||[]).includes(v.id)).length;
+            const on=has===mem.length;
+            const b=mks('button','',`${c.name} ${has}/${mem.length}`);
+            b.style.cssText=`height:30px;padding:0 10px;border-radius:7px;border:1px solid ${on?'#6d28d9':'#ddd6fe'};background:${on?'#6d28d9':'#fff'};color:${on?'#fff':'#5b21b6'};font-size:11px;font-weight:700;cursor:pointer;`;
+            b.onclick=async()=>{
+              mem.forEach(st=>{
+                st.videos=st.videos||[];
+                if(on)st.videos=st.videos.filter(id=>id!==v.id);
+                else if(!st.videos.includes(v.id))st.videos.push(v.id);
+              });
+              await saveStu();render();
+            };
+            crow.appendChild(b);
+          });
+          abox.appendChild(crow);
+        }
+        cbody.appendChild(abox);
         card.appendChild(cbody);
       }
       vc.appendChild(card);
