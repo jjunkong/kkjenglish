@@ -165,7 +165,7 @@ const saveStu=async()=>{
   if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
   return ok;
 };
-const savePw=async pw=>{MEM.pw=pw;Q.pw=pw;await fbSet('pw',pw);};
+const savePw=async pw=>{const v=String(pw==null?'':pw).trim();MEM.pw=v;Q.pw=v;PW_READY=true;await fbSet('pw',v);};
 const saveVideos=async()=>{
   MEM.videos=Q.videos;
   const ok=await fbSet('videos',Q.videos);
@@ -584,8 +584,9 @@ function loginScreen(){
       });
       return;
     }
-    if(pwInp.value===Q.pw){sesSave(true);Q.scr='aList';Q.err='';render();}
-    else{errMsg.textContent='비밀번호가 맞지 않습니다.';pwInp.style.borderColor='#f87171';setTimeout(()=>{pwInp.style.borderColor='rgba(180,200,255,0.7)';errMsg.textContent='';pwInp.value='';pwInp.focus();},1500);}
+    if(pwMatch(pwInp.value)){PW_FAIL=0;sesSave(true);Q.scr='aList';Q.err='';render();}
+    else{PW_FAIL++;
+      errMsg.textContent=PW_FAIL>=2?('맞지 않습니다 · '+pwHint()):'비밀번호가 맞지 않습니다.';pwInp.style.borderColor='#f87171';setTimeout(()=>{pwInp.style.borderColor='rgba(180,200,255,0.7)';errMsg.textContent='';pwInp.value='';pwInp.focus();},1500);}
   };
   pwInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
   card.appendChild(btn);
@@ -619,11 +620,12 @@ function aLogin(){
       });
       return;
     }
-    if(pi.value===Q.pw){
-      sesSave(keepCb.checked);
+    if(pwMatch(pi.value)){
+      PW_FAIL=0;sesSave(keepCb.checked);
       Q.scr='aList';Q.err='';render();
     }else{
-      say('비밀번호가 맞지 않습니다.');
+      PW_FAIL++;
+      say(PW_FAIL>=2?('맞지 않습니다 · '+pwHint()):'비밀번호가 맞지 않습니다.');
     }
   };
   const errDiv=mks('div','');errDiv.id='a-err';c.appendChild(errDiv);
@@ -1964,9 +1966,18 @@ async function noticeWrite(){
 // 학습리더 로그인
 
 let PW_READY=false;
+let PW_FAIL=0;
+// 타입/공백 차이를 흡수한 비교 (숫자로 저장된 경우 등)
+const pwNorm=v=>String(v==null?'':v).trim();
+const pwMatch=input=>pwNorm(input)===pwNorm(Q.pw);
+// 무엇이 저장돼 있는지 확인 (값은 노출하지 않음)
+const pwHint=()=>{
+  const v=Q.pw;
+  return `불러옴: ${PW_READY?'예':'아니오'} / 형식: ${typeof v} / 길이: ${pwNorm(v).length}`;
+};
 const loadPw=async(tries=3)=>{
   for(let i=0;i<tries;i++){
-    try{const pw=await fbGet('pw');if(pw){MEM.pw=pw;Q.pw=pw;PW_READY=true;return true;}}catch(e){}
+    try{const pw=await fbGet('pw');if(pw!=null&&pw!==''){const v=String(pw).trim();MEM.pw=v;Q.pw=v;PW_READY=true;return true;}}catch(e){}
     await new Promise(r=>setTimeout(r,600));
   }
   return false;
