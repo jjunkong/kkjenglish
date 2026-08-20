@@ -574,6 +574,16 @@ function loginScreen(){
   btn.textContent='Enter';
   btn.style.cssText=`display:block;width:100%;height:46px;border-radius:50px;background:linear-gradient(180deg,#5b9ef8,#2060e8 70%,#1a4fd6);border:none;box-shadow:0 4px 0 #1440a0,inset 0 1px 0 rgba(255,255,255,0.3);font-size:16px;color:#fff;cursor:pointer;font-family:${CF};font-weight:700;box-sizing:border-box;`;
   btn.onclick=()=>{
+    if(!PW_READY){
+      errMsg.textContent='정보를 불러오는 중입니다. 잠시만요…';
+      btn.disabled=true;
+      loadPw(3).then(ok=>{
+        btn.disabled=false;
+        if(!ok){errMsg.textContent='서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.';return;}
+        errMsg.textContent='';btn.onclick();
+      });
+      return;
+    }
     if(pwInp.value===Q.pw){sesSave(true);Q.scr='aList';Q.err='';render();}
     else{errMsg.textContent='비밀번호가 맞지 않습니다.';pwInp.style.borderColor='#f87171';setTimeout(()=>{pwInp.style.borderColor='rgba(180,200,255,0.7)';errMsg.textContent='';pwInp.value='';pwInp.focus();},1500);}
   };
@@ -599,12 +609,21 @@ function aLogin(){
   keepRow.appendChild(mks('div','font-size:12px;color:#888;','로그인 유지 (이 기기에서)'));
   c.appendChild(keepRow);
   const doL=()=>{
+    const errEl=document.getElementById('a-err');
+    const say=(t,cls)=>{if(errEl)errEl.innerHTML=`<div class="${cls||'err'}">${t}</div>`;};
+    if(!PW_READY){
+      say('정보를 불러오는 중입니다. 잠시만요…','');
+      loadPw(3).then(ok=>{
+        if(!ok){say('서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.');return;}
+        if(errEl)errEl.innerHTML='';doL();
+      });
+      return;
+    }
     if(pi.value===Q.pw){
       sesSave(keepCb.checked);
       Q.scr='aList';Q.err='';render();
     }else{
-      const errEl=document.getElementById('a-err');
-      if(errEl)errEl.innerHTML='<div class="err">비밀번호가 맞지 않습니다.</div>';
+      say('비밀번호가 맞지 않습니다.');
     }
   };
   const errDiv=mks('div','');errDiv.id='a-err';c.appendChild(errDiv);
@@ -1944,10 +1963,18 @@ async function noticeWrite(){
 
 // 학습리더 로그인
 
+let PW_READY=false;
+const loadPw=async(tries=3)=>{
+  for(let i=0;i<tries;i++){
+    try{const pw=await fbGet('pw');if(pw){MEM.pw=pw;Q.pw=pw;PW_READY=true;return true;}}catch(e){}
+    await new Promise(r=>setTimeout(r,600));
+  }
+  return false;
+};
 const initData=async()=>{
+  await loadPw();   // 비밀번호부터 확보
   try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
   try{const priv=await fbGet('privateInfo');if(priv&&MEM.stu){MEM.stu=MEM.stu.map(s=>{const p=priv[s.id];if(p?.phone){if(!s.info)s.info={};s.info.phone=p.phone;}return s;});}}catch(e){}
-  try{const pw=await fbGet('pw');if(pw)MEM.pw=pw;}catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
   try{const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
