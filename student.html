@@ -89,7 +89,7 @@ const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new D
 const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
 const fbGet=async path=>{try{const r=await fetch(`${FB}/${path}.json`);if(!r.ok)return null;return await r.json();}catch{return null;}};
 
-const MEM={stu:[],lessons:{},videos:[],classes:[]};
+const MEM={cprog:{},stu:[],lessons:{},videos:[],classes:[]};
 const mks=(tag,css,html='')=>{const e=document.createElement(tag);if(css)e.style.cssText=css;e.innerHTML=html;return e;};
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{},vocab:{},status:'none'});
 const getLesson=async(sid,date)=>{
@@ -246,8 +246,8 @@ async function mainScreen(){
   bg.appendChild(infoCard);
 
   // 탭 2개 (동영상 / 평가)
-  const tabRow=mks('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;');
-  [['video','▶️','강의영상'],['eval','⭐','평가']].forEach(([id,icon,label])=>{
+  const tabRow=mks('div','display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;');
+  [['map','🗺️','진도'],['video','▶️','강의영상'],['eval','⭐','평가']].forEach(([id,icon,label])=>{
     const active=Q.tab===id;
     const btn=mks('div',`border-radius:14px;padding:12px 4px;text-align:center;cursor:pointer;background:${active?'linear-gradient(160deg,rgba(255,255,255,0.75),rgba(255,255,255,0.5))':'rgba(255,255,255,0.25)'};border:1.5px solid ${active?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)'};${active?'box-shadow:0 4px 14px rgba(80,100,200,0.15);':''}`);
     const ic=mks('div','font-size:20px;margin-bottom:3px;',icon);
@@ -258,8 +258,13 @@ async function mainScreen(){
   });
   bg.appendChild(tabRow);
 
+  // ── 진도 탭 ───────────────────────────────
+  if(Q.tab==='map'){
+    renderMap(bg,stu);
+  }
+
   // ── 동영상 탭 ─────────────────────────────
-  if(Q.tab==='video'){
+  else if(Q.tab==='video'){
     const stuVids=stu.videos||[];
     const myVids=(MEM.videos||[]).filter(v=>stuVids.includes(v.id));
 
@@ -395,6 +400,154 @@ function bindFsRotate(){
   document.addEventListener('webkitfullscreenchange',onFs);
 }
 
+
+// ══════════ 진도 지도 ══════════
+const DOWK=['일','월','화','수','목','금','토'];
+// 월·화 = 문법 / 목·금 = 독해
+const trackOf=(title,dw)=>{
+  const t=String(title||'');
+  if(/월평|월간\s*평가/.test(t))return 'exam';
+  if(/방학|휴강/.test(t))return 'off';
+  if(/GRAMMAR\s*TREE|그래머/i.test(t))return 'gr';
+  if(/문장뽀개기|뽀개기/.test(t))return 'rd';
+  if(dw===1||dw===2)return 'gr';
+  if(dw===4||dw===5)return 'rd';
+  return 'etc';
+};
+// "중급_GRAMMAR TREE_시제 (36:10)" → "시제"
+const cleanUnit=t=>{
+  let x=String(t||'').replace(/\([^)]*\)/g,'').trim();
+  x=x.replace(/^[•·\-\s]+/,'');
+  const parts=x.split('_').map(p=>p.trim()).filter(Boolean);
+  if(parts.length>=3)return parts.slice(2).join(' ');
+  if(parts.length===2)return parts[1];
+  return x;
+};
+const TRACK={
+  gr:{n:'문법',sub:'GRAMMAR TREE',ic:'🌳',c:'#2E63E8',bg:'#EAF0FF'},
+  rd:{n:'독해',sub:'문장뽀개기',ic:'📖',c:'#0EA96B',bg:'#E6F7F0'},
+  exam:{n:'월간평가',sub:'월평',ic:'📝',c:'#E08A00',bg:'#FFF6E4'},
+  off:{n:'휴강',sub:'',ic:'🌴',c:'#8A97B4',bg:'#F0F3FA'},
+  etc:{n:'수업',sub:'',ic:'📚',c:'#8B5CF6',bg:'#F3EEFF'},
+};
+
+function myLessons(stu){
+  const map=(MEM.cprog||{})[stu.classId]||{};
+  const days=stu.days||[];
+  const out=[];
+  Object.keys(map).forEach(k=>{
+    const date=k.replace(/_/g,'-');
+    const [y,m,d]=date.split('-').map(Number);
+    if(!y)return;
+    const dw=new Date(y,m-1,d).getDay();
+    if(days.length&&!days.includes(dw))return;   // 내 수업 요일만
+    const v=map[k];
+    const raw=(v&&(v.unit||v.title))||'';
+    if(!raw)return;
+    String(raw).split(' / ').filter(Boolean).forEach(t=>{
+      out.push({date,dw,raw:t,unit:cleanUnit(t),tr:trackOf(t,dw)});
+    });
+  });
+  return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function renderMap(bg,stu){
+  const rows=myLessons(stu);
+  const T=TODAY;
+
+  if(!rows.length){
+    const e=mks('div','background:rgba(255,255,255,0.75);border-radius:16px;padding:34px 20px;text-align:center;');
+    e.appendChild(mks('div','font-size:38px;margin-bottom:10px;','🗺️'));
+    e.appendChild(mks('div',`font-size:14px;font-weight:700;color:#41527A;font-family:${CF};`,'아직 진도표가 준비되지 않았어요'));
+    e.appendChild(mks('div',`font-size:12px;color:#8A97B4;margin-top:6px;font-family:${CF};`,'선생님이 등록하면 여기에 보여요'));
+    bg.appendChild(e);return;
+  }
+
+  const past=rows.filter(r=>r.date<T);
+  const todayRows=rows.filter(r=>r.date===T);
+  const future=rows.filter(r=>r.date>T);
+  const prev=past.slice(-1)[0];
+  const next=future[0];
+
+  // ── 지난 / 오늘 / 다음 요약
+  const hero=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:16px;margin-bottom:14px;');
+  const mkLine=(tag,r,strong)=>{
+    const tk=r?TRACK[r.tr]:null;
+    const w=mks('div',`display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:13px;margin-bottom:7px;background:${strong?(tk?tk.bg:'#F0F3FA'):'rgba(255,255,255,0.55)'};${strong&&tk?`border:2px solid ${tk.c};`:'border:1.5px solid rgba(220,228,245,0.9);'}`);
+    w.appendChild(mks('div','font-size:22px;flex:none;',tk?tk.ic:'·'));
+    const c=mks('div','flex:1;min-width:0;');
+    c.appendChild(mks('div',`font-size:10.5px;font-weight:800;color:${strong&&tk?tk.c:'#8A97B4'};margin-bottom:2px;font-family:${CF};`,
+      tag+(r?`  ${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`:'')));
+    c.appendChild(mks('div',`font-size:${strong?15:13.5}px;font-weight:800;color:#0B1A38;font-family:${CF};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`,
+      r?r.unit:'예정된 수업이 없어요'));
+    if(r&&tk&&tk.sub)c.appendChild(mks('div',`font-size:11px;color:#8A97B4;font-weight:600;margin-top:1px;font-family:${CF};`,tk.n+' · '+tk.sub));
+    w.appendChild(c);
+    return w;
+  };
+  hero.appendChild(mkLine('지난 시간',prev,false));
+  if(todayRows.length)todayRows.forEach(r=>hero.appendChild(mkLine('오늘',r,true)));
+  else hero.appendChild(mkLine('오늘',null,true));
+  hero.appendChild(mkLine('다음 시간',next,false));
+  bg.appendChild(hero);
+
+  // ── 트랙별 진행 막대
+  ['gr','rd'].forEach(key=>{
+    const tk=TRACK[key];
+    const list=rows.filter(r=>r.tr===key);
+    if(!list.length)return;
+    const done=list.filter(r=>r.date<=T).length;
+    const pct=Math.round(done/list.length*100);
+
+    const card=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:16px;margin-bottom:14px;');
+    const hd=mks('div','display:flex;align-items:center;gap:9px;margin-bottom:12px;');
+    hd.appendChild(mks('div','font-size:20px;',tk.ic));
+    const hc=mks('div','flex:1;');
+    hc.appendChild(mks('div',`font-size:14.5px;font-weight:800;color:#0B1A38;font-family:${CF};`,tk.n));
+    hc.appendChild(mks('div',`font-size:11px;color:#8A97B4;font-weight:600;font-family:${CF};`,tk.sub));
+    hd.appendChild(hc);
+    hd.appendChild(mks('div',`font-size:12px;font-weight:800;color:${tk.c};background:${tk.bg};padding:4px 10px;border-radius:20px;font-family:${CF};`,`${done}/${list.length}`));
+    card.appendChild(hd);
+
+    const bar=mks('div','height:8px;border-radius:20px;background:rgba(200,210,230,0.45);overflow:hidden;margin-bottom:14px;');
+    bar.appendChild(mks('div',`height:100%;width:${pct}%;border-radius:20px;background:linear-gradient(90deg,${tk.c},${tk.c}bb);`));
+    card.appendChild(bar);
+
+    // 세로 경로
+    const path=mks('div','position:relative;padding-left:26px;');
+    path.appendChild(mks('div',`position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:rgba(200,210,230,0.6);border-radius:2px;`));
+    list.forEach(r=>{
+      const isToday=r.date===T, isPast=r.date<T;
+      const row=mks('div','position:relative;padding:7px 0;');
+      const dot=mks('div',`position:absolute;left:-22px;top:9px;width:12px;height:12px;border-radius:50%;border:2.5px solid ${isPast||isToday?tk.c:'#cfd8ea'};background:${isPast?tk.c:'#fff'};${isToday?`box-shadow:0 0 0 5px ${tk.c}33;`:''}`);
+      row.appendChild(dot);
+      const tx=mks('div',`font-size:${isToday?14:13}px;font-weight:${isToday?800:600};color:${isToday?'#0B1A38':(isPast?'#41527A':'#9aa5bd')};font-family:${CF};`,r.unit);
+      row.appendChild(tx);
+      const sb=mks('div',`font-size:10.5px;font-weight:700;color:${isToday?tk.c:'#a8b2c8'};margin-top:1px;font-family:${CF};`,
+        `${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`+(isToday?' · 오늘':(isPast?' · 완료':'')));
+      row.appendChild(sb);
+      path.appendChild(row);
+    });
+    card.appendChild(path);
+    bg.appendChild(card);
+  });
+
+  // ── 월간평가 / 휴강
+  const sp=rows.filter(r=>r.tr==='exam'||r.tr==='off').filter(r=>r.date>=T).slice(0,3);
+  if(sp.length){
+    const c=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:14px 16px;');
+    c.appendChild(mks('div',`font-size:12px;font-weight:800;color:#8A97B4;margin-bottom:9px;font-family:${CF};`,'다가오는 일정'));
+    sp.forEach(r=>{
+      const tk=TRACK[r.tr];
+      const w=mks('div','display:flex;align-items:center;gap:9px;padding:7px 0;');
+      w.appendChild(mks('div','font-size:17px;',tk.ic));
+      w.appendChild(mks('div',`flex:1;font-size:13px;font-weight:700;color:#0B1A38;font-family:${CF};`,tk.n));
+      w.appendChild(mks('div',`font-size:11.5px;font-weight:700;color:${tk.c};font-family:${CF};`,`${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`));
+      c.appendChild(w);
+    });
+    bg.appendChild(c);
+  }
+}
+
 // ── 비메오 인앱 플레이어 ─────────────────
 function renderPlayer(bg,v){
   bindFsRotate();
@@ -444,6 +597,7 @@ function renderPlayer(bg,v){
   try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
+  try{const cp=await fbGet('classProgress');if(cp)MEM.cprog=cp;}catch(e){}
   const sid=sesLoad();
   if(sid){const st=MEM.stu.find(x=>x.id===sid);if(st){Q.stu=st;Q.scr='main';Q.tab='video';}else sesClear();}
   render();
