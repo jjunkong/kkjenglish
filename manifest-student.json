@@ -1,7 +1,9 @@
 {
   "name": "기준영어 학생",
   "short_name": "기준영어 학생",
-  "start_url": "/student.html",
+  "id": "/student/",
+  "start_url": "/student/",
+  "scope": "/student/",
   "display": "standalone",
   "background_color": "#f8a8a8",
   "theme_color": "#dc2626",
@@ -31,6 +33,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "id": "/student.html"
+  ]
 }

@@ -1,8 +1,9 @@
-
 {
   "name": "기준영어 학부모",
   "short_name": "기준영어",
-  "start_url": "/",
+  "id": "/parent/",
+  "start_url": "/parent/",
+  "scope": "/parent/",
   "display": "standalone",
   "background_color": "#a8c8f8",
   "theme_color": "#2E63E8",
@@ -32,6 +33,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "id": "/"
+  ]
 }

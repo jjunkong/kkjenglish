@@ -3,6 +3,38 @@
     {
       "source": "/grading",
       "destination": "/grading.html"
+    },
+    {
+      "source": "/parent",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/parent/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/leader",
+      "destination": "/leader.html"
+    },
+    {
+      "source": "/leader/",
+      "destination": "/leader.html"
+    },
+    {
+      "source": "/student",
+      "destination": "/student.html"
+    },
+    {
+      "source": "/student/",
+      "destination": "/student.html"
     }
   ],
   "headers": [

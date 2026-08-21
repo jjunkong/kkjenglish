@@ -1,7 +1,9 @@
 {
   "name": "기준영어 학습리더",
   "short_name": "기준영어 리더",
-  "start_url": "/leader.html",
+  "id": "/leader/",
+  "start_url": "/leader/",
+  "scope": "/leader/",
   "display": "standalone",
   "background_color": "#a8f8c8",
   "theme_color": "#16a34a",
@@ -31,6 +33,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "id": "/leader.html"
+  ]
 }

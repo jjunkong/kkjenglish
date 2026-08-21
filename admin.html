@@ -121,6 +121,16 @@ function installApp(){
   }
 }
 </script>
+<script>
+// PWA 앱 구분: 항상 /admin/ 형태로 통일 (scope 밖으로 나가지 않도록)
+(function(){
+  var p=location.pathname;
+  if(p==='/admin/')return;
+  if(p==='/admin'||p==='/admin.html'){
+    location.replace('/admin/'+location.search+location.hash);
+  }
+})();
+</script>
 </head>
 <body>
 <div id="app"></div>

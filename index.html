@@ -64,6 +64,16 @@ window.addEventListener('load',()=>{
   b.style.display=isStandalone()?'none':'block';
 });
 </script>
+<script>
+// PWA 앱 구분: 항상 /parent/ 형태로 통일 (scope 밖으로 나가지 않도록)
+(function(){
+  var p=location.pathname;
+  if(p==='/parent/')return;
+  if(p==='/parent'||p==='/index.html'||p==='/'){
+    location.replace('/parent/'+location.search+location.hash);
+  }
+})();
+</script>
 </head>
 <body>
 <button id="install-btn" onclick="installApp()" style="display:block;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#2E63E8;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
