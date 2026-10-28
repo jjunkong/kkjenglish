@@ -111,6 +111,15 @@ const sesLoad=()=>{try{
   return r.v;
 }catch(e){return null;}};
 const sesClear=()=>{try{localStorage.removeItem(SKEY);}catch(e){}};
+// 로그아웃 = 세션 해제 후 새로고침 (재생 중이던 영상·전체화면·화면잠금까지 완전 초기화)
+function doLogout(){
+  sesClear();
+  try{if(typeof releaseWake==='function')releaseWake();}catch(e){}
+  try{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen();}catch(e){}
+  // 재생 중인 iframe을 먼저 끊어 소리가 남지 않도록
+  try{document.querySelectorAll('iframe').forEach(f=>f.remove());}catch(e){}
+  location.reload();
+}
 
 let Q={scr:'login',stu:null,tab:'video',err:''};
 const A=document.getElementById('app');
@@ -148,7 +157,7 @@ function bodaBack(){
   // 2) 평가 탭 → 홈(영상 탭)으로
   if(Q.scr==='main'&&Q.tab!=='video'){Q.tab='video';render();return true;}
   // 3) 홈 → 로그인 화면으로
-  if(Q.scr==='main'){sesClear();Q.stu=null;Q._playVideo=null;Q.scr='login';render();return true;}
+  if(Q.scr==='main'){doLogout();return true;}
   // 4) 로그인 화면 → 앱 종료
   return false;
 }
@@ -240,7 +249,7 @@ async function mainScreen(){
   if(cls)tagRow.appendChild(mkTag(cls.name));
   if(stu.level)tagRow.appendChild(mkTag(stu.level));
   const loBtn=mks('button','font-size:10px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;margin-left:auto;','로그아웃');
-  loBtn.style.fontFamily=CF;loBtn.onclick=()=>{sesClear();Q.stu=null;Q._playVideo=null;Q.scr='login';render();};
+  loBtn.style.fontFamily=CF;loBtn.onclick=()=>{doLogout();};
   tagRow.appendChild(loBtn);
   infoCard.appendChild(tagRow);
   bg.appendChild(infoCard);
