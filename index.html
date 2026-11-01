@@ -112,6 +112,18 @@ const sesLoad=()=>{try{
 }catch(e){return null;}};
 const sesClear=()=>{try{localStorage.removeItem(SKEY);}catch(e){}};
 
+// 과제 수행 상태 (구 boolean hw 호환)
+const hwStat=l=>(l&&l.hwDone)||((l&&l.hw===true)?'o':'');
+const hwLabel=l=>{
+  const v=hwStat(l);
+  if(v==='x')return '미제출';
+  if(v!=='o')return '';
+  const n=(l&&l.hwNote)||'';
+  if(n==='partial')return '제출 (부분 완료)';
+  if(n==='fixed')return '제출 (수정 완료)';
+  return '제출';
+};
+
 let Q={scr:'login',stu:null,pDate:TODAY,_pTab:'test',err:''};
 const A=document.getElementById('app');
 
@@ -306,7 +318,9 @@ async function mainScreen(){
       hwBox.style.cssText=`background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;font-size:13px;color:#333;line-height:1.7;font-family:${CF};`;
       hwBox.textContent=hwContent;card.appendChild(hwBox);
     } else card.appendChild(mks('div',`font-size:12px;color:rgba(10,26,92,0.4);font-family:${CF};`,'등록된 과제가 없어요'));
-    const hwBadge=mks('div',`display:inline-flex;font-size:12px;padding:6px 14px;border-radius:20px;font-weight:700;margin-top:10px;background:${lessonData.hw?'#dcfce7':'#f1f5f9'};color:${lessonData.hw?'#16a34a':'#94a3b8'};border:1.5px solid ${lessonData.hw?'#86efac':'#e2e8f0'};`,'과제 '+(lessonData.hw?'✓ 완료':'○ 미완료'));hwBadge.style.fontFamily=CF;
+    const _hs=hwStat(lessonData),_hok=_hs==='o',_hno=_hs==='x';
+    const _hbg=_hok?'#dcfce7':(_hno?'#fee2e2':'#f1f5f9'),_hfg=_hok?'#16a34a':(_hno?'#dc2626':'#94a3b8'),_hbd=_hok?'#86efac':(_hno?'#fca5a5':'#e2e8f0');
+    const hwBadge=mks('div',`display:inline-flex;font-size:12px;padding:6px 14px;border-radius:20px;font-weight:700;margin-top:10px;background:${_hbg};color:${_hfg};border:1.5px solid ${_hbd};`,'과제 '+(_hok?('✓ '+hwLabel(lessonData)):(_hno?'✗ 미제출':'○ 미입력')));hwBadge.style.fontFamily=CF;
     card.appendChild(hwBadge);bg.appendChild(card);
 
     // 과제 달력
@@ -329,13 +343,14 @@ async function mainScreen(){
         const cell=mks('div','text-align:center;border-radius:50%;padding:5px 2px;font-size:12px;');cell.style.fontFamily=CF;cell.textContent=d;
         const l=allLessonsHw[dateStr.replace(/-/g,'_')]||{};
         if(dateStr===TODAY)cell.style.cssText+='background:#2E63E8;color:#fff;font-weight:700;';
-        else if(l.hw===true){cell.style.cssText+='background:#fef3c7;color:#d97706;font-weight:700;border:1.5px solid #fde68a;';dC++;tC++;}
+        else if(hwStat(l)==='o'){cell.style.cssText+='background:#fef3c7;color:#d97706;font-weight:700;border:1.5px solid #fde68a;';dC++;tC++;}
+        else if(hwStat(l)==='x'){cell.style.cssText+='background:#fee2e2;color:#dc2626;font-weight:700;border:1.5px solid #fca5a5;';tC++;}
         else if(l.status&&l.status!=='none'){cell.style.cssText+='background:#fef9ee;color:#d97706;opacity:0.5;';tC++;}
         else cell.style.color='rgba(10,26,92,0.5)';
         grid.appendChild(cell);
       }
       calCard.appendChild(grid);
-      if(tC>0){const stat=mks('div',`font-size:11px;text-align:center;padding:4px;background:rgba(245,158,11,0.1);border-radius:8px;margin-bottom:8px;color:#d97706;font-family:${CF};`,`과제 완료 ${dC}/${tC}회`);calCard.appendChild(stat);}
+      if(tC>0){const stat=mks('div',`font-size:11px;text-align:center;padding:4px;background:rgba(245,158,11,0.1);border-radius:8px;margin-bottom:8px;color:#d97706;font-family:${CF};`,`과제 제출 ${dC}/${tC}회`);calCard.appendChild(stat);}
     }
     bg.appendChild(calCard);
 
