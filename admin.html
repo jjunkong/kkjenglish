@@ -693,7 +693,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103c'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103g'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -741,7 +741,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103c'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103g'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -922,17 +922,6 @@ async function aList(){
         const right=mks('div','display:flex;align-items:center;gap:4px;flex-shrink:0;');
         if(l.planComment||l.resultComment)right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
         right.appendChild(mk('span',SL_BADGE[l.status],SL[l.status]));
-        // 문자 버튼
-        const smsBtn=mks('button','','📱');
-        smsBtn.title='문자 발송';
-        smsBtn.style.cssText='font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid #e2e8f0;background:#f8faff;cursor:pointer;';
-        smsBtn.onclick=e=>{e.stopPropagation();
-          const phone=stu.info?.phone||'';
-          if(!phone){alert('학생 정보에 전화번호가 없습니다.');return;}
-          if(!SOLAPI_KEY){alert('설정에서 솔라피 API를 먼저 등록해주세요.');return;}
-          Q.aStu=stu;Q._smsDate=Q.aDate;Q.scr='smsBulk';render();
-        };
-        right.appendChild(smsBtn);
         // 정보 버튼
         const infoBtn=mks('button','','👤');
         infoBtn.title='학생 정보';
@@ -1591,10 +1580,37 @@ async function aSettings(){
   skBtn.onclick=async()=>{
     skBtn.textContent='저장 중...';skBtn.disabled=true;
     SOLAPI_KEY=ski.value.trim();SOLAPI_SECRET=ssi.value.trim();SOLAPI_SENDER=sni.value.trim();
-    await fbSet('solapiCfg',{key:SOLAPI_KEY,secret:SOLAPI_SECRET,sender:SOLAPI_SENDER});
-    skmsg.innerHTML='<div class="ok-msg">✓ 저장됐습니다!</div>';
+    const ok=await fbSet('solapiCfg',{key:SOLAPI_KEY,secret:SOLAPI_SECRET,sender:SOLAPI_SENDER});
+    skmsg.innerHTML=ok
+      ? '<div class="ok-msg">✓ 저장됐습니다!</div>'
+      : '<div class="err">저장 실패 — Firebase 규칙에서 solapiCfg 쓰기가 막혀 있습니다.</div>';
     skBtn.textContent='저장';skBtn.disabled=false;
+    chkSolapi();
   };sc.appendChild(skBtn);
+
+  // 현재 상태 진단
+  const skStat=mks('div','font-size:11px;font-weight:600;margin-top:10px;padding:9px 11px;border-radius:9px;background:#f1f5f9;color:#64748b;','상태 확인 중…');
+  sc.appendChild(skStat);
+  const chkSolapi=async()=>{
+    try{
+      const r=await fetch(`${FB}/solapiCfg.json`);
+      if(r.status===401||r.status===403){
+        skStat.style.cssText+='background:#fdecef;color:#e23d5a;';
+        skStat.textContent='읽기 거부됨 — Firebase 규칙에서 solapiCfg 의 .read 가 false 입니다.';return;
+      }
+      const d=await r.json();
+      if(!d||!d.key){
+        skStat.style.cssText+='background:#fff6e4;color:#b45309;';
+        skStat.textContent='저장된 값이 없습니다. 위에 입력하고 저장을 눌러주세요.';return;
+      }
+      skStat.style.cssText+='background:#e6f7f0;color:#0ea96b;';
+      skStat.textContent=`등록됨 — 발신번호 ${d.sender||'(미입력)'} · 키 ${String(d.key).slice(0,6)}…`;
+    }catch(e){
+      skStat.style.cssText+='background:#fdecef;color:#e23d5a;';
+      skStat.textContent='확인 실패: '+e.message;
+    }
+  };
+  chkSolapi();
 
   // 반 관리
   const cc=mk('div','card');cc.style.marginTop='12px';w2.appendChild(cc);
