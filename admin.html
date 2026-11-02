@@ -179,8 +179,10 @@ const smsTests=l=>{
   }
   if(testOn(l,'write')){
     const w=l.writeTest;
-    r.push(`영작시험 : ${(w==='done'||w===true)?(l.writeNote==='fixed'?'수정 완료':'완료')
-      :(w===''||w==null||w===false)?'미완료':smsNum(w)}`);
+    const t=(w==='fixed')?'수정 완료'
+      :((w==='done'||w===true)?(l.writeNote==='fixed'?'수정 완료':'완료')
+      :((w===''||w==null||w===false)?'미완료':smsNum(w)));
+    r.push(`영작시험 : ${t}`);
   }
   return r.join('\n');
 };
