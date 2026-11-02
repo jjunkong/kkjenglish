@@ -286,7 +286,8 @@ async function mainScreen(){
     if(!Q._lScores[stu.id]){
       Q._lScores[stu.id]={
         attend:(l.attend===true?'present':(l.attend||'')),hwDone:(l.hwDone||(l.hw===true?'o':'')),hwNote:l.hwNote||'',
-        B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',
+        on:(l.on&&typeof l.on==='object')?Object.assign({},l.on):null,
+        B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',dNote:l.dNote||'',
         word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||'',
         comment:l.leaderComment||''
       };
@@ -311,6 +312,44 @@ async function mainScreen(){
         const btn=mks('button','',done?'✓':'○');
         btn.style.cssText=`width:100%;height:38px;border-radius:10px;border:none;cursor:pointer;font-size:14px;color:${done?'#fff':'#aaa'};font-weight:700;font-family:${CF};box-shadow:0 2px 6px rgba(0,0,0,0.1);background:${done?`linear-gradient(135deg,${c1},${c2})`:'rgba(200,210,230,0.5)'};`;
         btn.onclick=()=>cb(!done);return btn;
+      };
+      // ── 시험 실시 여부 (라벨을 눌러 켜고 끔) ──
+      const TK={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest'};
+      const isOn=k=>{
+        const o=sc.on;
+        if(o&&typeof o==='object'&&k in o)return !!o[k];
+        const v=sc[k];
+        return !(v===''||v==null||v===false);
+      };
+      const toggleOn=async k=>{
+        const nv=!isOn(k);
+        sc.on=(sc.on&&typeof sc.on==='object')?sc.on:{};
+        sc.on[k]=nv?1:0;
+        const lData=await getLesson(stu.id,Q._lDate||TODAY);
+        lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[k]:nv?1:0});
+        if(!nv){lData[TK[k]]='';sc[k]='';}
+        await setLesson(stu.id,Q._lDate||TODAY,lData);
+        Q[`_lOpen_${stu.id}`]=true;render();
+      };
+      const mkTLbl=(k,txt,bg,color,border)=>{
+        const on=isOn(k);
+        const l=mks('div','font-size:11px;font-weight:700;text-align:center;padding:3px 6px;border-radius:5px;width:100%;cursor:pointer;-webkit-user-select:none;user-select:none;',txt);
+        l.style.cssText+=on
+          ?`background:${bg};color:${color};border:1.5px solid ${border};font-family:${CF};`
+          :`background:rgba(226,232,240,0.65);color:#9aa5bd;border:1.5px dashed #cbd5e1;font-family:${CF};`;
+        l.title=on?'누르면 미실시로 바뀝니다':'누르면 점수를 입력할 수 있습니다';
+        l.onclick=()=>toggleOn(k);
+        return l;
+      };
+      const mkOff=()=>{
+        const d=mks('div','width:100%;height:38px;border-radius:10px;border:2px dashed #cbd5e1;background:rgba(241,245,249,0.6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#9aa5bd;cursor:pointer;','미실시');
+        d.style.fontFamily=CF;return d;
+      };
+      const mkTest=(k,txt,lb,lc,lbd,inpFn)=>{
+        const on=isOn(k);
+        const el=on?inpFn():mkOff();
+        if(!on)el.onclick=()=>toggleOn(k);
+        return mkItem(mkTLbl(k,txt,lb,lc,lbd),el);
       };
       const mkInp=(val,bg,bc,color,key)=>{
         const inp=document.createElement('input');inp.type='number';inp.value=val||'';inp.placeholder='-';
@@ -351,8 +390,8 @@ async function mainScreen(){
       };
       const curAtt=sc.attend===true?'present':(sc.attend||'');
       g1.appendChild(mkItem(mkLbl('출결','#d1fae5','#065f46','#10b981'),mkAtt(curAtt)));
-      g1.appendChild(mkItem(mkLbl('복테','#e0e7ff','#3730a3','#6366f1'),mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
-      g1.appendChild(mkItem(mkLbl('확테','#dcfce7','#166534','#22c55e'),mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
+      g1.appendChild(mkTest('B','복테','#e0e7ff','#3730a3','#6366f1',()=>mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
+      g1.appendChild(mkTest('O','확테','#dcfce7','#166534','#22c55e',()=>mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
       body2.appendChild(g1);
 
       // 보다 CARE
@@ -363,15 +402,19 @@ async function mainScreen(){
       const g2=mks('div','display:flex;gap:6px;margin-bottom:10px;');
       // 개테 토글
       const isDone=sc.D==='done'||sc.D===true;
-      const dBtn=mks('button','',isDone?'✓ 완성':'○ 미완성');
+      const dBtn=mks('button','',isDone?'✓ 완료':'○ 미완료');
       dBtn.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${isDone?'#a855f7':'rgba(168,85,247,0.3)'};background:${isDone?'linear-gradient(135deg,#d8b4fe,#a855f7)':'rgba(240,225,255,0.8)'};color:${isDone?'#fff':'#9333ea'};font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};`;
       dBtn.onclick=async()=>{
         const nv=isDone?'':'done';sc.D=nv;
         const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.dTest=nv;
+        if(nv!=='done'){lData.dNote='';sc.dNote='';}
         await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
       };
+      const dOn=isOn('D');
       const dItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;');
-      dItem.appendChild(mkLbl('개테','#f3e8ff','#6b21a8','#a855f7'));dItem.appendChild(dBtn);
+      dItem.appendChild(mkTLbl('D','개테','#f3e8ff','#6b21a8','#a855f7'));
+      if(dOn)dItem.appendChild(dBtn);
+      else{const o=mkOff();o.onclick=()=>toggleOn('D');dItem.appendChild(o);}
       g2.appendChild(dItem);
       // 과제: O(제출) / X(미제출)
       const hwOX=mks('div','display:flex;gap:4px;width:100%;');
@@ -395,6 +438,24 @@ async function mainScreen(){
       g2.appendChild(hwItem);
       g2.appendChild(mks('div','flex:1;'));
       body2.appendChild(g2);
+
+      // 개테 완료 시 세부 상태
+      if(dOn&&sc.D==='done'){
+        const dr=mks('div','display:flex;gap:5px;align-items:center;margin:-2px 0 10px;');
+        dr.appendChild(mks('div',`font-size:10px;font-weight:700;color:#6b21a8;flex:none;font-family:${CF};`,'개테'));
+        [['','완료'],['fixed','수정 완료']].forEach(([k,t])=>{
+          const on=(sc.dNote||'')===k;
+          const b=mks('button','',t);
+          b.style.cssText=`flex:1;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${on?'#a855f7':'rgba(180,200,255,0.5)'};background:${on?'#f3e8ff':'rgba(255,255,255,0.6)'};color:${on?'#6b21a8':'#8A97B4'};`;
+          b.onclick=async()=>{
+            sc.dNote=k;
+            const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.dNote=k;
+            await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+          };
+          dr.appendChild(b);
+        });
+        body2.appendChild(dr);
+      }
 
       // 과제 O 선택 시 세부 상태
       if(sc.hwDone==='o'){
@@ -420,8 +481,8 @@ async function mainScreen(){
       st3.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CLINIC</span>';
       body2.appendChild(st3);
       const g3=mks('div','display:flex;gap:8px;');
-      g3.appendChild(mkItem(mkLbl('단어','#ffedd5','#9a3412','#f97316'),mkInp(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
-      g3.appendChild(mkItem(mkLbl('영작','#ffe4e6','#9f1239','#f43f5e'),mkInp(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
+      g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkInp(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
+      g3.appendChild(mkTest('write','영작','#ffe4e6','#9f1239','#f43f5e',()=>mkInp(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
       g3.appendChild(mkItem(mkLbl('독해','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.read,'rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#2563eb','read')));
       body2.appendChild(g3);
 
