@@ -226,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103d'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103e'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -326,11 +326,26 @@ async function mainScreen(){
     const nm=mks('div','font-size:18px;font-weight:700;color:#0B1A38;',stu.name);nm.style.fontFamily=CF;
     const arr=mks('div','font-size:13px;color:#2E63E8;',isOpen?'▲':'▼');arr.style.fontFamily=CF;
     nameRow2.appendChild(nm);nameRow2.appendChild(arr);
-    nameRow2.onclick=()=>{Q[`_lOpen_${stu.id}`]=!Q[`_lOpen_${stu.id}`];Q._focusStu=stu.id;render();};
+    nameRow2.onclick=()=>{
+      const open=!Q[`_lOpen_${stu.id}`];
+      Q[`_lOpen_${stu.id}`]=open;
+      let b=card.querySelector('.stubody');
+      if(open&&!b)b=buildBody();
+      if(b)b.style.display=open?'':'none';
+      arr.textContent=open?'▲':'▼';
+      if(open){
+        requestAnimationFrame(()=>{
+          const top=card.getBoundingClientRect().top+(window.scrollY||0)-12;
+          window.scrollTo(0,Math.max(0,top));
+        });
+      }
+    };
     card.appendChild(nameRow2);
 
-    if(isOpen){
+    // 카드 내용은 펼칠 때 한 번만 만든다 (전체를 다시 그리지 않음)
+    const buildBody=()=>{
       const body2=mks('div','padding:0 14px 14px;');
+      body2.className='stubody';
       const mkLbl=(txt,bg,color,border)=>{const l=mks('div','font-size:11px;font-weight:700;text-align:center;padding:3px 6px;border-radius:5px;width:100%;',txt);l.style.cssText+=`background:${bg};color:${color};border:1.5px solid ${border};font-family:${CF};`;return l;};
       const mkItem=(lbl,el)=>{const c=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;');c.appendChild(lbl);c.appendChild(el);return c;};
       const mkChk=(done,c1,c2,cb)=>{
@@ -602,7 +617,9 @@ async function mainScreen(){
       };
       body2.appendChild(cmtInp);
       card.appendChild(body2);
-    }
+      return body2;
+    };
+    if(isOpen)buildBody();
     w.appendChild(card);
   }
 }
