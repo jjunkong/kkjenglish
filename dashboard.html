@@ -867,6 +867,8 @@ async function cfgExt(){
 
 /* ============ DAILY REPORT 일괄 발송 ============ */
 let MROWS=[];
+// 문자 점수 표기 (빈값은 공백)
+const smsNum=v=>(v!==''&&v!=null&&v!==false)?`${v}점`:'';
 // 과제 수행 상태 (구 boolean hw 호환)
 const hwStat=l=>(l&&l.hwDone)||((l&&l.hw===true)?'o':'');
 const hwLabel=l=>{
@@ -880,14 +882,15 @@ const hwLabel=l=>{
 };
 function genSMS(stu,l,dateStr){
   const sc=[
-    `B-test(리뷰테스트) : ${l.bTest!==''&&l.bTest!=null?l.bTest+'점':''}`,
-    `O-test(수업후 테스트) : ${l.oTest!==''&&l.oTest!=null?l.oTest+'점':''}`,
-    `D-test(개념테스트) : ${l.dTest!==''&&l.dTest!=null?l.dTest+'점':''}`,
-    `A-test-단어 : ${l.wordTest!==''&&l.wordTest!=null?l.wordTest+'점':''}`,
-    `A-test-영작 : ${l.writeTest!==''&&l.writeTest!=null?l.writeTest+'점':''}`,
+    `복테[복습테스트] : ${smsNum(l.bTest)}`,
+    `확테[확인테스트] : ${smsNum(l.oTest)}`,
+    `개테[개념테스트] : ${l.dTest==='done'?'완성':''}`,
+    `단어시험 : ${smsNum(l.wordTest)}`,
+    `영작시험 : ${smsNum(l.writeTest)}`,
   ].join('\n');
   return `[${stu.name} DAILY REPORT]\n`
-    +`안녕하세요 ${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
+    +`안녕하세요. 김기준영어학원입니다.\n`
+    +`${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
     +`<과제 수행>\n${hwLabel(l)}\n\n`
     +`<TEST>\n${sc}\n\n`
@@ -914,6 +917,8 @@ $('smsbtn').onclick=async()=>{
     : `<b>${dateStr} (${DAYS[d]}요일)</b> 수업 학생 전체입니다. 왼쪽에서 반을 고르면 그 반만 보냅니다.`;
 
   MROWS=[];
+  // 학습리더가 방금 체크한 내용이 반영되도록 캐시를 비우고 다시 읽음
+  targets.forEach(st=>{delete S.hist[st.id];});
   for(const st of targets){
     const h=await loadHist(st.id);
     const rec=h.rows.find(r=>r.date===S.date);

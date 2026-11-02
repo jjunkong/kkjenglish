@@ -148,6 +148,8 @@ const TODAY=localDate();
 const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);return`${m}월 ${d}일 (${DAYS[dt.getDay()]}요일)`;};
 const fdShort=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);return`${m}/${d}`;};
 const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
+// 문자 점수 표기 (빈값은 공백)
+const smsNum=v=>(v!==''&&v!=null&&v!==false)?`${v}점`:'';
 // 과제 수행 상태 (구 boolean hw 호환)
 const hwStat=l=>(l&&l.hwDone)||((l&&l.hw===true)?'o':'');
 const hwLabel=l=>{
@@ -197,6 +199,14 @@ const saveNotices=async()=>{MEM.notices=Q.notices;await fbSet('notices',Q.notice
 const saveClasses=async()=>{MEM.classes=Q.classes;await fbSet('classes',Q.classes);};
 const saveLeaders=async()=>{MEM.leaders=Q.leaders;await fbSet('leaders',Q.leaders);};
 
+// 서버에서 다시 읽어 캐시를 갱신 (학습리더가 방금 체크한 내용 반영)
+const getLessonFresh=async(sid,date)=>{
+  const k=`${sid}__${date}`;
+  const r=await fbGet(`lessons/${sid}/${date.replace(/-/g,'_')}`);
+  if(r){MEM.lessons[k]=r;return JSON.parse(JSON.stringify(r));}
+  delete MEM.lessons[k];
+  return emL();
+};
 const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
   if(MEM.lessons[k])return JSON.parse(JSON.stringify(MEM.lessons[k]));
@@ -1232,7 +1242,7 @@ async function aLessonView(){
   const body=mk('div','page-body');w.appendChild(body);
   const L=Q.aLesson;
   if(!L.vocab)L.vocab={score:'',comment:''};
-  const lData=await getLesson(Q.aStu.id,Q.aDate);
+  const lData=await getLessonFresh(Q.aStu.id,Q.aDate);
 
   // 제목
   body.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:10px;padding:8px 12px;background:#eef2ff;border-radius:10px;','📚 수업내용'));
@@ -1282,14 +1292,15 @@ async function aLessonView(){
     const dateStr=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
     const classNotice=L.plan?.check||'';
     const scores=[
-      lData.bTest?`B-test(리뷰테스트) : ${lData.bTest}점`:'B-test(리뷰테스트) : ',
-      lData.oTest?`O-test(수업후 테스트) : ${lData.oTest}점`:'O-test(수업후 테스트) : ',
-      lData.dTest?`D-test(개념테스트) : ${lData.dTest}점`:'D-test(개념테스트) : ',
-      lData.wordTest?`A-test-단어 : ${lData.wordTest}점`:'A-test-단어 : ',
-      lData.writeTest?`A-test-영작 : ${lData.writeTest}점`:'A-test-영작 : ',
+      `복테[복습테스트] : ${smsNum(lData.bTest)}`,
+      `확테[확인테스트] : ${smsNum(lData.oTest)}`,
+      `개테[개념테스트] : ${lData.dTest==='done'?'완성':''}`,
+      `단어시험 : ${smsNum(lData.wordTest)}`,
+      `영작시험 : ${smsNum(lData.writeTest)}`,
     ].join('\n');
     return '['+name+' DAILY REPORT]\n'
-      +'안녕하세요 '+dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
+      +'안녕하세요. 김기준영어학원입니다.\n'
+      +dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
       +'<CLASS 공지>\n'+classNotice+'\n\n'
       +'<과제 수행>\n'+hwLabel(lData)+'\n\n'
       +'<TEST>\n'+scores+'\n\n'
