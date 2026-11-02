@@ -85,6 +85,14 @@ const fbSet=async(path,val)=>{try{const r=await fetch(`${FB}/${path}.json`,{meth
 
 const MEM={stu:[],lessons:{},classes:[],leaders:[]};
 
+// 저장 직전에는 서버에서 다시 읽는다 (원장이 그 사이 공통계획을 적용했을 수 있음)
+const getLessonFresh=async(sid,date)=>{
+  const k=`${sid}__${date}`;
+  const r=await fbGet(`lessons/${sid}/${date.replace(/-/g,'_')}`);
+  if(r){MEM.lessons[k]=r;return JSON.parse(JSON.stringify(r));}
+  delete MEM.lessons[k];
+  return emL();
+};
 const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
   if(MEM.lessons[k])return JSON.parse(JSON.stringify(MEM.lessons[k]));
@@ -208,6 +216,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103c'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -258,7 +267,7 @@ async function mainScreen(){
       else if(kn.includes('o-test')||kn.includes('otest'))key='O';
       else if(kn.includes('d-test')||kn.includes('dtest'))key='D';
       Q._lScores[stu.id][key]=pct;
-      const lData=await getLesson(stu.id,Q._lDate||TODAY);
+      const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
       const keyMap={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest',read:'readTest'};
       lData[keyMap[key]]=pct;
       await setLesson(stu.id,Q._lDate||TODAY,lData);
@@ -330,7 +339,7 @@ async function mainScreen(){
         const nv=!isOn(k);
         sc.on=(sc.on&&typeof sc.on==='object')?sc.on:{};
         sc.on[k]=nv?1:0;
-        const lData=await getLesson(stu.id,Q._lDate||TODAY);
+        const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
         lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[k]:nv?1:0});
         if(!nv){lData[TK[k]]='';sc[k]='';if(k==='wb'){lData.wbDone='';sc.wbDone='';}}
         await setLesson(stu.id,Q._lDate||TODAY,lData);
@@ -374,7 +383,7 @@ async function mainScreen(){
         const save=async()=>{
           const nv=(wi.value===''&&ti.value==='')?'':`${wi.value}/${ti.value}`;
           sc[key]=nv;
-          const lData=await getLesson(stu.id,Q._lDate||TODAY);
+          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           lData[TK[key]]=nv;
           lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[key]:1});
           await setLesson(stu.id,Q._lDate||TODAY,lData);
@@ -390,7 +399,7 @@ async function mainScreen(){
         inp.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${bc};background:${bg};text-align:center;font-size:14px;font-weight:700;color:${color};outline:none;font-family:${CF};`;
         inp.oninput=async()=>{
           sc[key]=inp.value;
-          const lData=await getLesson(stu.id,Q._lDate||TODAY);
+          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           const km={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest'};
           lData[km[key]]=inp.value;
           await setLesson(stu.id,Q._lDate||TODAY,lData);
@@ -413,7 +422,7 @@ async function mainScreen(){
           b.onclick=async()=>{
             const nv=on?'':k;
             sc.attend=nv;
-            const lData=await getLesson(stu.id,Q._lDate||TODAY);
+            const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
             lData.attend=nv;
             await setLesson(stu.id,Q._lDate||TODAY,lData);
             Q[`_lOpen_${stu.id}`]=true;render();
@@ -440,7 +449,7 @@ async function mainScreen(){
       dBtn.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${isDone?'#a855f7':'rgba(168,85,247,0.3)'};background:${isDone?'linear-gradient(135deg,#d8b4fe,#a855f7)':'rgba(240,225,255,0.8)'};color:${isDone?'#fff':'#9333ea'};font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};`;
       dBtn.onclick=async()=>{
         const nv=isDone?'':'done';sc.D=nv;
-        const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.dTest=nv;
+        const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.dTest=nv;
         if(nv!=='done'){lData.dNote='';sc.dNote='';}
         await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
       };
@@ -459,7 +468,7 @@ async function mainScreen(){
         b.onclick=async()=>{
           const nv=on?'':k;
           sc.hwDone=nv;
-          const lData=await getLesson(stu.id,Q._lDate||TODAY);
+          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           lData.hwDone=nv;
           if(nv!=='o'){lData.hwNote='';sc.hwNote='';}
           await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
@@ -483,7 +492,7 @@ async function mainScreen(){
           b.style.cssText=`flex:1;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${on?'#a855f7':'rgba(180,200,255,0.5)'};background:${on?'#f3e8ff':'rgba(255,255,255,0.6)'};color:${on?'#6b21a8':'#8A97B4'};`;
           b.onclick=async()=>{
             sc.dNote=k;
-            const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.dNote=k;
+            const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.dNote=k;
             await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
           };
           dr.appendChild(b);
@@ -501,7 +510,7 @@ async function mainScreen(){
           b.style.cssText=`flex:1;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${on?'#f59e0b':'rgba(180,200,255,0.5)'};background:${on?'#fef3c7':'rgba(255,255,255,0.6)'};color:${on?'#92400e':'#8A97B4'};`;
           b.onclick=async()=>{
             sc.hwNote=k;
-            const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.hwNote=k;
+            const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.hwNote=k;
             await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
           };
           nr.appendChild(b);
@@ -516,7 +525,23 @@ async function mainScreen(){
       body2.appendChild(st3);
       const g3=mks('div','display:flex;gap:6px;min-width:0;');
       g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkFrac(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
-      g3.appendChild(mkTest('wb','단어워크북','#fef9c3','#854d0e','#eab308',()=>mkFrac(sc.wb,'rgba(254,249,195,0.8)','rgba(234,179,8,0.45)','#a16207','wb')));
+      // 단어워크북: 완료 여부만
+      const wbOn=isOn('wb');
+      const wbDone=(sc.wb==='done'||sc.wb===true||sc.wbDone==='done'||sc.wbDone===true);
+      const wbBtn=mks('button','',wbDone?'✓ 완료':'○ 미완료');
+      wbBtn.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${wbDone?'#eab308':'rgba(234,179,8,0.3)'};background:${wbDone?'linear-gradient(135deg,#fde68a,#eab308)':'rgba(254,249,195,0.8)'};color:${wbDone?'#fff':'#a16207'};font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};box-sizing:border-box;`;
+      wbBtn.onclick=async()=>{
+        const nv=wbDone?'':'done';
+        sc.wb=nv;sc.wbDone='';
+        const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
+        lData.wbTest=nv;lData.wbDone='';
+        await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+      };
+      const wbItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;');
+      wbItem.appendChild(mkTLbl('wb','단어워크북','#fef9c3','#854d0e','#eab308'));
+      if(wbOn)wbItem.appendChild(wbBtn);
+      else{const o=mkOff();o.onclick=()=>toggleOn('wb');wbItem.appendChild(o);}
+      g3.appendChild(wbItem);
       // 영작: 완료 / 수정 완료
       const wOn=isOn('write');
       const wVal=(sc.write==='fixed')?'fixed':((sc.write===true||sc.write==='done')?'done':'');
@@ -528,7 +553,7 @@ async function mainScreen(){
         b.onclick=async()=>{
           const nv=on?'':k;
           sc.write=nv;
-          const lData=await getLesson(stu.id,Q._lDate||TODAY);
+          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           lData.writeTest=nv;lData.writeNote='';
           await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
         };
@@ -540,23 +565,6 @@ async function mainScreen(){
       else{const o=mkOff();o.onclick=()=>toggleOn('write');wItem.appendChild(o);}
       g3.appendChild(wItem);
       body2.appendChild(g3);
-
-      // 단어워크북 완료 버튼
-      if(isOn('wb')){
-        const wbDone=sc.wbDone==='done'||sc.wbDone===true;
-        const wbr=mks('div','display:flex;gap:5px;align-items:center;margin:8px 0 2px;');
-        wbr.appendChild(mks('div',`font-size:10px;font-weight:700;color:#854d0e;flex:none;font-family:${CF};`,'워크북'));
-        const wbb=mks('button','',wbDone?'✓ 완료':'○ 미완료');
-        wbb.style.cssText=`flex:1 1 0;min-width:0;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${wbDone?'#eab308':'rgba(180,200,255,0.5)'};background:${wbDone?'#fef9c3':'rgba(255,255,255,0.6)'};color:${wbDone?'#854d0e':'#8A97B4'};`;
-        wbb.onclick=async()=>{
-          const nv=wbDone?'':'done';
-          sc.wbDone=nv;
-          const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.wbDone=nv;
-          await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
-        };
-        wbr.appendChild(wbb);
-        body2.appendChild(wbr);
-      }
 
       // 내신 시험
       const divNas=mks('div','border-top:1px dashed rgba(180,200,255,0.4);margin:8px 0;');body2.appendChild(divNas);
@@ -577,7 +585,7 @@ async function mainScreen(){
       cmtInp.style.cssText=`width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid rgba(180,200,255,0.5);background:rgba(255,255,255,0.8);font-size:13px;color:#0B1A38;outline:none;font-family:${CF};resize:none;box-sizing:border-box;`;
       cmtInp.oninput=async()=>{
         sc.comment=cmtInp.value;
-        const lData=await getLesson(stu.id,Q._lDate||TODAY);
+        const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
         lData.leaderComment=cmtInp.value;
         await setLesson(stu.id,Q._lDate||TODAY,lData);
       };
