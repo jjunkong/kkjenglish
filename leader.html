@@ -226,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103e'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103f'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -369,7 +369,7 @@ async function mainScreen(){
         lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[k]:nv?1:0});
         if(!nv){lData[TK[k]]='';sc[k]='';if(k==='wb'){lData.wbDone='';sc.wbDone='';}}
         await setLesson(stu.id,Q._lDate||TODAY,lData);
-        Q[`_lOpen_${stu.id}`]=true;render();
+        refreshBody();
       };
       const mkTLbl=(k,txt,bg,color,border)=>{
         const on=isOn(k);
@@ -451,7 +451,7 @@ async function mainScreen(){
             const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
             lData.attend=nv;
             await setLesson(stu.id,Q._lDate||TODAY,lData);
-            Q[`_lOpen_${stu.id}`]=true;render();
+            refreshBody();
           };
           w.appendChild(b);
         });
@@ -477,7 +477,7 @@ async function mainScreen(){
         const nv=isDone?'':'done';sc.D=nv;
         const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.dTest=nv;
         if(nv!=='done'){lData.dNote='';sc.dNote='';}
-        await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+        await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
       };
       const dOn=isOn('D');
       const dItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;');
@@ -497,7 +497,7 @@ async function mainScreen(){
           const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           lData.hwDone=nv;
           if(nv!=='o'){lData.hwNote='';sc.hwNote='';}
-          await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+          await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
         };
         hwOX.appendChild(b);
       });
@@ -519,7 +519,7 @@ async function mainScreen(){
           b.onclick=async()=>{
             sc.dNote=k;
             const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.dNote=k;
-            await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+            await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
           };
           dr.appendChild(b);
         });
@@ -537,7 +537,7 @@ async function mainScreen(){
           b.onclick=async()=>{
             sc.hwNote=k;
             const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);lData.hwNote=k;
-            await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+            await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
           };
           nr.appendChild(b);
         });
@@ -561,7 +561,7 @@ async function mainScreen(){
         sc.wb=nv;sc.wbDone='';
         const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
         lData.wbTest=nv;lData.wbDone='';
-        await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+        await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
       };
       const wbItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;');
       wbItem.appendChild(mkTLbl('wb','단어워크북','#fef9c3','#854d0e','#eab308'));
@@ -581,7 +581,7 @@ async function mainScreen(){
           sc.write=nv;
           const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
           lData.writeTest=nv;lData.writeNote='';
-          await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+          await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
         };
         wRow.appendChild(b);
       });
@@ -618,6 +618,17 @@ async function mainScreen(){
       body2.appendChild(cmtInp);
       card.appendChild(body2);
       return body2;
+    };
+    // 체크 한 번에 화면 전체를 다시 그리지 않고, 이 학생 카드만 갱신
+    const refreshBody=()=>{
+      Q[`_lOpen_${stu.id}`]=true;
+      const sy=window.scrollY||document.documentElement.scrollTop||0;
+      const old=card.querySelector('.stubody');
+      if(old)old.remove();
+      const nb=buildBody();
+      nb.style.display='';
+      arr.textContent='▲';
+      window.scrollTo(0,sy);
     };
     if(isOpen)buildBody();
     w.appendChild(card);
