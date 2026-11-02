@@ -119,9 +119,9 @@ const hwLabel=l=>{
   if(v==='x')return '미제출';
   if(v!=='o')return '';
   const n=(l&&l.hwNote)||'';
-  if(n==='partial')return '제출 (부분 완료)';
-  if(n==='fixed')return '제출 (수정 완료)';
-  return '제출';
+  if(n==='partial')return '부분 완료';
+  if(n==='fixed')return '수정 완료';
+  return '완료';
 };
 
 let Q={scr:'login',stu:null,pDate:TODAY,_pTab:'test',err:''};

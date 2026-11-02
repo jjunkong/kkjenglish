@@ -118,10 +118,25 @@ const initData=async()=>{
   try{const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);}catch(e){}
 };
 
+// 체크 후 화면이 맨 위로 튀지 않도록 스크롤 위치 유지
+let _lastScr='';
+function restoreScroll(sy){
+  let tries=0;
+  const tick=()=>{
+    const max=document.documentElement.scrollHeight-window.innerHeight;
+    if(max>=sy-2||tries>40){window.scrollTo(0,Math.max(0,Math.min(sy,max)));return;}
+    tries++;requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
 function render(){
+  const same=(Q.scr===_lastScr);
+  const sy=same?(window.scrollY||document.documentElement.scrollTop||0):0;
+  _lastScr=Q.scr;
   A.innerHTML='';
   if(Q.scr==='login')loginScreen();
   else if(Q.scr==='main')mainScreen();
+  if(same&&sy>0)restoreScroll(sy);
 }
 
 // ── 로그인 화면 ─────────────────────────────
@@ -383,7 +398,7 @@ async function mainScreen(){
       if(sc.hwDone==='o'){
         const nr=mks('div','display:flex;gap:5px;align-items:center;margin:-2px 0 10px;');
         nr.appendChild(mks('div',`font-size:10px;font-weight:700;color:#92400e;flex:none;font-family:${CF};`,'세부'));
-        [['','완전 제출'],['partial','부분 완료'],['fixed','수정 완료']].forEach(([k,t])=>{
+        [['','완료'],['partial','부분 완료'],['fixed','수정 완료']].forEach(([k,t])=>{
           const on=(sc.hwNote||'')===k;
           const b=mks('button','',t);
           b.style.cssText=`flex:1;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${on?'#f59e0b':'rgba(180,200,255,0.5)'};background:${on?'#fef3c7':'rgba(255,255,255,0.6)'};color:${on?'#92400e':'#8A97B4'};`;
