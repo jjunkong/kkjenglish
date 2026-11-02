@@ -119,24 +119,26 @@ const initData=async()=>{
 };
 
 // 체크 후 화면이 맨 위로 튀지 않도록 스크롤 위치 유지
+// 화면을 비울 때 높이가 0이 되면 브라우저가 스크롤을 0으로 당겨버리므로,
+// 다시 그리는 동안 이전 높이를 붙잡아 둔다.
 let _lastScr='';
-function restoreScroll(sy){
-  let tries=0;
-  const tick=()=>{
-    const max=document.documentElement.scrollHeight-window.innerHeight;
-    if(max>=sy-2||tries>40){window.scrollTo(0,Math.max(0,Math.min(sy,max)));return;}
-    tries++;requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
 function render(){
   const same=(Q.scr===_lastScr);
   const sy=same?(window.scrollY||document.documentElement.scrollTop||0):0;
+  const oldH=same?A.offsetHeight:0;
   _lastScr=Q.scr;
+  if(oldH)A.style.minHeight=oldH+'px';
   A.innerHTML='';
-  if(Q.scr==='login')loginScreen();
-  else if(Q.scr==='main')mainScreen();
-  if(same&&sy>0)restoreScroll(sy);
+  const done=()=>{
+    if(same&&sy>0){
+      window.scrollTo(0,sy);
+      requestAnimationFrame(()=>window.scrollTo(0,sy));
+    }
+    requestAnimationFrame(()=>{A.style.minHeight='';});
+  };
+  if(Q.scr==='login'){loginScreen();done();}
+  else if(Q.scr==='main'){Promise.resolve(mainScreen()).then(done).catch(done);}
+  else done();
 }
 
 // ── 로그인 화면 ─────────────────────────────
