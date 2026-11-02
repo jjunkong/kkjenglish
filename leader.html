@@ -351,6 +351,34 @@ async function mainScreen(){
         if(!on)el.onclick=()=>toggleOn(k);
         return mkItem(mkTLbl(k,txt,lb,lc,lbd),el);
       };
+      // 틀린개수 / 전체문제수 입력
+      const mkFrac=(val,bg,bc,color,key)=>{
+        const sv=String(val==null?'':val);
+        const sl=sv.includes('/');
+        const w0=sl?sv.split('/')[0]:'';
+        const t0=sl?sv.split('/')[1]:'';
+        const wrap=mks('div','display:flex;align-items:center;gap:3px;width:100%;');
+        const box=(v,ph)=>{
+          const i=document.createElement('input');
+          i.type='number';i.min=0;i.value=v;i.placeholder=ph;
+          i.style.cssText=`flex:1;min-width:0;height:38px;border-radius:10px;border:2px solid ${bc};background:${bg};text-align:center;font-size:13px;font-weight:700;color:${color};outline:none;font-family:${CF};`;
+          return i;
+        };
+        const wi=box(w0,'틀린'),ti=box(t0,'전체');
+        const save=async()=>{
+          const nv=(wi.value===''&&ti.value==='')?'':`${wi.value}/${ti.value}`;
+          sc[key]=nv;
+          const lData=await getLesson(stu.id,Q._lDate||TODAY);
+          lData[TK[key]]=nv;
+          lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[key]:1});
+          await setLesson(stu.id,Q._lDate||TODAY,lData);
+        };
+        wi.oninput=save;ti.oninput=save;
+        wrap.appendChild(wi);
+        wrap.appendChild(mks('div',`font-size:14px;font-weight:800;color:${color};flex:none;`,'/'));
+        wrap.appendChild(ti);
+        return wrap;
+      };
       const mkInp=(val,bg,bc,color,key)=>{
         const inp=document.createElement('input');inp.type='number';inp.value=val||'';inp.placeholder='-';
         inp.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${bc};background:${bg};text-align:center;font-size:14px;font-weight:700;color:${color};outline:none;font-family:${CF};`;
@@ -390,8 +418,8 @@ async function mainScreen(){
       };
       const curAtt=sc.attend===true?'present':(sc.attend||'');
       g1.appendChild(mkItem(mkLbl('출결','#d1fae5','#065f46','#10b981'),mkAtt(curAtt)));
-      g1.appendChild(mkTest('B','복테','#e0e7ff','#3730a3','#6366f1',()=>mkInp(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
-      g1.appendChild(mkTest('O','확테','#dcfce7','#166534','#22c55e',()=>mkInp(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
+      g1.appendChild(mkTest('B','복테','#e0e7ff','#3730a3','#6366f1',()=>mkFrac(sc.B,'rgba(230,233,255,0.8)','rgba(99,102,241,0.4)','#4f46e5','B')));
+      g1.appendChild(mkTest('O','확테','#dcfce7','#166534','#22c55e',()=>mkFrac(sc.O,'rgba(220,245,228,0.8)','rgba(74,158,107,0.4)','#2d7a50','O')));
       body2.appendChild(g1);
 
       // 보다 CARE
@@ -481,8 +509,8 @@ async function mainScreen(){
       st3.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CLINIC</span>';
       body2.appendChild(st3);
       const g3=mks('div','display:flex;gap:8px;');
-      g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkInp(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
-      g3.appendChild(mkTest('write','영작','#ffe4e6','#9f1239','#f43f5e',()=>mkInp(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
+      g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkFrac(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
+      g3.appendChild(mkTest('write','영작','#ffe4e6','#9f1239','#f43f5e',()=>mkFrac(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
       g3.appendChild(mkItem(mkLbl('독해','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.read,'rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#2563eb','read')));
       body2.appendChild(g3);
 

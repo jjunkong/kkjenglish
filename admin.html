@@ -149,7 +149,16 @@ const fd=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);const dt=new D
 const fdShort=s=>{if(!s)return'';const[y,m,d]=s.split('-').map(Number);return`${m}/${d}`;};
 const dowOf=s=>{if(!s)return-1;const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
 // 문자 점수 표기 (빈값은 공백)
-const smsNum=v=>(v!==''&&v!=null&&v!==false)?`${v}점`:'';
+const smsNum=v=>{
+  if(v===''||v==null||v===false)return '';
+  const s=String(v);
+  if(s.includes('/')){
+    const p=s.split('/'),w=p[0],t=p[1];
+    if(t!=='' && t!=null)return `-${w===''?0:w}/${t}`;
+    return w===''?'':`-${w}`;
+  }
+  return `${s}점`;
+};
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
 const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest'};
 const testOn=(l,k)=>{

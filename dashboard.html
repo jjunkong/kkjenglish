@@ -679,9 +679,10 @@ function paintC(){
   TESTS.forEach(t=>{
     const lab=el('label');
     lab.appendChild(el('dt','',t.n));
-    const i=el('input');i.type='number';i.min=0;i.max=100;i.placeholder='—';
+    const i=el('input');i.type='text';i.inputMode='text';i.placeholder='2/5';
+    i.title='틀린개수/전체문제수 (예: 2/5). 숫자만 쓰면 점수로 봅니다.';
     i.value=l[t.k]==null?'':l[t.k];
-    i.onchange=async()=>{await saveField(s.id,S.date,{[t.k]:i.value===''?'':Number(i.value)});paintR();paintL(dow(S.date));};
+    i.onchange=async()=>{await saveField(s.id,S.date,{[t.k]:i.value.trim()});paintR();paintL(dow(S.date));};
     lab.appendChild(i);g.appendChild(lab);
   });
   c3.appendChild(g);
@@ -868,7 +869,29 @@ async function cfgExt(){
 /* ============ DAILY REPORT 일괄 발송 ============ */
 let MROWS=[];
 // 문자 점수 표기 (빈값은 공백)
-const smsNum=v=>(v!==''&&v!=null&&v!==false)?`${v}점`:'';
+const smsNum=v=>{
+  if(v===''||v==null||v===false)return '';
+  const s=String(v);
+  if(s.includes('/')){
+    const p=s.split('/'),w=p[0],t=p[1];
+    if(t!=='' && t!=null)return `-${w===''?0:w}/${t}`;
+    return w===''?'':`-${w}`;
+  }
+  return `${s}점`;
+};
+// 통계용 점수 환산: "틀린/전체" → 정답률(%), 숫자는 그대로
+const scoreVal=v=>{
+  if(v===''||v==null||v===false)return null;
+  const s=String(v);
+  if(s.includes('/')){
+    const p=s.split('/'),t=Number(p[1]);
+    if(!p[1]||isNaN(t)||t<=0)return null;
+    const w=(p[0]===''||isNaN(Number(p[0])))?0:Number(p[0]);
+    return Math.round(Math.max(0,(t-w))/t*100);
+  }
+  const n=Number(s);
+  return isNaN(n)?null:n;
+};
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
 const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest'};
 const testOn=(l,k)=>{
@@ -1392,8 +1415,9 @@ function paintR(){
     byM[m]=byM[m]||{};
     TESTS.forEach(t=>{
       const v=r.l&&r.l[t.k];
-      if(v===''||v==null||isNaN(Number(v)))return;
-      (byM[m][t.k]=byM[m][t.k]||[]).push(Number(v));
+      const n=scoreVal(v);
+      if(n==null)return;
+      (byM[m][t.k]=byM[m][t.k]||[]).push(n);
     });
   });
   const ms=Object.keys(byM).sort().reverse().slice(0,6);
@@ -1571,8 +1595,7 @@ function chart(rows){
   const W=314,H=150,PL=26,PR=8,PT=10,PB=20;
   const series=TESTS.filter(t=>S.chart.includes(t.k)).map(t=>({
     ...t,
-    pts:rows.map(r=>({d:r.date,v:r.l&&r.l[t.k]})).filter(p=>p.v!==''&&p.v!=null&&!isNaN(Number(p.v)))
-            .map(p=>({d:p.d,v:Number(p.v)})).slice(-12)
+    pts:rows.map(r=>({d:r.date,v:scoreVal(r.l&&r.l[t.k])})).filter(p=>p.v!=null).slice(-12)
   })).filter(s=>s.pts.length);
 
   if(!series.length)return el('div','empty','표시할 점수가 없습니다.');
