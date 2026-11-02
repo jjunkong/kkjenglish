@@ -164,6 +164,7 @@ const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'wr
 const testOn=(l,k)=>{
   const o=l&&l.on;
   if(o&&typeof o==='object'&&k in o)return !!o[k];
+  if(k==='wb'&&l&&(l.wbDone==='done'||l.wbDone===true))return true;
   const v=l&&l[TKMAP[k]];
   return !(v===''||v==null||v===false);
 };
@@ -174,8 +175,10 @@ const smsTests=l=>{
   if(testOn(l,'D'))r.push(`개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
   if(testOn(l,'word'))r.push(`단어시험 : ${smsNum(l.wordTest)}`);
   if(testOn(l,'wb')){
-    const n=smsNum(l.wbTest),d=(l.wbDone==='done'||l.wbDone===true)?'완료':'';
-    r.push(`단어워크북 : ${[n,d].filter(Boolean).join(' · ')}`);
+    const w=l.wbTest;
+    const done=(w==='done'||w===true||l.wbDone==='done'||l.wbDone===true);
+    const t=done?'완료':((w===''||w==null||w===false)?'미완료':smsNum(w));
+    r.push(`단어워크북 : ${t}`);
   }
   if(testOn(l,'write')){
     const w=l.writeTest;
@@ -197,6 +200,10 @@ const hwLabel=l=>{
   if(n==='fixed')return '수정 완료';
   return '완료';
 };
+// 과제 내용 + 수행 상태를 한 줄로
+const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.core)||'').trim();
+const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
+
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},vocab:{score:'',comment:''},status:'none'});
 
 // Firebase REST API
@@ -1327,12 +1334,13 @@ async function aLessonView(){
     const d=new Date(Q.aDate);
     const dateStr=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
     const classNotice=L.plan?.check||'';
+    const hwBody=(L.plan?.core||'').trim()||hwText(lData);
     const scores=smsTests(lData);
     return '['+name+' DAILY REPORT]\n'
       +'안녕하세요. 김기준영어학원입니다.\n'
       +dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
       +'<CLASS 공지>\n'+classNotice+'\n\n'
-      +'<과제 수행>\n'+hwLabel(lData)+'\n\n'
+      +'<과제 수행>\n'+hwLine(lData,hwBody)+'\n\n'
       +(scores?('<TEST>\n'+scores+'\n\n'):'')
       +'늘 믿고 맡겨주셔서 감사합니다.\n'
       +'-김기준영어학원 드림';
