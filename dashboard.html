@@ -377,8 +377,8 @@ const TESTS=[
   {k:'bTest',    n:'복습테스트', s:'복테', c:'#2E63E8'},
   {k:'oTest',    n:'확인테스트', s:'확테', c:'#0EA96B'},
   {k:'wordTest', n:'단어',      s:'단어', c:'#E08A00'},
+  {k:'wbTest',   n:'단어워크북', s:'워크북', c:'#EC4899'},
   {k:'writeTest',n:'영작',      s:'영작', c:'#8B5CF6'},
-  {k:'readTest', n:'독해',      s:'독해', c:'#EC4899'},
   {k:'habangTest',n:'하빵',     s:'하빵', c:'#0891B2'},
 ];
 
@@ -893,7 +893,7 @@ const scoreVal=v=>{
   return isNaN(n)?null:n;
 };
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
-const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest'};
+const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest'};
 const testOn=(l,k)=>{
   const o=l&&l.on;
   if(o&&typeof o==='object'&&k in o)return !!o[k];
@@ -906,7 +906,15 @@ const smsTests=l=>{
   if(testOn(l,'O'))r.push(`확테[확인테스트] : ${smsNum(l.oTest)}`);
   if(testOn(l,'D'))r.push(`개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
   if(testOn(l,'word'))r.push(`단어시험 : ${smsNum(l.wordTest)}`);
-  if(testOn(l,'write'))r.push(`영작시험 : ${smsNum(l.writeTest)}`);
+  if(testOn(l,'wb')){
+    const n=smsNum(l.wbTest),d=(l.wbDone==='done'||l.wbDone===true)?'완료':'';
+    r.push(`단어워크북 : ${[n,d].filter(Boolean).join(' · ')}`);
+  }
+  if(testOn(l,'write')){
+    const w=l.writeTest;
+    r.push(`영작시험 : ${(w==='done'||w===true)?(l.writeNote==='fixed'?'수정 완료':'완료')
+      :(w===''||w==null||w===false)?'미완료':smsNum(w)}`);
+  }
   return r.join('\n');
 };
 // 과제 수행 상태 (구 boolean hw 호환)

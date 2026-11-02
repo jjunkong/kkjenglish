@@ -292,8 +292,8 @@ async function mainScreen(){
       Q._lScores[stu.id]={
         attend:(l.attend===true?'present':(l.attend||'')),hwDone:(l.hwDone||(l.hw===true?'o':'')),hwNote:l.hwNote||'',
         on:(l.on&&typeof l.on==='object')?Object.assign({},l.on):null,
-        B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',dNote:l.dNote||'',
-        word:l.wordTest||'',write:l.writeTest||'',read:l.readTest||'',habang:l.habangTest||'',
+        B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',dNote:l.dNote||'',writeNote:l.writeNote||'',
+        word:l.wordTest||'',wb:l.wbTest||'',wbDone:l.wbDone||'',write:l.writeTest||'',habang:l.habangTest||'',
         comment:l.leaderComment||''
       };
     }
@@ -319,7 +319,7 @@ async function mainScreen(){
         btn.onclick=()=>cb(!done);return btn;
       };
       // ── 시험 실시 여부 (라벨을 눌러 켜고 끔) ──
-      const TK={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest'};
+      const TK={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest'};
       const isOn=k=>{
         const o=sc.on;
         if(o&&typeof o==='object'&&k in o)return !!o[k];
@@ -332,7 +332,7 @@ async function mainScreen(){
         sc.on[k]=nv?1:0;
         const lData=await getLesson(stu.id,Q._lDate||TODAY);
         lData.on=Object.assign({},(lData.on&&typeof lData.on==='object')?lData.on:{},{[k]:nv?1:0});
-        if(!nv){lData[TK[k]]='';sc[k]='';}
+        if(!nv){lData[TK[k]]='';sc[k]='';if(k==='wb'){lData.wbDone='';sc.wbDone='';}}
         await setLesson(stu.id,Q._lDate||TODAY,lData);
         Q[`_lOpen_${stu.id}`]=true;render();
       };
@@ -391,7 +391,7 @@ async function mainScreen(){
         inp.oninput=async()=>{
           sc[key]=inp.value;
           const lData=await getLesson(stu.id,Q._lDate||TODAY);
-          const km={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',write:'writeTest',read:'readTest',habang:'habangTest'};
+          const km={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest'};
           lData[km[key]]=inp.value;
           await setLesson(stu.id,Q._lDate||TODAY,lData);
         };
@@ -516,9 +516,59 @@ async function mainScreen(){
       body2.appendChild(st3);
       const g3=mks('div','display:flex;gap:6px;min-width:0;');
       g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkFrac(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
-      g3.appendChild(mkTest('write','영작','#ffe4e6','#9f1239','#f43f5e',()=>mkFrac(sc.write,'rgba(255,228,230,0.8)','rgba(244,63,94,0.4)','#e11d48','write')));
-      g3.appendChild(mkItem(mkLbl('독해','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.read,'rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#2563eb','read')));
+      g3.appendChild(mkTest('wb','단어워크북','#fef9c3','#854d0e','#eab308',()=>mkFrac(sc.wb,'rgba(254,249,195,0.8)','rgba(234,179,8,0.45)','#a16207','wb')));
+      // 영작: 완료 / 미완료 (점수 대신 완료 여부)
+      const wOn=isOn('write');
+      const wDone=sc.write==='done'||sc.write===true;
+      const wBtn=mks('button','',wDone?'✓ 완료':'○ 미완료');
+      wBtn.style.cssText=`width:100%;height:38px;border-radius:10px;border:2px solid ${wDone?'#f43f5e':'rgba(244,63,94,0.3)'};background:${wDone?'linear-gradient(135deg,#fda4af,#f43f5e)':'rgba(255,228,230,0.8)'};color:${wDone?'#fff':'#e11d48'};font-size:13px;font-weight:700;cursor:pointer;font-family:${CF};`;
+      wBtn.onclick=async()=>{
+        const nv=wDone?'':'done';sc.write=nv;
+        const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.writeTest=nv;
+        if(nv!=='done'){lData.writeNote='';sc.writeNote='';}
+        await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+      };
+      const wItem=mks('div','display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0;');
+      wItem.appendChild(mkTLbl('write','영작','#ffe4e6','#9f1239','#f43f5e'));
+      if(wOn)wItem.appendChild(wBtn);
+      else{const o=mkOff();o.onclick=()=>toggleOn('write');wItem.appendChild(o);}
+      g3.appendChild(wItem);
       body2.appendChild(g3);
+
+      // 단어워크북 완료 버튼
+      if(isOn('wb')){
+        const wbDone=sc.wbDone==='done'||sc.wbDone===true;
+        const wbr=mks('div','display:flex;gap:5px;align-items:center;margin:8px 0 2px;');
+        wbr.appendChild(mks('div',`font-size:10px;font-weight:700;color:#854d0e;flex:none;font-family:${CF};`,'워크북'));
+        const wbb=mks('button','',wbDone?'✓ 완료':'○ 미완료');
+        wbb.style.cssText=`flex:1 1 0;min-width:0;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${wbDone?'#eab308':'rgba(180,200,255,0.5)'};background:${wbDone?'#fef9c3':'rgba(255,255,255,0.6)'};color:${wbDone?'#854d0e':'#8A97B4'};`;
+        wbb.onclick=async()=>{
+          const nv=wbDone?'':'done';
+          sc.wbDone=nv;
+          const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.wbDone=nv;
+          await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+        };
+        wbr.appendChild(wbb);
+        body2.appendChild(wbr);
+      }
+
+      // 영작 완료 시 세부 상태
+      if(wOn&&wDone){
+        const wr=mks('div','display:flex;gap:5px;align-items:center;margin:8px 0 2px;');
+        wr.appendChild(mks('div',`font-size:10px;font-weight:700;color:#9f1239;flex:none;font-family:${CF};`,'영작'));
+        [['','완료'],['fixed','수정 완료']].forEach(([k,t])=>{
+          const on=(sc.writeNote||'')===k;
+          const b=mks('button','',t);
+          b.style.cssText=`flex:1 1 0;min-width:0;height:30px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:${CF};border:1.5px solid ${on?'#f43f5e':'rgba(180,200,255,0.5)'};background:${on?'#ffe4e6':'rgba(255,255,255,0.6)'};color:${on?'#9f1239':'#8A97B4'};`;
+          b.onclick=async()=>{
+            sc.writeNote=k;
+            const lData=await getLesson(stu.id,Q._lDate||TODAY);lData.writeNote=k;
+            await setLesson(stu.id,Q._lDate||TODAY,lData);Q[`_lOpen_${stu.id}`]=true;render();
+          };
+          wr.appendChild(b);
+        });
+        body2.appendChild(wr);
+      }
 
       // 내신 시험
       const divNas=mks('div','border-top:1px dashed rgba(180,200,255,0.4);margin:8px 0;');body2.appendChild(divNas);
