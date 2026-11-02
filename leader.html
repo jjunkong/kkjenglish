@@ -142,12 +142,22 @@ function render(){
   _lastScr=Q.scr;
   if(oldH)A.style.minHeight=oldH+'px';
   A.innerHTML='';
+  const focus=Q._focusStu; Q._focusStu=null;
   const done=()=>{
-    if(same&&sy>0){
-      window.scrollTo(0,sy);
-      requestAnimationFrame(()=>window.scrollTo(0,sy));
-    }
-    requestAnimationFrame(()=>{A.style.minHeight='';});
+    const go=()=>{
+      if(focus){
+        const el=document.getElementById('stucard_'+focus);
+        if(el){
+          // 카드 윗부분이 화면 상단 가까이 오도록
+          const top=el.getBoundingClientRect().top+(window.scrollY||0)-12;
+          window.scrollTo(0,Math.max(0,top));
+          return;
+        }
+      }
+      if(same&&sy>0)window.scrollTo(0,sy);
+    };
+    go();
+    requestAnimationFrame(()=>{go();A.style.minHeight='';});
   };
   if(Q.scr==='login'){loginScreen();done();}
   else if(Q.scr==='main'){Promise.resolve(mainScreen()).then(done).catch(done);}
@@ -216,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103c'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103d'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -309,13 +319,14 @@ async function mainScreen(){
     const sc=Q._lScores[stu.id];
     const isOpen=Q[`_lOpen_${stu.id}`];
     const card=mks('div','border-radius:14px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);box-shadow:0 4px 14px rgba(80,100,200,0.1);margin-bottom:10px;overflow:hidden;');
+    card.id='stucard_'+stu.id;
 
     // 이름 행
     const nameRow2=mks('div','display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;cursor:pointer;');
     const nm=mks('div','font-size:18px;font-weight:700;color:#0B1A38;',stu.name);nm.style.fontFamily=CF;
     const arr=mks('div','font-size:13px;color:#2E63E8;',isOpen?'▲':'▼');arr.style.fontFamily=CF;
     nameRow2.appendChild(nm);nameRow2.appendChild(arr);
-    nameRow2.onclick=()=>{Q[`_lOpen_${stu.id}`]=!Q[`_lOpen_${stu.id}`];render();};
+    nameRow2.onclick=()=>{Q[`_lOpen_${stu.id}`]=!Q[`_lOpen_${stu.id}`];Q._focusStu=stu.id;render();};
     card.appendChild(nameRow2);
 
     if(isOpen){
