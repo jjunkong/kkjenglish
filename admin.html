@@ -693,7 +693,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103b'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -741,6 +741,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103b'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1303,18 +1304,6 @@ async function aLessonView(){
   }
   body.appendChild(sec1);
 
-  // ── 섹션 2: HOMEWORK ──────────────────────────
-  const sec2=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:14px;margin-bottom:12px;');
-  const s2hdr=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:10px;');
-  s2hdr.appendChild(mks('span','font-size:11px;font-weight:700;background:#0e9f6e;color:#fff;padding:3px 10px;border-radius:20px;','HOMEWORK'));
-  sec2.appendChild(s2hdr);
-  const hwInp=document.createElement('textarea');hwInp.rows=3;hwInp.placeholder='과제 내용을 입력하세요...';
-  hwInp.value=L.plan?.core||'';
-  hwInp.style.cssText='width:100%;padding:10px 12px;border:1px solid #e8e8e6;border-radius:10px;font-size:13px;color:#333;line-height:1.6;resize:vertical;box-sizing:border-box;outline:none;';
-  hwInp.oninput=()=>{if(!L.plan)L.plan={};L.plan.core=hwInp.value;};
-  sec2.appendChild(hwInp);
-  body.appendChild(sec2);
-
   // ── 섹션 3: 알림문자 미리보기 ────────────────
   const sec3=mks('div','background:#fff;border:1px solid #e8e8e6;border-radius:14px;padding:14px;margin-bottom:12px;');
   const s3hdr=mks('div','display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;');
@@ -1334,7 +1323,7 @@ async function aLessonView(){
     const d=new Date(Q.aDate);
     const dateStr=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
     const classNotice=L.plan?.check||'';
-    const hwBody=(L.plan?.core||'').trim()||hwText(lData);
+    const hwBody=hwText(lData)||(L.plan?.core||'').trim();
     const scores=smsTests(lData);
     return '['+name+' DAILY REPORT]\n'
       +'안녕하세요. 김기준영어학원입니다.\n'
@@ -1355,7 +1344,6 @@ async function aLessonView(){
     smsBox.appendChild(pre);
   };
   refreshSMS();
-  hwInp.oninput=()=>{if(!L.plan)L.plan={};L.plan.core=hwInp.value;refreshSMS();};
   copyBtn.onclick=()=>{
     navigator.clipboard.writeText(genSMS()).then(()=>{
       copyBtn.textContent='✓ 복사됨!';setTimeout(()=>copyBtn.textContent='📋 복사',1500);
