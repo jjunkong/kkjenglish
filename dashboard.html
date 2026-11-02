@@ -953,7 +953,7 @@ $('smsbtn').onclick=async()=>{
   $('mprev').innerHTML='<div class="load">불러오는 중…</div>';
   $('mgo').disabled=true;
 
-  const cfg=await fbGet('solapiCfg');
+  const cfg=await fetch('/api/send-sms').then(r=>r.json()).catch(()=>null);
   const priv=await fbGet('privateInfo')||{};
   const d=dow(S.date);
   const targets=S.selCls
@@ -991,8 +991,8 @@ $('mmodal').onclick=e=>{if(e.target===$('mmodal'))$('mmodal').classList.remove('
 function renderM(cfg){
   const box=$('mprev');box.innerHTML='';
   if(!MROWS.length){box.innerHTML='<div class="warn">해당하는 학생이 없습니다.</div>';return;}
-  if(!cfg||!cfg.key||!cfg.secret||!cfg.sender){
-    box.appendChild(el('div','warn','솔라피 설정이 없습니다. 원장방 → 설정 → SMS에서 API 키와 발신번호를 먼저 등록해 주세요.'));
+  if(!cfg||!cfg.configured){
+    box.appendChild(el('div','warn','문자 발송 설정이 없습니다. Vercel 환경변수에 SOLAPI_KEY · SOLAPI_SECRET · SOLAPI_SENDER 를 등록해 주세요.'));
   }
   S._cfg=cfg;
 
@@ -1012,7 +1012,7 @@ function renderM(cfg){
   const upd=()=>{
     const c=MROWS.filter(r=>r.on).length;
     n.textContent=`${MROWS.length}명 중 ${c}명 선택`;
-    $('mgo').disabled=!c||!cfg||!cfg.key;
+    $('mgo').disabled=!c||!cfg||!cfg.configured;
     $('mgo').textContent=c?`${c}명에게 발송하기`:'발송하기';
   };
   const draw=()=>{
@@ -1036,20 +1036,17 @@ function renderM(cfg){
   draw();
 }
 
-async function sendSolapi(messages,cfg){
-  const date=new Date().toISOString();
-  const salt=Math.random().toString(36).slice(2,12);
-  const enc=new TextEncoder();
-  const key=await crypto.subtle.importKey('raw',enc.encode(cfg.secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-  const sig=await crypto.subtle.sign('HMAC',key,enc.encode(date+salt));
-  const hex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  const res=await fetch('https://api.solapi.com/messages/v4/send-many',{
+// 발송은 서버(/api/send-sms)가 처리합니다. API 키는 브라우저에 없습니다.
+async function sendSolapi(messages){
+  const pw=await fbGet('pw');
+  const res=await fetch('/api/send-sms',{
     method:'POST',
-    headers:{'Content-Type':'application/json',
-      'Authorization':`HMAC-SHA256 apiKey=${cfg.key}, date=${date}, salt=${salt}, signature=${hex}`},
+    headers:{'Content-Type':'application/json','x-admin-pw':String(pw||'').trim()},
     body:JSON.stringify({messages})
   });
-  return res.json();
+  const out=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(out.error||out.errorMessage||('발송 실패 ('+res.status+')'));
+  return out;
 }
 
 $('mgo').onclick=async()=>{
@@ -1058,10 +1055,9 @@ $('mgo').onclick=async()=>{
   const cfg=S._cfg;
   if(!confirm(`${use.length}명에게 문자를 발송합니다. 진행할까요?`))return;
   const btn=$('mgo');btn.disabled=true;btn.textContent='발송 중…';
-  const msgs=use.map(r=>({to:r.phone,from:String(cfg.sender).replace(/[^\d]/g,''),text:r.text,type:'LMS',
-                          subject:`${r.stu.name} DAILY REPORT`}));
+  const msgs=use.map(r=>({to:r.phone,text:r.text,subject:`${r.stu.name} DAILY REPORT`}));
   try{
-    const out=await sendSolapi(msgs,cfg);
+    const out=await sendSolapi(msgs);
     const fail=(out&&out.failedMessageList&&out.failedMessageList.length)||0;
     const log=el('div','mlog '+(fail?'er':'ok'));
     log.textContent=fail?`${use.length}건 중 ${fail}건 실패했습니다. 발신번호와 잔액을 확인해 주세요.`
