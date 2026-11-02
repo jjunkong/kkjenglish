@@ -137,7 +137,6 @@ function installApp(){
 <button id="install-btn" onclick="installApp()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;background:#2E63E8;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">📲 앱 설치</button>
 <script>
 (()=>{
-let CLAUDE_API_KEY='';
 
 const DAYS=['일','월','화','수','목','금','토'];
 const localDate=()=>{const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;};
@@ -552,7 +551,7 @@ function showModal(title,msg,onOk){
 // 모바일 뒤로가기 처리
 const pushState=()=>history.pushState({scr:Q.scr},'','');
 window.addEventListener('popstate',()=>{
-  const adminScreens=['aList','aLessonView','aStuEdit','aSettings','aGroupPlan','noticeList','noticeWrite','smsBulk','quizResult'];
+  const adminScreens=['aList','aLessonView','aStuEdit','aSettings','aGroupPlan','noticeList','noticeWrite','smsBulk'];
   if(Q.scr==='home'){
     history.pushState({scr:'home'},'','');
   } else if(adminScreens.includes(Q.scr)&&Q.scr!=='aList'){
@@ -690,7 +689,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103h'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103i'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -738,7 +737,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103h'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103i'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1536,26 +1535,6 @@ async function aSettings(){
   }
   ldrPwCard.appendChild(lmsg);
 
-  // Claude API 키 설정
-  const ac=mk('div','card');ac.style.marginTop='12px';w2.appendChild(ac);
-  ac.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','복습 퀴즈 API 키'));
-  ac.appendChild(mks('div','font-size:11px;color:#aaa;margin-bottom:10px;','console.anthropic.com 에서 발급받은 API 키를 입력하세요'));
-  const aki=document.createElement('input');aki.className='inp';aki.type='password';
-  aki.placeholder='sk-ant-...';aki.value=CLAUDE_API_KEY||'';
-  ac.appendChild(aki);
-  const akmsg=mks('div','');ac.appendChild(akmsg);
-  const akBtn=mk('button','btn-primary','저장');
-  akBtn.onclick=async()=>{
-    const key=aki.value.trim();
-    if(!key){akmsg.innerHTML='<div class="err">API 키를 입력하세요.</div>';return;}
-    akBtn.textContent='저장 중...';akBtn.disabled=true;
-    CLAUDE_API_KEY=key;
-    await fbSet('apikey',key);
-    akmsg.innerHTML='<div class="ok-msg">✓ 저장됐습니다!</div>';
-    akBtn.textContent='저장';akBtn.disabled=false;
-  };
-  ac.appendChild(akBtn);
-
   // 솔라피 문자 발송 설정 (서버에서 관리)
   const sc=mk('div','card');sc.style.marginTop='12px';w2.appendChild(sc);
   sc.appendChild(mks('div','font-size:14px;font-weight:500;color:#111;margin-bottom:6px;','문자 발송 설정 (솔라피)'));
@@ -2111,7 +2090,6 @@ const initData=async()=>{
   try{const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}
   try{const ldrs=await fbGet('leaders');if(ldrs)MEM.leaders=Array.isArray(ldrs)?ldrs:Object.values(ldrs);}catch(e){}
-  try{const ak=await fbGet('apikey');if(ak)CLAUDE_API_KEY=ak;}catch(e){}
 };
 
 (async()=>{
