@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>과제 진단</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:#f4f6fb;color:#0B1A38;padding:16px;font-size:14px;line-height:1.55;}
+h1{font-size:19px;margin-bottom:3px;}
+.sub{color:#8A97B4;font-size:12px;margin-bottom:16px;}
+.box{background:#fff;border:1px solid #E3E8F4;border-radius:12px;padding:14px;margin-bottom:12px;}
+.box h2{font-size:14px;margin-bottom:9px;}
+select,input{height:38px;border:1.5px solid #E3E8F4;border-radius:9px;padding:0 10px;font-size:14px;font-family:inherit;}
+select{width:100%;margin-bottom:8px;}
+code{background:#f0f3fa;padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all;}
+pre{background:#f0f3fa;border-radius:9px;padding:11px;font-size:12px;white-space:pre-wrap;word-break:break-all;line-height:1.6;}
+.ok{background:#E6F7F0;color:#0EA96B;padding:10px 12px;border-radius:9px;font-weight:700;font-size:13px;}
+.bad{background:#FDECEF;color:#E23D5A;padding:10px 12px;border-radius:9px;font-weight:700;font-size:13px;}
+.row{padding:7px 0;border-top:1px solid #f0f3fa;font-size:13px;display:flex;gap:10px;}
+.row b{flex:none;width:92px;color:#8A97B4;font-weight:700;}
+.load{color:#8A97B4;text-align:center;padding:22px;}
+</style>
+</head>
+<body>
+<h1>과제 진단</h1>
+<div class="sub">학생과 날짜를 고르면 실제 저장된 값과 문자 결과를 보여줍니다.</div>
+<div class="box">
+  <h2>대상</h2>
+  <select id="stu"><option>불러오는 중…</option></select>
+  <select id="date"></select>
+</div>
+<div id="out"></div>
+
+<script>
+(async()=>{
+const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
+const g=async p=>{try{const r=await fetch(`${FB}/${p}.json`);if(!r.ok)return null;return await r.json();}catch(e){return null;}};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const H=h=>{const d=document.createElement('div');d.innerHTML=h;return d.firstChild;};
+
+// 배포본과 동일한 함수
+const hwStat=l=>(l&&l.hwDone)||((l&&l.hw===true)?'o':'');
+const hwLabel=l=>{const v=hwStat(l);if(v==='x')return '미제출';if(v!=='o')return '';
+  const n=(l&&l.hwNote)||'';if(n==='partial')return '부분 완료';if(n==='fixed')return '수정 완료';return '완료';};
+const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.core)||'').trim();
+const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
+
+const raw=await g('students');
+if(!raw){document.getElementById('out').innerHTML='<div class="box"><div class="bad">학생 목록을 읽지 못했습니다.</div></div>';return;}
+const students=Array.isArray(raw)?raw.filter(Boolean):Object.values(raw);
+const ss=document.getElementById('stu'),ds=document.getElementById('date');
+ss.innerHTML='';
+students.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(s=>{
+  const o=document.createElement('option');o.value=s.id;o.textContent=s.name;ss.appendChild(o);
+});
+const pad=n=>String(n).padStart(2,'0');
+const now=new Date();
+for(let i=0;i<30;i++){
+  const d=new Date(now);d.setDate(now.getDate()-i);
+  const v=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const o=document.createElement('option');o.value=v;o.textContent=v+(i?'':' (오늘)');ds.appendChild(o);
+}
+
+async function show(){
+  const out=document.getElementById('out');
+  out.innerHTML='<div class="box"><div class="load">읽는 중…</div></div>';
+  const sid=ss.value,date=ds.value;
+  const l=await g(`lessons/${sid}/${date.replace(/-/g,'_')}`);
+  out.innerHTML='';
+
+  if(!l){
+    out.appendChild(H('<div class="box"><h2>① 저장된 기록</h2><div class="bad">이 날짜에 저장된 수업기록이 없습니다. 공통수업계획을 적용하거나 학습리더가 입력해야 생깁니다.</div></div>'));
+    return;
+  }
+
+  const b1=H('<div class="box"><h2>① 과제 내용 (원장 · 공통수업계획)</h2></div>');
+  const hw=l.hw, core=l.plan&&l.plan.core;
+  b1.appendChild(H(`<div class="row"><b>hw</b><span><code>${esc(JSON.stringify(hw))}</code></span></div>`));
+  b1.appendChild(H(`<div class="row"><b>plan.core</b><span><code>${esc(JSON.stringify(core))}</code></span></div>`));
+  const txt=hwText(l);
+  b1.appendChild(H(txt?`<div class="ok" style="margin-top:9px;">내용 있음 → ${esc(txt)}</div>`
+                      :`<div class="bad" style="margin-top:9px;">내용이 비어 있습니다. 공통수업계획 HOMEWORK에 적고 「선택 학생에게 적용」을 누르세요.</div>`));
+  out.appendChild(b1);
+
+  const b2=H('<div class="box"><h2>② 과제 수행 (학습리더 체크)</h2></div>');
+  b2.appendChild(H(`<div class="row"><b>hwDone</b><span><code>${esc(JSON.stringify(l.hwDone))}</code></span></div>`));
+  b2.appendChild(H(`<div class="row"><b>hwNote</b><span><code>${esc(JSON.stringify(l.hwNote))}</code></span></div>`));
+  const lab=hwLabel(l);
+  b2.appendChild(H(lab?`<div class="ok" style="margin-top:9px;">상태 있음 → ${esc(lab)}</div>`
+                      :`<div class="bad" style="margin-top:9px;">상태가 없습니다. 학습리더앱에서 과제 O/X를 눌러야 합니다.</div>`));
+  out.appendChild(b2);
+
+  const b3=H('<div class="box"><h2>③ 문자에 나갈 내용</h2></div>');
+  const line=hwLine(l,hwText(l)||((l.plan&&l.plan.core)||'').trim());
+  b3.appendChild(H(`<pre>&lt;과제 수행&gt;\n${esc(line||'(빈칸)')}</pre>`));
+  b3.appendChild(H(line.includes(' - ')
+    ? '<div class="ok">정상입니다. 내용과 상태가 함께 나갑니다.</div>'
+    : (line?'<div class="bad">한쪽만 있습니다. 위 ①②에서 빠진 쪽을 채우세요.</div>'
+           :'<div class="bad">둘 다 비어 있습니다.</div>')));
+  out.appendChild(b3);
+
+  const b4=H('<div class="box"><h2>④ 저장된 전체 값</h2></div>');
+  b4.appendChild(H(`<pre>${esc(JSON.stringify(l,null,2))}</pre>`));
+  out.appendChild(b4);
+}
+ss.onchange=show;ds.onchange=show;
+show();
+})();
+</script>
+</body>
+</html>
