@@ -274,14 +274,12 @@ const saveStu=async()=>{
   }
   const gone=STU_GONE.slice();
   const obj=toMap(cur.val);
-  const privNew={};
   Q.students.forEach(s=>{
     if(!s||!s.id)return;
     const {info,...rest}=s;
-    const {phone,...safeInfo}=info||{};
     const prev=obj[s.id]||{};
-    obj[s.id]={...prev,...rest,info:{...(prev.info||{}),...safeInfo}};
-    if(phone!==undefined)privNew[s.id]=String(phone||'');
+    // 연락처를 포함해 info 를 통째로 병합합니다.
+    obj[s.id]={...prev,...rest,info:{...(prev.info||{}),...(info||{})}};
   });
   gone.forEach(id=>{delete obj[id];});
   const ok=await fbSet('students',obj);
@@ -290,20 +288,6 @@ const saveStu=async()=>{
     return false;
   }
   STU_GONE.length=0;
-  // 연락처도 서버 값과 병합
-  const pk=Object.keys(privNew);
-  if(pk.length||gone.length){
-    const cp=await fbReadTry('privateInfo');
-    if(cp.ok){
-      const pm=toMap(cp.val);
-      pk.forEach(id=>{
-        if(privNew[id])pm[id]={...(pm[id]||{}),phone:privNew[id]};
-        else delete pm[id];
-      });
-      gone.forEach(id=>{delete pm[id];});
-      await fbSet('privateInfo',pm);
-    }
-  }
   return ok;
 };
 const savePw=async pw=>{const v=String(pw==null?'':pw).trim();MEM.pw=v;Q.pw=v;PW_READY=true;await fbSet('pw',v);};
@@ -768,7 +752,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103o'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103p'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -816,7 +800,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103o'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103p'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -2212,7 +2196,7 @@ const initData=async()=>{
     const r=await fbReadTry('privateInfo');
     if(r.ok&&MEM.stu){
       const priv=toMap(r.val);
-      MEM.stu=MEM.stu.map(s=>{const p=priv[s.id];if(p&&p.phone){if(!s.info)s.info={};s.info.phone=p.phone;}return s;});
+      MEM.stu=MEM.stu.map(s=>{const p=priv[s.id];if(p&&p.phone&&!(s.info&&s.info.phone)){if(!s.info)s.info={};s.info.phone=p.phone;}return s;});
     }
   }catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
