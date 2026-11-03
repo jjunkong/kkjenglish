@@ -950,6 +950,8 @@ const hwLabel=l=>{
 // 과제 내용 + 수행 상태를 한 줄로
 const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.core)||'').trim();
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
+// 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
+const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
 
 function genSMS(stu,l,dateStr){
   const sc=smsTests(l);
@@ -957,7 +959,7 @@ function genSMS(stu,l,dateStr){
     +`안녕하세요. 김기준영어학원입니다.\n`
     +`${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
-    +`<과제 수행>\n${hwLine(l)}\n\n`
+    +(hwOn(l)?`<과제 수행>\n${hwLine(l)}\n\n`:'')
     +(sc?`<TEST>\n${sc}\n\n`:'')
     +`늘 믿고 맡겨주셔서 감사합니다.\n-김기준영어학원 드림`;
 }
@@ -994,7 +996,7 @@ $('smsbtn').onclick=async()=>{
     if(!phone)warn='연락처 없음';
     else if(att==='absent')warn='결석';
     else if(!rec)warn='기록 없음';
-    MROWS.push({stu:st,phone:String(phone).replace(/[^\d]/g,''),text:genSMS(st,l,dateStr),
+    MROWS.push({stu:st,l,dateStr,phone:String(phone).replace(/[^\d]/g,''),text:genSMS(st,l,dateStr),
                 warn,on:!!phone&&att!=='absent'});
   }
   renderM(cfg);
@@ -1039,6 +1041,24 @@ function renderM(cfg){
       mi.appendChild(el('b','',esc(r.stu.name)));
       mi.appendChild(el('em','',r.phone?r.phone.replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3'):''));
       if(r.warn)mi.appendChild(el('em','bad',r.warn));
+      const hb=document.createElement('button');
+      const paintHb=()=>{
+        const on=hwOn(r.l);
+        hb.textContent=on?'과제 포함':'과제 제외';
+        hb.style.cssText='margin-top:6px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;border:1px solid '
+          +(on?'#c7d2fe;background:#eef2ff;color:#4338ca;':'#e2e8f0;background:#f1f5f9;color:#94a3b8;');
+      };
+      hb.onclick=async()=>{
+        const v=!hwOn(r.l);
+        hb.disabled=true;
+        if(!r.l.on)r.l.on={};
+        r.l.on.hw=v;
+        await saveLessonFlag(r.stu.id,S.date,{hw:v});
+        r.text=genSMS(r.stu,r.l,r.dateStr);
+        hb.disabled=false;
+        draw();
+      };
+      paintHb();mi.appendChild(hb);
       const pre=document.createElement('pre');pre.textContent=r.text;
       row.appendChild(cb);row.appendChild(mi);row.appendChild(pre);
       sc.appendChild(row);
@@ -1048,6 +1068,16 @@ function renderM(cfg){
   ba.onclick=()=>{MROWS.forEach(r=>{if(r.phone)r.on=true;});draw();};
   bn.onclick=()=>{MROWS.forEach(r=>r.on=false);draw();};
   draw();
+}
+
+// 수업기록의 on 플래그만 안전하게 갱신합니다. (다른 항목을 덮어쓰지 않도록 서버값을 읽어 병합)
+async function saveLessonFlag(sid,date,patch){
+  const key=date.replace(/-/g,'_');
+  const cur=await fbReadTry(`lessons/${sid}/${key}`);
+  if(!cur.ok){alert('서버 상태를 확인할 수 없어 저장하지 않았습니다.');return false;}
+  const base=(cur.val&&typeof cur.val==='object')?cur.val:{};
+  const next={...base,on:{...(base.on||{}),...patch}};
+  return await fbSet(`lessons/${sid}/${key}`,next);
 }
 
 // 발송은 서버(/api/send-sms)가 처리합니다. API 키는 브라우저에 없습니다.

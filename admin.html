@@ -199,6 +199,8 @@ const hwLabel=l=>{
 // 과제 내용 + 수행 상태를 한 줄로
 const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.core)||'').trim();
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
+// 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
+const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
 
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},vocab:{score:'',comment:''},status:'none'});
 
@@ -752,7 +754,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103p'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103q'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -800,7 +802,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103p'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103q'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1417,11 +1419,38 @@ async function aLessonView(){
       +'안녕하세요. 김기준영어학원입니다.\n'
       +dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
       +'<CLASS 공지>\n'+classNotice+'\n\n'
-      +'<과제 수행>\n'+hwLine(lData,hwBody)+'\n\n'
+      +(hwOn(lData)?('<과제 수행>\n'+hwLine(lData,hwBody)+'\n\n'):'')
       +(scores?('<TEST>\n'+scores+'\n\n'):'')
       +'늘 믿고 맡겨주셔서 감사합니다.\n'
       +'-김기준영어학원 드림';
   };
+
+  // 과제 수행 포함/제외 토글
+  const hwRow=mks('div','display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:#f8f9ff;border:1px solid #e0e7ff;border-radius:10px;margin-bottom:8px;');
+  hwRow.appendChild(mks('div','font-size:12px;font-weight:600;color:#475569;','과제 수행 항목'));
+  const hwTg=document.createElement('button');
+  const paintTg=()=>{
+    const on=hwOn(lData);
+    hwTg.textContent=on?'문자에 포함':'문자에서 제외';
+    hwTg.style.cssText='font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;cursor:pointer;font-family:inherit;flex-shrink:0;border:1px solid '
+      +(on?'#c7d2fe;background:#eef2ff;color:#4338ca;':'#e2e8f0;background:#f1f5f9;color:#94a3b8;');
+  };
+  hwTg.onclick=async()=>{
+    const v=!hwOn(lData);
+    hwTg.disabled=true;
+    if(!lData.on)lData.on={};
+    lData.on.hw=v;
+    if(!L.on)L.on={};
+    L.on.hw=v;
+    const fresh=await getLessonFresh(Q.aStu.id,Q.aDate);
+    fresh.on=Object.assign({},fresh.on||{},{hw:v});
+    await setLesson(Q.aStu.id,Q.aDate,fresh);
+    hwTg.disabled=false;
+    paintTg();refreshSMS();
+  };
+  paintTg();
+  hwRow.appendChild(hwTg);
+  sec3.appendChild(hwRow);
 
   const smsBox=mks('div','');
   const refreshSMS=()=>{
