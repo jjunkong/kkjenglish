@@ -227,6 +227,8 @@ const toMap=v=>{
 // 메모리 캐시
 const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[],leaders:[]};
 
+const GRADES=['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
+
 // 학생 명단을 서버에서 제대로 읽었는지, 원장이 명시적으로 삭제한 학생이 누군지 기억합니다.
 let STU_READY=false;
 const STU_GONE=[];
@@ -740,7 +742,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103m'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103n'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -788,7 +790,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103m'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103n'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1200,6 +1202,15 @@ async function aStuEdit(){
   schoolInp.oninput=()=>{if(!stu.info)stu.info={};stu.info.school=schoolInp.value;};
   body.appendChild(schoolInp);
 
+  mkLabel('학년');
+  const gradeSel=document.createElement('select');gradeSel.className='inp';
+  ['',...GRADES].forEach(g=>{
+    const o=document.createElement('option');o.value=g;o.textContent=g||'선택 안 함';
+    if((stu.info?.grade||'')===g)o.selected=true;gradeSel.appendChild(o);
+  });
+  gradeSel.onchange=()=>{if(!stu.info)stu.info={};stu.info.grade=gradeSel.value;};
+  body.appendChild(gradeSel);
+
   mkLabel('성별');
   const genSel=document.createElement('select');genSel.className='inp';
   ['선택 안 함','남','여'].forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;if((stu.info?.gender||'선택 안 함')===g)o.selected=true;genSel.appendChild(o);});
@@ -1310,7 +1321,8 @@ async function aLessonView(){
     panel.appendChild(mks('div','font-size:13px;font-weight:700;color:#1a2f6e;margin-bottom:12px;','학생 정보'));
     const fields=[
       {key:'phone',label:'학부모 연락처',placeholder:'예: 010-1234-5678'},
-      {key:'school',label:'학교/학년',placeholder:'예: 광남중 3학년'},
+      {key:'school',label:'학교',placeholder:'예: 광남중학교'},
+      {key:'grade',label:'학년',sel:GRADES},
       {key:'level',label:'현재 실력',placeholder:'예: 중급, 내신 3등급'},
       {key:'prevMethod',label:'이전 공부 방법',placeholder:'예: 학원, 인강, 독학'},
       {key:'prevResult',label:'이전 학습 결과',placeholder:'예: 성적 변화, 취약 단원'},
@@ -1318,6 +1330,16 @@ async function aLessonView(){
     const stu=Q.aStu;
     fields.forEach(f=>{
       panel.appendChild(mks('div','font-size:11px;color:#888;margin-bottom:4px;',f.label));
+      if(f.sel){
+        const sel=document.createElement('select');sel.className='inp';sel.style.marginBottom='8px';
+        ['',...f.sel].forEach(g=>{
+          const o=document.createElement('option');o.value=g;o.textContent=g||'선택 안 함';
+          if((stu.info?.[f.key]||'')===g)o.selected=true;sel.appendChild(o);
+        });
+        sel.onchange=()=>{if(!stu.info)stu.info={};stu.info[f.key]=sel.value;};
+        panel.appendChild(sel);
+        return;
+      }
       const inp=document.createElement('input');inp.className='inp';
       inp.placeholder=f.placeholder;inp.value=stu.info?.[f.key]||'';
       inp.style.marginBottom='8px';
