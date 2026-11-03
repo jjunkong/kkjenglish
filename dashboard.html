@@ -611,7 +611,9 @@ function paintC(){
   who.appendChild(el('span','',[cls&&cls.name,s.level,ld&&ld.name+' 리더'].filter(Boolean).map(esc).join(' · ')));
   c1.appendChild(who);
   const meta=el('div','meta');
-  [['학교',s.info&&s.info.school],['교재',s.info&&s.info.book],
+  const bk=[(s.info&&s.info.bookG),(s.info&&s.info.bookV),(s.info&&s.info.bookR)].filter(Boolean).join(' · ')
+          ||(s.info&&s.info.book)||'';
+  [['학교',s.info&&s.info.school],['교재',bk],
    ['수업 요일',(s.days||[]).sort((a,b)=>a-b).map(d=>DAYS[d]).join('·')],
    ['결제일',s.billDay?`매월 ${s.billDay}일`:''],
    ['누적 수업일',h.rows.length+'일']].forEach(([k,v])=>{
@@ -1100,13 +1102,13 @@ $('sclose').onclick=()=>$('smodal').classList.remove('on');
 $('smodal').onclick=e=>{if(e.target===$('smodal'))$('smodal').classList.remove('on');};
 
 $('stpl').onclick=()=>{
-  const H=['이름','학생코드','학부모코드','영상코드','반','레벨','학교','성별','교재','연락처','결제일','수업요일'];
+  const H=['이름','학생코드','학부모코드','영상코드','반','레벨','학교','성별','문법교재','단어장','독해교재','연락처','결제일','수업요일'];
   const data=(S.students.length?S.students:[{name:''}]).map(st=>{
     const c=S.classes.find(c=>String(c.id)===String(st.classId));
     return {이름:st.name||'',학생코드:st.sCode||'',학부모코드:st.code||'',영상코드:st.videoCode||'',반:c?c.name:'',
       레벨:(st.level&&st.level!=='선택 안 함')?st.level:'',학교:(st.info&&st.info.school)||'',
       성별:(st.info&&st.info.gender&&st.info.gender!=='선택 안 함')?st.info.gender:'',
-      교재:(st.info&&st.info.book)||'',연락처:'',결제일:st.billDay||'',
+      문법교재:(st.info&&st.info.bookG)||'',단어장:(st.info&&st.info.bookV)||'',독해교재:(st.info&&st.info.bookR)||'',연락처:'',결제일:st.billDay||'',
       수업요일:(st.days||[]).sort((a,b)=>a-b).map(d=>DAYS[d]).join('')};
   });
   const ws=XLSX.utils.json_to_sheet(data,{header:H});
@@ -1134,7 +1136,7 @@ function readStu(file){
     const col=(...ns)=>{for(const n of ns){const i=head.indexOf(n);if(i>=0)return i;}return -1;};
     const C={name:col('이름','학생','학생이름'),scode:col('학생코드','학원코드'),code:col('학부모코드','코드','비밀번호'),
       vcode:col('영상코드','학생코드'),cls:col('반','반이름','클래스'),lv:col('레벨'),
-      sch:col('학교'),gen:col('성별'),book:col('교재','사용교재'),
+      sch:col('학교'),gen:col('성별'),bookG:col('문법교재','문법'),bookV:col('단어장','단어'),bookR:col('독해교재','독해'),book:col('교재','사용교재'),
       ph:col('연락처','전화번호','학부모연락처'),bill:col('결제일','수강결제일'),days:col('수업요일','요일')};
     if(C.name<0){$('sprev').innerHTML='<div class="warn">\'이름\' 열을 찾을 수 없습니다. 첫 줄의 열 이름을 확인해 주세요.</div>';return;}
 
@@ -1160,7 +1162,7 @@ function readStu(file){
       if(bill&&(+bill<1||+bill>31)&&!err)err='결제일은 1~31 사이여야 합니다';
       SROWS.push({line:r+1,name:nm,exist:hits.length===1?hits[0]:null,err,
         scode:g('scode'),code:g('code'),vcode:g('vcode'),cid,clsName,lv:g('lv'),sch:g('sch'),gen:g('gen'),
-        book:g('book'),ph:g('ph'),bill:bill?+bill:'',days:parseDays(g('days'))});
+        bookG:g('bookG'),bookV:g('bookV'),bookR:g('bookR'),book:g('book'),ph:g('ph'),bill:bill?+bill:'',days:parseDays(g('days'))});
     }
     renderSPrev();
   };
@@ -1207,6 +1209,9 @@ $('sgo').onclick=async()=>{
     st.info=st.info||{};
     if(r.sch)st.info.school=r.sch;
     if(r.gen)st.info.gender=r.gen;
+    if(r.bookG)st.info.bookG=r.bookG;
+    if(r.bookV)st.info.bookV=r.bookV;
+    if(r.bookR)st.info.bookR=r.bookR;
     if(r.book)st.info.book=r.book;
     if(r.ph)st.info.phone=r.ph;
     if(!st.code&&r.code)st.code=r.code;

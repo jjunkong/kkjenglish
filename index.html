@@ -191,7 +191,11 @@ async function mainScreen(){
   const mkTag=(txt)=>{const t=mks('div','font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(46,99,232,0.1);color:#2E63E8;border:1px solid rgba(46,99,232,0.2);',txt);t.style.fontFamily=CF;return t;};
   if(cls)tagRow.appendChild(mkTag(cls.name));
   if(stu.level)tagRow.appendChild(mkTag(stu.level));
-  if(stu.info?.book)tagRow.appendChild(mkTag('📖 '+stu.info.book));
+  [['bookG','📘'],['bookV','📗'],['bookR','📙']].forEach(([k,ic])=>{
+    const v=stu.info&&stu.info[k];
+    if(v)tagRow.appendChild(mkTag(ic+' '+v));
+  });
+  if(stu.info?.book&&!stu.info.bookG&&!stu.info.bookV&&!stu.info.bookR)tagRow.appendChild(mkTag('📖 '+stu.info.book));
   const loBtn=mks('button','font-size:10px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;margin-left:auto;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.stu=null;Q.scr='login';render();};
   tagRow.appendChild(loBtn);infoCard.appendChild(tagRow);

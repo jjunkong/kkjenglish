@@ -689,7 +689,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103j'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103k'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -737,7 +737,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103j'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103k'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1098,10 +1098,20 @@ async function aStuEdit(){
 
   // 교재
   mkLabel('사용 교재');
-  const bookInp=document.createElement('input');bookInp.className='inp';bookInp.placeholder='예: Grammar Zone 기초편';
-  bookInp.value=stu.info?.book||'';
-  bookInp.oninput=()=>{if(!stu.info)stu.info={};stu.info.book=bookInp.value;};
-  body.appendChild(bookInp);
+  [['bookG','문법교재','예: Grammar Zone 기초편'],
+   ['bookV','단어장','예: 능률 보카 어원편'],
+   ['bookR','독해교재','예: 리딩튜터 입문']].forEach(([k,lb,ph])=>{
+    body.appendChild(mks('div','font-size:11px;font-weight:600;color:#888;margin-bottom:4px;',lb));
+    const i=document.createElement('input');i.className='inp';i.placeholder=ph;
+    i.value=(stu.info&&stu.info[k])||'';
+    i.oninput=()=>{if(!stu.info)stu.info={};stu.info[k]=i.value;};
+    body.appendChild(i);
+  });
+  // 예전에 한 칸으로 입력한 교재가 있으면 안내
+  if(stu.info&&stu.info.book&&!stu.info.bookG&&!stu.info.bookV&&!stu.info.bookR){
+    body.appendChild(mks('div','font-size:11px;color:#b45309;background:#fff6e4;padding:8px 10px;border-radius:8px;margin:-4px 0 10px;',
+      '기존 입력: '+stu.info.book+' — 위 세 칸 중 알맞은 곳에 옮겨 적어주세요.'));
+  }
 
   // 반 선택
   if(Q.classes&&Q.classes.length){
