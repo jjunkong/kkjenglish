@@ -228,6 +228,32 @@ const toMap=v=>{
 const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[],leaders:[]};
 
 const GRADES=['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
+// 학년도는 3월 1일에 바뀝니다. (1~2월은 아직 지난 학년도)
+const schoolYear=(d=new Date())=>d.getFullYear()-(d.getMonth()<2?1:0);
+const gradeUp=(g,n)=>{
+  if(!g||g==='졸업')return g||'';
+  const i=GRADES.indexOf(g);
+  if(i<0||!n)return g;
+  const j=i+n;
+  if(j>=GRADES.length)return '졸업';
+  return GRADES[Math.max(0,j)];
+};
+// 저장된 학년을 올해 학년도 기준으로 환산
+const curGrade=info=>{
+  if(!info||!info.grade)return '';
+  const base=Number(info.gradeY);
+  if(!base)return info.grade;           // 기준 연도가 없으면 그대로 둠
+  return gradeUp(info.grade,schoolYear()-base);
+};
+// 메모리의 학년을 올해 기준으로 맞춰 둡니다. (다음 저장 때 서버에도 반영)
+const normGrades=list=>{
+  const y=schoolYear();
+  (list||[]).forEach(s=>{
+    if(!s||!s.info||!s.info.grade)return;
+    s.info.grade=curGrade(s.info);
+    s.info.gradeY=y;
+  });
+};
 
 // 학생 명단을 서버에서 제대로 읽었는지, 원장이 명시적으로 삭제한 학생이 누군지 기억합니다.
 let STU_READY=false;
@@ -742,7 +768,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103n'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103o'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -790,7 +816,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103n'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103o'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1204,12 +1230,13 @@ async function aStuEdit(){
 
   mkLabel('학년');
   const gradeSel=document.createElement('select');gradeSel.className='inp';
-  ['',...GRADES].forEach(g=>{
+  ['',...GRADES,'졸업'].forEach(g=>{
     const o=document.createElement('option');o.value=g;o.textContent=g||'선택 안 함';
-    if((stu.info?.grade||'')===g)o.selected=true;gradeSel.appendChild(o);
+    if(curGrade(stu.info)===g)o.selected=true;gradeSel.appendChild(o);
   });
-  gradeSel.onchange=()=>{if(!stu.info)stu.info={};stu.info.grade=gradeSel.value;};
+  gradeSel.onchange=()=>{if(!stu.info)stu.info={};stu.info.grade=gradeSel.value;stu.info.gradeY=schoolYear();};
   body.appendChild(gradeSel);
+  body.appendChild(mks('div','font-size:11px;color:#8aa;margin:-6px 0 10px;','매년 3월 1일에 자동으로 한 학년 올라갑니다.'));
 
   mkLabel('성별');
   const genSel=document.createElement('select');genSel.className='inp';
@@ -1322,7 +1349,7 @@ async function aLessonView(){
     const fields=[
       {key:'phone',label:'학부모 연락처',placeholder:'예: 010-1234-5678'},
       {key:'school',label:'학교',placeholder:'예: 광남중학교'},
-      {key:'grade',label:'학년',sel:GRADES},
+      {key:'grade',label:'학년',sel:[...GRADES,'졸업']},
       {key:'level',label:'현재 실력',placeholder:'예: 중급, 내신 3등급'},
       {key:'prevMethod',label:'이전 공부 방법',placeholder:'예: 학원, 인강, 독학'},
       {key:'prevResult',label:'이전 학습 결과',placeholder:'예: 성적 변화, 취약 단원'},
@@ -1334,9 +1361,9 @@ async function aLessonView(){
         const sel=document.createElement('select');sel.className='inp';sel.style.marginBottom='8px';
         ['',...f.sel].forEach(g=>{
           const o=document.createElement('option');o.value=g;o.textContent=g||'선택 안 함';
-          if((stu.info?.[f.key]||'')===g)o.selected=true;sel.appendChild(o);
+          if((f.key==='grade'?curGrade(stu.info):(stu.info?.[f.key]||''))===g)o.selected=true;sel.appendChild(o);
         });
-        sel.onchange=()=>{if(!stu.info)stu.info={};stu.info[f.key]=sel.value;};
+        sel.onchange=()=>{if(!stu.info)stu.info={};stu.info[f.key]=sel.value;if(f.key==='grade')stu.info.gradeY=schoolYear();};
         panel.appendChild(sel);
         return;
       }
@@ -2179,7 +2206,7 @@ const initData=async()=>{
   // 학생 명단은 실패하면 재시도하고, 성공했을 때만 저장을 허용합니다.
   try{
     const r=await fbReadTry('students');
-    if(r.ok){MEM.stu=Object.values(toMap(r.val));STU_READY=true;}
+    if(r.ok){MEM.stu=Object.values(toMap(r.val));normGrades(MEM.stu);STU_READY=true;}
   }catch(e){}
   try{
     const r=await fbReadTry('privateInfo');

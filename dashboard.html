@@ -368,6 +368,12 @@ const fbRead=async p=>{try{const r=await fetch(`${FB}/${p}.json?t=${Date.now()}`
 const fbReadTry=async(p,tries=3)=>{for(let i=0;i<tries;i++){const r=await fbRead(p);if(r.ok)return r;if(i<tries-1)await new Promise(x=>setTimeout(x,500));}return{ok:false,val:null};};
 const toMap=v=>{if(!v||typeof v!=='object')return{};if(Array.isArray(v)){const o={};v.forEach((x,i)=>{if(x==null)return;o[(x&&x.id)||i]=x;});return o;}return{...v};};
 let STU_READY=false;
+// 학년 자동 진급 — 학년도는 3월 1일에 바뀝니다.
+const GRADES=['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
+const schoolYear=(d=new Date())=>d.getFullYear()-(d.getMonth()<2?1:0);
+const gradeUp=(g,n)=>{if(!g||g==='졸업')return g||'';const i=GRADES.indexOf(g);if(i<0||!n)return g;const j=i+n;return j>=GRADES.length?'졸업':GRADES[Math.max(0,j)];};
+const curGrade=info=>{if(!info||!info.grade)return '';const b=Number(info.gradeY);return b?gradeUp(info.grade,schoolYear()-b):info.grade;};
+const normGrades=list=>{const y=schoolYear();(list||[]).forEach(s=>{if(!s||!s.info||!s.info.grade)return;s.info.grade=curGrade(s.info);s.info.gradeY=y;});};
 
 const DAYS=['일','월','화','수','목','금','토'];
 const pad=n=>String(n).padStart(2,'0');
@@ -500,7 +506,7 @@ async function loadBase(){
   S.cprog=cp||{};
   const vd=await fbGet('videos');
   S.videos=vd?(Array.isArray(vd)?vd.filter(Boolean):Object.values(vd)):[];
-  if(st.ok){S.students=Object.values(toMap(st.val));STU_READY=true;}
+  if(st.ok){S.students=Object.values(toMap(st.val));normGrades(S.students);STU_READY=true;}
   else{S.students=[];STU_READY=false;}
   S.classes=cl?(Array.isArray(cl)?cl.filter(Boolean):Object.values(cl)):[];
   S.leaders=ld?(Array.isArray(ld)?ld.filter(Boolean):Object.values(ld)):[];
@@ -1237,7 +1243,7 @@ $('sgo').onclick=async()=>{
     if(r.days)st.days=r.days;
     st.info=st.info||{};
     if(r.sch)st.info.school=r.sch;
-    if(r.grd)st.info.grade=r.grd;
+    if(r.grd){st.info.grade=r.grd;st.info.gradeY=schoolYear();}
     if(r.gen)st.info.gender=r.gen;
     if(r.bookG)st.info.bookG=r.bookG;
     if(r.bookV)st.info.bookV=r.bookV;
