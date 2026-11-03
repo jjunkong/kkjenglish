@@ -888,8 +888,9 @@ const smsNum=v=>{
   const s=String(v);
   if(s.includes('/')){
     const p=s.split('/'),w=p[0],t=p[1];
-    if(t!=='' && t!=null)return `-${w===''?0:w}/${t}`;
-    return w===''?'':`-${w}`;
+    // '1/30' 을 휴대폰이 날짜(1월 30일)로 인식해 링크를 거는 것을 피합니다.
+    if(t!=='' && t!=null)return `-${w===''?0:w}개 (총 ${t}문항)`;
+    return w===''?'':`-${w}개`;
   }
   return `${s}점`;
 };
