@@ -689,7 +689,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103k'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103l'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -737,7 +737,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103k'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103l'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -911,21 +911,19 @@ async function aList(){
         const l=MEM.lessons[`${stu.id}__${Q.aDate}`]||{status:'none'};
         const sc=mk('div','stu-card');sc.style.marginBottom='6px';
         const row=mks('div','display:flex;justify-content:space-between;align-items:center;');
-        const left=mks('div','flex:1;cursor:pointer;');
+        const left=mks('div','flex:1;');
         left.appendChild(mks('div','font-size:13px;font-weight:600;color:#111;',(cls.name&&cls.id!=='__none__'?cls.name+'_':'')+stu.name));
-        left.onclick=async()=>{Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();};
         row.appendChild(left);
         const right=mks('div','display:flex;align-items:center;gap:4px;flex-shrink:0;');
         if(l.planComment||l.resultComment)right.appendChild(mks('span','font-size:9px;font-weight:700;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:20px;','💬'));
         right.appendChild(mk('span',SL_BADGE[l.status],SL[l.status]));
         // 문자 버튼
         const smsBtn=mks('button','','문자');
-        smsBtn.title='문자 발송';
+        smsBtn.title='문자 내용 보기 · 발송';
         smsBtn.style.cssText='font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;cursor:pointer;flex-shrink:0;font-family:inherit;';
-        smsBtn.onclick=e=>{e.stopPropagation();
-          const phone=stu.info?.phone||'';
-          if(!phone){alert('학생 정보에 전화번호가 없습니다.');return;}
-          Q.aStu=stu;Q._smsDate=Q.aDate;Q.scr='smsBulk';render();
+        smsBtn.onclick=async e=>{
+          e.stopPropagation();
+          Q.aStu=stu;Q.aLesson=await getLesson(stu.id,Q.aDate);Q.aTab='plan';Q.scr='aLessonView';render();
         };
         right.appendChild(smsBtn);
         // 정보 버튼
