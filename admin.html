@@ -207,24 +207,75 @@ const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
 const fbGet=async path=>{try{const r=await fetch(`${FB}/${path}.json`);if(!r.ok)return null;const d=await r.json();return d;}catch{return null;}};
 const fbSet=async(path,val)=>{try{const r=await fetch(`${FB}/${path}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});if(!r.ok){console.error('fbSet 실패:',path,r.status);return false;}return true;}catch(e){console.error('fbSet 오류:',e);return false;}};
 const fbDel=async path=>{try{await fetch(`${FB}/${path}.json`,{method:'DELETE'});return true;}catch{return false;}};
+// 읽기 성공/실패를 구분해서 돌려줍니다. (빈 값과 통신 실패를 섞지 않기 위함)
+const fbRead=async path=>{try{const r=await fetch(`${FB}/${path}.json?t=${Date.now()}`,{cache:'no-store'});if(!r.ok)return {ok:false,val:null};return {ok:true,val:await r.json()};}catch(e){return {ok:false,val:null};}};
+const fbReadTry=async(path,tries=3)=>{
+  for(let i=0;i<tries;i++){
+    const r=await fbRead(path);
+    if(r.ok)return r;
+    if(i<tries-1)await new Promise(x=>setTimeout(x,500));
+  }
+  return {ok:false,val:null};
+};
+// Firebase는 id가 숫자처럼 보이면 배열로 돌려줄 수 있어 항상 맵으로 정규화합니다.
+const toMap=v=>{
+  if(!v||typeof v!=='object')return {};
+  if(Array.isArray(v)){const o={};v.forEach((x,i)=>{if(x==null)return;o[(x&&x.id)||i]=x;});return o;}
+  return {...v};
+};
 
 // 메모리 캐시
 const MEM={stu:[],pw:'admin1234',lessons:{},videos:[],notices:[],classes:[],leaders:[]};
 
+// 학생 명단을 서버에서 제대로 읽었는지, 원장이 명시적으로 삭제한 학생이 누군지 기억합니다.
+let STU_READY=false;
+const STU_GONE=[];
+
 const saveStu=async()=>{
   MEM.stu=Q.students;
-  const obj={};
-  const privateObj={};
+  if(!STU_READY){
+    alert('학생 명단을 서버에서 아직 읽지 못했습니다.\n\n기존 정보가 지워지는 것을 막기 위해 저장하지 않았습니다.\n페이지를 새로고침한 뒤 다시 시도해 주세요.');
+    return false;
+  }
+  // 저장 직전에 서버의 현재 값을 읽어 병합합니다.
+  // (다른 기기·다른 탭에서 입력한 내용, 그리고 이 화면에 없는 항목이 지워지지 않도록)
+  const cur=await fbReadTry('students');
+  if(!cur.ok){
+    alert('서버 상태를 확인할 수 없어 저장하지 않았습니다.\n\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+    return false;
+  }
+  const gone=STU_GONE.slice();
+  const obj=toMap(cur.val);
+  const privNew={};
   Q.students.forEach(s=>{
-    // 전화번호는 privateInfo로 분리
+    if(!s||!s.id)return;
     const {info,...rest}=s;
     const {phone,...safeInfo}=info||{};
-    obj[s.id]={...rest,info:safeInfo};
-    if(phone)privateObj[s.id]={phone};
+    const prev=obj[s.id]||{};
+    obj[s.id]={...prev,...rest,info:{...(prev.info||{}),...safeInfo}};
+    if(phone!==undefined)privNew[s.id]=String(phone||'');
   });
+  gone.forEach(id=>{delete obj[id];});
   const ok=await fbSet('students',obj);
-  if(!ok)alert('학생 저장에 실패했습니다.\n\nFirebase 규칙에서 students 쓰기가 허용되어 있는지 확인해 주세요.');
-  if(Object.keys(privateObj).length)await fbSet('privateInfo',privateObj);
+  if(!ok){
+    alert('학생 저장에 실패했습니다.\n\nFirebase 규칙에서 students 쓰기가 허용되어 있는지 확인해 주세요.');
+    return false;
+  }
+  STU_GONE.length=0;
+  // 연락처도 서버 값과 병합
+  const pk=Object.keys(privNew);
+  if(pk.length||gone.length){
+    const cp=await fbReadTry('privateInfo');
+    if(cp.ok){
+      const pm=toMap(cp.val);
+      pk.forEach(id=>{
+        if(privNew[id])pm[id]={...(pm[id]||{}),phone:privNew[id]};
+        else delete pm[id];
+      });
+      gone.forEach(id=>{delete pm[id];});
+      await fbSet('privateInfo',pm);
+    }
+  }
   return ok;
 };
 const savePw=async pw=>{const v=String(pw==null?'':pw).trim();MEM.pw=v;Q.pw=v;PW_READY=true;await fbSet('pw',v);};
@@ -689,7 +740,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103l'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103m'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -737,7 +788,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103l'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103m'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1229,6 +1280,7 @@ async function aStuEdit(){
     const name=Q.students.find(s=>s.id===stu.id)?.name||'';
     showModal('학생 삭제',`${name} 학생과 모든 수업 기록이 삭제됩니다. 복구할 수 없습니다.`,async()=>{
       await deleteStu(stu.id);
+      STU_GONE.push(stu.id);
       Q.students=Q.students.filter(s=>s.id!==stu.id);
       await saveStu();Q.scr='aList';render();
     });
@@ -2102,8 +2154,18 @@ const loadPw=async(tries=3)=>{
 };
 const initData=async()=>{
   await loadPw();   // 비밀번호부터 확보
-  try{const stu=await fbGet('students');if(stu)MEM.stu=Object.values(stu);}catch(e){}
-  try{const priv=await fbGet('privateInfo');if(priv&&MEM.stu){MEM.stu=MEM.stu.map(s=>{const p=priv[s.id];if(p?.phone){if(!s.info)s.info={};s.info.phone=p.phone;}return s;});}}catch(e){}
+  // 학생 명단은 실패하면 재시도하고, 성공했을 때만 저장을 허용합니다.
+  try{
+    const r=await fbReadTry('students');
+    if(r.ok){MEM.stu=Object.values(toMap(r.val));STU_READY=true;}
+  }catch(e){}
+  try{
+    const r=await fbReadTry('privateInfo');
+    if(r.ok&&MEM.stu){
+      const priv=toMap(r.val);
+      MEM.stu=MEM.stu.map(s=>{const p=priv[s.id];if(p&&p.phone){if(!s.info)s.info={};s.info.phone=p.phone;}return s;});
+    }
+  }catch(e){}
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
   try{const nots=await fbGet('notices');if(nots)MEM.notices=Array.isArray(nots)?nots:Object.values(nots);}catch(e){}
   try{const cls=await fbGet('classes');if(cls)MEM.classes=Array.isArray(cls)?cls:Object.values(cls);}catch(e){}

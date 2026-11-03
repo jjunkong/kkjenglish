@@ -363,6 +363,11 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
 const FB='https://kkjenglish-a831d-default-rtdb.firebaseio.com';
 const fbGet=async p=>{try{const r=await fetch(`${FB}/${p}.json`);return r.ok?await r.json():null;}catch{return null;}};
 const fbSet=async(p,v)=>{try{const r=await fetch(`${FB}/${p}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)});return r.ok;}catch{return false;}};
+// 읽기 성공/실패를 구분 (빈 값과 통신 실패를 섞지 않기 위함)
+const fbRead=async p=>{try{const r=await fetch(`${FB}/${p}.json?t=${Date.now()}`,{cache:'no-store'});if(!r.ok)return{ok:false,val:null};return{ok:true,val:await r.json()};}catch(e){return{ok:false,val:null};}};
+const fbReadTry=async(p,tries=3)=>{for(let i=0;i<tries;i++){const r=await fbRead(p);if(r.ok)return r;if(i<tries-1)await new Promise(x=>setTimeout(x,500));}return{ok:false,val:null};};
+const toMap=v=>{if(!v||typeof v!=='object')return{};if(Array.isArray(v)){const o={};v.forEach((x,i)=>{if(x==null)return;o[(x&&x.id)||i]=x;});return o;}return{...v};};
+let STU_READY=false;
 
 const DAYS=['일','월','화','수','목','금','토'];
 const pad=n=>String(n).padStart(2,'0');
@@ -491,11 +496,12 @@ async function boot(){
   paint();
 }
 async function loadBase(){
-  const [st,cl,ld,cp]=await Promise.all([fbGet('students'),fbGet('classes'),fbGet('leaders'),fbGet('classProgress')]);
+  const [st,cl,ld,cp]=await Promise.all([fbReadTry('students'),fbGet('classes'),fbGet('leaders'),fbGet('classProgress')]);
   S.cprog=cp||{};
   const vd=await fbGet('videos');
   S.videos=vd?(Array.isArray(vd)?vd.filter(Boolean):Object.values(vd)):[];
-  S.students=st?(Array.isArray(st)?st.filter(Boolean):Object.values(st)):[];
+  if(st.ok){S.students=Object.values(toMap(st.val));STU_READY=true;}
+  else{S.students=[];STU_READY=false;}
   S.classes=cl?(Array.isArray(cl)?cl.filter(Boolean):Object.values(cl)):[];
   S.leaders=ld?(Array.isArray(ld)?ld.filter(Boolean):Object.values(ld)):[];
 }
@@ -1086,15 +1092,38 @@ function parseDays(v){
   return out.length?out.sort((a,b)=>a-b):null;
 }
 async function saveStudents(){
-  const obj={},priv={};
+  if(!STU_READY){
+    alert('학생 명단을 서버에서 아직 읽지 못했습니다.\n\n기존 정보가 지워지는 것을 막기 위해 저장하지 않았습니다.\n새로고침한 뒤 다시 시도해 주세요.');
+    return false;
+  }
+  // 저장 직전에 서버의 현재 값을 읽어 병합합니다.
+  const cur=await fbReadTry('students');
+  if(!cur.ok){
+    alert('서버 상태를 확인할 수 없어 저장하지 않았습니다.\n\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+    return false;
+  }
+  const obj=toMap(cur.val),priv={};
   S.students.forEach(st=>{
+    if(!st||!st.id)return;
     const {info,...rest}=st;
     const {phone,...safe}=info||{};
-    obj[st.id]={...rest,info:safe};
-    if(phone)priv[st.id]={phone};
+    const prev=obj[st.id]||{};
+    obj[st.id]={...prev,...rest,info:{...(prev.info||{}),...safe}};
+    if(phone!==undefined)priv[st.id]=String(phone||'');
   });
-  await fbSet('students',obj);
-  if(Object.keys(priv).length)await fbSet('privateInfo',priv);
+  const ok=await fbSet('students',obj);
+  if(!ok){alert('학생 저장에 실패했습니다.');return false;}
+  const pk=Object.keys(priv);
+  if(pk.length){
+    // 연락처는 올린 학생만 갱신하고 나머지는 그대로 둡니다.
+    const cp=await fbReadTry('privateInfo');
+    if(cp.ok){
+      const pm=toMap(cp.val);
+      pk.forEach(id=>{if(priv[id])pm[id]={...(pm[id]||{}),phone:priv[id]};else delete pm[id];});
+      await fbSet('privateInfo',pm);
+    }
+  }
+  return ok;
 }
 
 $('stubtn').onclick=()=>{SROWS=[];$('sprev').innerHTML='';$('sgo').disabled=true;$('smodal').classList.add('on');};
