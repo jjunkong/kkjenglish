@@ -226,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103f'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103h'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -598,8 +598,26 @@ async function mainScreen(){
       stNas.innerHTML='<span style="color:#0B1A38;">내신 </span><span style="color:#2E63E8;">시험</span>';
       body2.appendChild(stNas);
       const gNas=mks('div','display:flex;gap:6px;min-width:0;');
-      gNas.appendChild(mkItem(mkLbl('하빵','#dbeafe','#1e3a8a','#3b82f6'),mkInp(sc.habang||'','rgba(219,234,254,0.8)','rgba(59,130,246,0.4)','#1e3a8a','habang')));
-      gNas.appendChild(mks('div','flex:2;'));
+      // 하빵: 완료 / 수정 완료
+      const hbVal=(sc.habang==='fixed')?'fixed':((sc.habang===true||sc.habang==='done')?'done':'');
+      const hbRow=mks('div','display:flex;gap:4px;width:100%;min-width:0;');
+      [['done','완료'],['fixed','수정']].forEach(([k,t])=>{
+        const on=hbVal===k;
+        const b=mks('button','',t);
+        b.style.cssText=`flex:1 1 0;min-width:0;height:38px;border-radius:10px;border:2px solid ${on?'#3b82f6':'rgba(59,130,246,0.25)'};background:${on?'linear-gradient(135deg,#93c5fd,#3b82f6)':'rgba(219,234,254,0.8)'};color:${on?'#fff':'#1d4ed8'};font-size:12px;font-weight:700;cursor:pointer;font-family:${CF};box-sizing:border-box;`;
+        b.onclick=async()=>{
+          const nv=on?'':k;
+          sc.habang=nv;
+          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
+          lData.habangTest=nv;
+          await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
+        };
+        hbRow.appendChild(b);
+      });
+      const hbItem=mkItem(mkLbl('하빵(내신범위 빈칸테스트)','#dbeafe','#1e3a8a','#3b82f6'),hbRow);
+      hbItem.style.flex='2 1 0';
+      gNas.appendChild(hbItem);
+      gNas.appendChild(mks('div','flex:1;'));
       body2.appendChild(gNas);
 
       // 코멘트
