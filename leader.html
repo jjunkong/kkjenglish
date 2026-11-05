@@ -226,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103i'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103j'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -312,7 +312,7 @@ async function mainScreen(){
         attend:(l.attend===true?'present':(l.attend||'')),hwDone:(l.hwDone||(l.hw===true?'o':'')),hwNote:l.hwNote||'',
         on:(l.on&&typeof l.on==='object')?Object.assign({},l.on):null,
         B:l.bTest||'',O:l.oTest||'',D:l.dTest||'',dNote:l.dNote||'',
-        word:l.wordTest||'',wb:l.wbTest||'',wbDone:l.wbDone||'',write:l.writeTest||'',habang:l.habangTest||'',
+        word:l.wordTest||'',wb:l.wbTest||'',wbDone:l.wbDone||'',write:l.writeTest||'',habang:l.habangTest||'',mock:l.mockTest||'',
         comment:l.leaderComment||''
       };
     }
@@ -354,7 +354,7 @@ async function mainScreen(){
         btn.onclick=()=>cb(!done);return btn;
       };
       // ── 시험 실시 여부 (라벨을 눌러 켜고 끔) ──
-      const TK={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest'};
+      const TK={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest'};
       const isOn=k=>{
         const o=sc.on;
         if(o&&typeof o==='object'&&k in o)return !!o[k];
@@ -598,29 +598,41 @@ async function mainScreen(){
       stNas.innerHTML='<span style="color:#0B1A38;">내신 </span><span style="color:#2E63E8;">시험</span>';
       body2.appendChild(stNas);
       const gNas=mks('div','display:flex;gap:6px;min-width:0;');
-      // 하빵: 완료 / 수정 완료
-      const hbVal=(sc.habang==='fixed')?'fixed':((sc.habang===true||sc.habang==='done')?'done':'');
-      const hbRow=mks('div','display:flex;gap:4px;width:100%;min-width:0;');
-      [['done','완료'],['fixed','수정']].forEach(([k,t])=>{
-        const on=hbVal===k;
-        const b=mks('button','',t);
-        b.style.cssText=`flex:1 1 0;min-width:0;height:38px;border-radius:10px;border:2px solid ${on?'#3b82f6':'rgba(59,130,246,0.25)'};background:${on?'linear-gradient(135deg,#93c5fd,#3b82f6)':'rgba(219,234,254,0.8)'};color:${on?'#fff':'#1d4ed8'};font-size:12px;font-weight:700;cursor:pointer;font-family:${CF};box-sizing:border-box;`;
-        b.onclick=async()=>{
-          const nv=on?'':k;
-          sc.habang=nv;
-          const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
-          lData.habangTest=nv;
-          await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
-        };
-        hbRow.appendChild(b);
-      });
-      const hbOn=isOn('habang');
-      let hbBody=hbRow;
-      if(!hbOn){hbBody=mkOff();hbBody.onclick=()=>toggleOn('habang');}
-      const hbItem=mkItem(mkTLbl('habang','하빵(내신범위 빈칸테스트)','#dbeafe','#1e3a8a','#3b82f6'),hbBody);
-      hbItem.style.flex='2 1 0';
-      gNas.appendChild(hbItem);
-      gNas.appendChild(mks('div','flex:1;'));
+      // 완료 / 수정 두 버튼 한 벌 (하빵·동형모의고사 공용)
+      const mkDone2=(key,field,bd,bg,fg,on1,on2)=>{
+        const cur=(sc[key]==='fixed')?'fixed':((sc[key]===true||sc[key]==='done')?'done':'');
+        const row=mks('div','display:flex;gap:4px;width:100%;min-width:0;');
+        [['done','완료'],['fixed','수정']].forEach(([k,t])=>{
+          const sel=cur===k;
+          const b=mks('button','',t);
+          b.style.cssText=`flex:1 1 0;min-width:0;height:38px;border-radius:10px;border:2px solid ${sel?bd:bg};background:${sel?`linear-gradient(135deg,${on1},${on2})`:bg};color:${sel?'#fff':fg};font-size:12px;font-weight:700;cursor:pointer;font-family:${CF};box-sizing:border-box;`;
+          b.onclick=async()=>{
+            const nv=sel?'':k;
+            sc[key]=nv;
+            const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
+            lData[field]=nv;
+            await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
+          };
+          row.appendChild(b);
+        });
+        return row;
+      };
+      // 라벨(실시/미실시 토글) + 본문
+      const mkNasRow=(key,txt,lbg,lfg,lbd,body)=>{
+        const on=isOn(key);
+        let el=body;
+        if(!on){el=mkOff();el.onclick=()=>toggleOn(key);}
+        const it=mkItem(mkTLbl(key,txt,lbg,lfg,lbd),el);
+        it.style.flex='0 0 auto';
+        it.style.width='100%';
+        return it;
+      };
+      gNas.style.flexDirection='column';
+      gNas.style.gap='8px';
+      gNas.appendChild(mkNasRow('habang','하빵(내신범위 빈칸테스트)','#dbeafe','#1e3a8a','#3b82f6',
+        mkDone2('habang','habangTest','#3b82f6','rgba(219,234,254,0.8)','#1d4ed8','#93c5fd','#3b82f6')));
+      gNas.appendChild(mkNasRow('mock','동형모의고사 & 문풀','#ccfbf1','#115e59','#14b8a6',
+        mkDone2('mock','mockTest','#14b8a6','rgba(204,251,241,0.8)','#0f766e','#5eead4','#14b8a6')));
       body2.appendChild(gNas);
 
       // 코멘트

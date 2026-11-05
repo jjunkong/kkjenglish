@@ -908,7 +908,9 @@ const scoreVal=v=>{
   return isNaN(n)?null:n;
 };
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
-const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest'};
+const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest'};
+// 완료 / 수정 완료 / 미완료
+const dLab=v=>(v==='fixed')?'수정 완료':((v==='done'||v===true)?'완료':'미완료');
 const testOn=(l,k)=>{
   const o=l&&l.on;
   if(o&&typeof o==='object'&&k in o)return !!o[k];
@@ -935,6 +937,8 @@ const smsTests=l=>{
       :((w===''||w==null||w===false)?'미완료':smsNum(w)));
     r.push(`영작시험 : ${t}`);
   }
+  if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
+  if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
 // 과제 수행 상태 (구 boolean hw 호환)

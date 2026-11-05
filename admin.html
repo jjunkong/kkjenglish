@@ -157,7 +157,9 @@ const smsNum=v=>{
   return `${s}점`;
 };
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
-const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest'};
+const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest'};
+// 완료 / 수정 완료 / 미완료
+const dLab=v=>(v==='fixed')?'수정 완료':((v==='done'||v===true)?'완료':'미완료');
 const testOn=(l,k)=>{
   const o=l&&l.on;
   if(o&&typeof o==='object'&&k in o)return !!o[k];
@@ -184,6 +186,8 @@ const smsTests=l=>{
       :((w===''||w==null||w===false)?'미완료':smsNum(w)));
     r.push(`영작시험 : ${t}`);
   }
+  if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
+  if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
 // 과제 수행 상태 (구 boolean hw 호환)
@@ -755,7 +759,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103r'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103s'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -803,7 +807,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103r'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103s'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
