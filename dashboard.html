@@ -923,7 +923,11 @@ const smsTests=l=>{
   if(testOn(l,'B'))r.push(`복테[복습테스트] : ${smsNum(l.bTest)}`);
   if(testOn(l,'O'))r.push(`확테[확인테스트] : ${smsNum(l.oTest)}`);
   if(testOn(l,'D'))r.push(`개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
-  if(testOn(l,'word'))r.push(`단어시험 : ${smsNum(l.wordTest)}`);
+  if(testOn(l,'word')){
+    const w=l.wordTest;
+    const t=(w==='done'||w===true)?'완료':((w===''||w==null||w===false)?'미완료':smsNum(w));
+    r.push(`단어시험 : ${t}`);
+  }
   if(testOn(l,'wb')){
     const w=l.wbTest;
     const done=(w==='done'||w===true||l.wbDone==='done'||l.wbDone===true);

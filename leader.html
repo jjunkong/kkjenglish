@@ -226,7 +226,7 @@ async function mainScreen(){
   // 리더 이름 + 로그아웃
   const nameRow=mks('div','display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;');
   const nameEl=mks('div','font-size:16px;font-weight:700;color:#0B1A38;',`👨‍🏫 ${Q.lLeader.name} 학습리더`);nameEl.style.fontFamily=CF;
-  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103j'));
+  nameEl.appendChild(mks('span',`font-size:9px;font-weight:600;color:#9aa5bd;margin-left:7px;font-family:${CF};`,'v1103k'));
   const loBtn=mks('button','font-size:11px;color:rgba(10,26,92,0.4);background:none;border:none;cursor:pointer;','로그아웃');loBtn.style.fontFamily=CF;
   loBtn.onclick=()=>{sesClear();Q.lLeader=null;Q._lClass='';Q._lScores=null;Q.scr='login';render();};
   nameRow.appendChild(nameEl);nameRow.appendChild(loBtn);topCard.appendChild(nameRow);
@@ -549,8 +549,35 @@ async function mainScreen(){
       const st3=mks('div','font-size:13px;font-weight:700;margin-bottom:8px;');st3.style.fontFamily=CF;
       st3.innerHTML='<span style="color:#0B1A38;">보다 </span><span style="color:#2E63E8;">CLINIC</span>';
       body2.appendChild(st3);
-      const g3=mks('div','display:flex;gap:6px;min-width:0;');
-      g3.appendChild(mkTest('word','단어','#ffedd5','#9a3412','#f97316',()=>mkFrac(sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word')));
+      const g3=mks('div','display:flex;gap:6px;min-width:0;align-items:flex-start;');
+      // 단어: 틀린개수/전체문제수 + 완료 버튼
+      const wdOn=isOn('word');
+      const wdDone=(sc.word==='done'||sc.word===true);
+      const wdWrap=mks('div','display:flex;flex-direction:column;gap:4px;width:100%;min-width:0;');
+      wdWrap.appendChild(mkFrac(wdDone?'':sc.word,'rgba(255,237,213,0.8)','rgba(249,115,22,0.4)','#ea580c','word'));
+      let wdCur=wdDone;
+      const wdBtn=mks('button','','완료');
+      const paintWd=()=>{
+        wdBtn.textContent=wdCur?'✓ 완료':'완료';
+        wdBtn.style.cssText=`width:100%;height:32px;border-radius:9px;border:2px solid ${wdCur?'#f97316':'rgba(249,115,22,0.3)'};background:${wdCur?'linear-gradient(135deg,#fdba74,#f97316)':'rgba(255,237,213,0.8)'};color:${wdCur?'#fff':'#c2410c'};font-size:12px;font-weight:700;cursor:pointer;font-family:${CF};box-sizing:border-box;`;
+      };
+      paintWd();
+      wdBtn.onclick=async()=>{
+        const nv=wdCur?'':'done';
+        wdCur=!wdCur;paintWd();
+        sc.word=nv;
+        const lData=await getLessonFresh(stu.id,Q._lDate||TODAY);
+        lData.wordTest=nv;
+        await setLesson(stu.id,Q._lDate||TODAY,lData);refreshBody();
+      };
+      // 숫자를 입력하면 완료 표시를 내린다 (포커스를 잃지 않도록 다시 그리지 않음)
+      wdWrap.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{
+        if(wdCur){wdCur=false;paintWd();}
+      }));
+      wdWrap.appendChild(wdBtn);
+      let wdBody=wdWrap;
+      if(!wdOn){wdBody=mkOff();wdBody.onclick=()=>toggleOn('word');}
+      g3.appendChild(mkItem(mkTLbl('word','단어','#ffedd5','#9a3412','#f97316'),wdBody));
       // 단어워크북: 완료 여부만
       const wbOn=isOn('wb');
       const wbDone=(sc.wb==='done'||sc.wb===true||sc.wbDone==='done'||sc.wbDone===true);

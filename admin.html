@@ -172,7 +172,11 @@ const smsTests=l=>{
   if(testOn(l,'B'))r.push(`복테[복습테스트] : ${smsNum(l.bTest)}`);
   if(testOn(l,'O'))r.push(`확테[확인테스트] : ${smsNum(l.oTest)}`);
   if(testOn(l,'D'))r.push(`개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
-  if(testOn(l,'word'))r.push(`단어시험 : ${smsNum(l.wordTest)}`);
+  if(testOn(l,'word')){
+    const w=l.wordTest;
+    const t=(w==='done'||w===true)?'완료':((w===''||w==null||w===false)?'미완료':smsNum(w));
+    r.push(`단어시험 : ${t}`);
+  }
   if(testOn(l,'wb')){
     const w=l.wbTest;
     const done=(w==='done'||w===true||l.wbDone==='done'||l.wbDone===true);
@@ -759,7 +763,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103s'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103t'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -807,7 +811,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103s'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103t'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
