@@ -199,6 +199,16 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 #mmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #mmodal.on{display:flex;}
 .xbox.wide{width:720px;}
+/* DAILY REPORT 발송 창 — 문자 전문이 잘리지 않게 */
+#mmodal{padding:12px;}
+#mmodal .xbox{width:1120px;max-width:97vw;max-height:95vh;}
+#mprev .xscroll{max-height:none;overflow:visible;border:none;border-radius:0;padding:0;}
+#mprev .mrow pre{max-height:none;overflow:visible;font-size:12px;line-height:1.7;}
+@media (max-width:760px){
+  #mmodal .xbox{padding:16px;}
+  .mrow{flex-wrap:wrap;}
+  .mrow .mi{width:auto;flex:1 1 100%;}
+}
 .mrow{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line-2);align-items:flex-start;}
 .mrow:last-child{border-bottom:none;}
 .mrow>input{width:17px;height:17px;accent-color:var(--brand);cursor:pointer;margin-top:2px;flex:none;}
@@ -970,7 +980,7 @@ function genSMS(stu,l,dateStr){
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
     +(hwOn(l)?`<과제 수행>\n${hwLine(l)}\n\n`:'')
     +(sc?`<TEST>\n${sc}\n\n`:'')
-    +`늘 믿고 맡겨주셔서 감사합니다.\n-김기준영어학원 드림`;
+    +`최선을 다해서 지도하겠습니다. 감사합니다.\n-김기준영어학원 드림`;
 }
 
 $('smsbtn').onclick=async()=>{
