@@ -763,7 +763,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103u'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103v'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -811,7 +811,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103u'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103v'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -913,7 +913,7 @@ async function aList(){
       gl.appendChild(mks('div','font-size:12px;font-weight:700;color:#1a2f6e;','📋 공통 수업 계획 입력'));
       gl.appendChild(mks('div','font-size:10px;color:#818cf8;margin-top:2px;','선택한 학생에게 적용'));
       groupBtn.appendChild(gl);groupBtn.appendChild(mks('span','font-size:14px;color:#818cf8;','›'));
-      groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=stuList;Q._groupClassName=cls.name;render();};
+      groupBtn.onclick=()=>{Q.scr='aGroupPlan';Q._groupDate=Q.aDate;Q._groupStudents=stuList;Q._groupClassName=cls.name;Q._groupClassId=cls.id;render();};
       cbody.appendChild(groupBtn);
 
       // 반 전체 영상 배정
@@ -1579,8 +1579,20 @@ async function aGroupPlan(){
     if(!existingPlan&&firstLesson.plan?.core)existingPlan=firstLesson.plan.core;
   }
 
+  // 대시보드에서 만든 공지 초안 (아직 적은 내용이 없을 때만 채웁니다)
+  let draft=null;
+  if(Q._groupClassId){
+    try{draft=await fbGet(`classNotice/${Q._groupClassId}/${date.replace(/-/g,'_')}`);}catch(e){}
+  }
+  if(draft&&!existingPlan&&draft.notice)existingPlan=String(draft.notice).trim();
+  if(draft&&!existingHw&&draft.homework)existingHw=String(draft.homework).trim();
+
   // 수업 내용 입력 (단일 칸)
   body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin-bottom:8px;','공통 수업 계획'));
+  if(draft&&draft.notice){
+    body.appendChild(mks('div','font-size:11px;color:#1d4ed8;background:#eef2ff;border:1px solid #c7d2fe;padding:8px 10px;border-radius:8px;margin-bottom:8px;',
+      '대시보드에서 만든 공지 초안입니다. 확인하고 고친 뒤 적용해 주세요.'));
+  }
   const GL={plan:{check:existingPlan,core:'',fix:''},hw:existingHw};
   const sb=mk('div','section-block');
   sb.appendChild(mk('div','section-tag','수업내용'));

@@ -199,6 +199,16 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 #mmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #mmodal.on{display:flex;}
 .xbox.wide{width:720px;}
+#nmodal .nrow{display:flex;gap:8px;margin-bottom:10px;}
+#nmodal .nrow select,#nmodal .nrow input{flex:1;height:38px;border:1.5px solid var(--line);border-radius:9px;padding:0 10px;font-size:13px;font-family:inherit;background:var(--card);color:var(--ink);}
+#nmodal .nlab{font-size:12px;font-weight:700;margin:12px 0 5px;}
+#nmodal .nlab span{font-weight:500;color:var(--ink-3);}
+#nmodal textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 11px;font-size:12.5px;line-height:1.65;font-family:inherit;resize:vertical;background:var(--card);color:var(--ink);box-sizing:border-box;}
+#nfiles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+#nfiles .f{font-size:11.5px;font-weight:600;background:var(--line-2);border-radius:7px;padding:4px 9px;}
+#nfiles .f.bad{background:#FDECEF;color:var(--no);}
+#nmodal .outbox{margin-top:14px;border:1.5px solid var(--brand);border-radius:12px;padding:13px;}
+#nmodal .outbox h4{font-size:13px;font-weight:800;margin-bottom:8px;}
 /* DAILY REPORT 발송 창 — 화면 전체를 쓰고 문자 전문이 잘리지 않게 */
 #mmodal{padding:0;}
 #mmodal .xbox{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;
@@ -256,6 +266,9 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 .vsave button:disabled{background:var(--line);color:var(--ink-3);}
 #xmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #xmodal.on{display:flex;}
+#nmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
+#nmodal.on{display:flex;}
+#nmodal .xbox{max-height:92vh;}
 .xbox{background:var(--card);border-radius:18px;padding:24px;width:560px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(11,26,56,.3);}
 .xbox h3{font-size:19px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;}
 .xdesc{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-bottom:14px;}
@@ -297,6 +310,7 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
 .pbase{grid-column:span 2;font-size:13px;font-weight:600;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pbase em{font-style:normal;color:var(--ink-3);}
 .load{text-align:center;color:var(--ink-3);padding:34px 10px;font-size:13px;}
+.ok{margin-top:9px;background:#E6F7F0;color:#0EA96B;font-size:11.5px;font-weight:700;padding:8px 11px;border-radius:8px;}
 </style>
 </head>
 <body>
@@ -321,6 +335,7 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <button class="ghost pri" id="smsbtn">문자 일괄 발송</button>
     <button class="ghost" id="stubtn">학생 정보 업로드</button>
     <button class="ghost" id="xlsbtn">진도 업로드</button>
+    <button class="ghost" id="ntcbtn" title="수업자료로 학부모 공지 초안 만들기">공지 만들기</button>
     <button class="ghost" id="extbtn" title="외부 성적 연동 설정">연동</button>
     <button class="ghost" id="toadmin">원장방</button>
   </div>
@@ -356,6 +371,31 @@ table.xtb tr.bad td{color:var(--no);background:var(--no-w);}
     <div class="xfoot">
       <button class="ghost" id="sclose">닫기</button>
       <button class="xgo" id="sgo" disabled>반영하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="nmodal">
+  <div class="xbox wide">
+    <h3>수업자료 → 학부모 공지 초안</h3>
+    <p class="xdesc">그날 쓴 수업자료를 올리면 학부모 공지 문장을 만들어 드립니다. <b>초안일 뿐이라 바로 나가지 않습니다</b> — 원장방의 공통 수업 계획에 채워지고, 확인·수정 후 적용하시면 됩니다.</p>
+    <div class="nrow">
+      <select id="ncls"></select>
+      <input type="date" id="ndate">
+    </div>
+    <label class="xdrop" id="ndrop">
+      <input type="file" id="nfile" accept=".docx,.txt,.md" multiple hidden>
+      <span>수업자료 선택 또는 여기에 끌어다 놓기 &nbsp;·&nbsp; 워드(.docx) · 텍스트(.txt)</span>
+    </label>
+    <div id="nfiles"></div>
+    <div class="nlab">수업자료 내용 <span>— 파일을 올리면 자동으로 채워집니다. 직접 붙여넣어도 됩니다.</span></div>
+    <textarea id="ntext" rows="7" placeholder="PDF나 한글 파일은 내용을 복사해서 여기에 붙여넣어 주세요."></textarea>
+    <div class="nlab">원장 메모 <span>— 자료에 없는 내용(복습테스트 범위, 강조한 부분 등)</span></div>
+    <textarea id="nmemo" rows="2" placeholder="예: 지난 시간 관계사 복습테스트로 시작, 영작 연습지 과제"></textarea>
+    <div id="nprev"></div>
+    <div class="xfoot">
+      <button class="ghost" id="nclose">닫기</button>
+      <button class="xgo" id="ngo">공지 만들기</button>
     </div>
   </div>
 </div>
@@ -1106,6 +1146,121 @@ async function saveLessonFlag(sid,date,patch){
   const next={...base,on:{...(base.on||{}),...patch}};
   return await fbSet(`lessons/${sid}/${key}`,next);
 }
+
+// ───────── 수업자료 → 학부모 공지 초안 ─────────
+// .docx 는 zip 이라 브라우저 기본 기능만으로 글자를 뽑습니다. (외부 라이브러리 없음)
+async function docxText(buf){
+  const dv=new DataView(buf), u8=new Uint8Array(buf);
+  let eo=-1;
+  for(let i=u8.length-22;i>=0&&i>u8.length-65558;i--){ if(dv.getUint32(i,true)===0x06054b50){eo=i;break;} }
+  if(eo<0)throw new Error('워드 파일이 아닙니다');
+  const n=dv.getUint16(eo+10,true);
+  let p=dv.getUint32(eo+16,true), target=null;
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true);
+    const nlen=dv.getUint16(p+28,true), elen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(u8.subarray(p+46,p+46+nlen));
+    if(name==='word/document.xml')target={method,csize,lho};
+    p+=46+nlen+elen+clen;
+  }
+  if(!target)throw new Error('본문을 찾지 못했습니다');
+  const lh=target.lho;
+  if(dv.getUint32(lh,true)!==0x04034b50)throw new Error('파일이 손상됐습니다');
+  const start=lh+30+dv.getUint16(lh+26,true)+dv.getUint16(lh+28,true);
+  const comp=u8.subarray(start,start+target.csize);
+  let xmlBuf;
+  if(target.method===0)xmlBuf=comp;
+  else{
+    const ds=new DecompressionStream('deflate-raw');
+    xmlBuf=new Uint8Array(await new Response(new Blob([comp]).stream().pipeThrough(ds)).arrayBuffer());
+  }
+  return new TextDecoder().decode(xmlBuf)
+    .replace(/<w:tab[^>]*\/>/g,'\t').replace(/<w:br[^>]*\/>/g,'\n').replace(/<\/w:p>/g,'\n')
+    .replace(/<[^>]+>/g,'')
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'")
+    .replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+$('ntcbtn').onclick=()=>{
+  const sel=$('ncls'); sel.innerHTML='';
+  S.classes.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+  $('ndate').value=S.date;
+  $('nfiles').innerHTML=''; $('nprev').innerHTML='';
+  $('ntext').value=''; $('nmemo').value='';
+  $('nmodal').classList.add('on');
+};
+$('nclose').onclick=()=>$('nmodal').classList.remove('on');
+$('nmodal').onclick=e=>{if(e.target===$('nmodal'))$('nmodal').classList.remove('on');};
+
+async function readMaterials(files){
+  const tags=$('nfiles'); tags.innerHTML='';
+  const parts=[];
+  for(const f of files){
+    const tag=el('div','f',f.name); tags.appendChild(tag);
+    try{
+      let t='';
+      if(/\.docx$/i.test(f.name))t=await docxText(await f.arrayBuffer());
+      else t=(await f.text()).trim();
+      if(!t)throw new Error('내용이 비어 있습니다');
+      parts.push(`[${f.name}]\n${t}`);
+      tag.textContent=`${f.name} · ${t.length}자`;
+    }catch(err){
+      tag.className='f bad'; tag.textContent=`${f.name} — ${err.message}`;
+    }
+  }
+  if(parts.length){
+    const cur=$('ntext').value.trim();
+    $('ntext').value=(cur?cur+'\n\n':'')+parts.join('\n\n');
+  }
+}
+$('nfile').onchange=e=>readMaterials([...e.target.files]);
+$('ndrop').ondragover=e=>{e.preventDefault();};
+$('ndrop').ondrop=e=>{e.preventDefault();readMaterials([...e.dataTransfer.files]);};
+
+$('ngo').onclick=async()=>{
+  const btn=$('ngo'), out=$('nprev');
+  const material=$('ntext').value.trim(), memo=$('nmemo').value.trim();
+  if(!material&&!memo){out.innerHTML='<div class="warn">수업자료를 올리거나 메모를 적어주세요.</div>';return;}
+  const cid=$('ncls').value, date=$('ndate').value;
+  const cls=S.classes.find(c=>String(c.id)===String(cid));
+  btn.disabled=true; btn.textContent='만드는 중…';
+  out.innerHTML='<div class="load">공지를 쓰는 중입니다…</div>';
+  try{
+    const pw=await fbGet('pw');
+    const r=await fetch('/api/write-notice',{method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-pw':String(pw||'')},
+      body:JSON.stringify({material,memo,className:cls?cls.name:'',dateStr:date})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||`실패 (${r.status})`);
+    out.innerHTML='';
+    const box=el('div','outbox');
+    box.appendChild(el('h4','','공지 초안 — 고치실 수 있습니다'));
+    const ta=document.createElement('textarea'); ta.rows=7; ta.value=j.notice||'';
+    box.appendChild(ta);
+    box.appendChild(el('div','nlab','과제'));
+    const hw=document.createElement('textarea'); hw.rows=2; hw.value=j.homework||'';
+    box.appendChild(hw);
+    const save=el('button','xgo','원장방 공통 수업 계획에 넣기');
+    save.style.marginTop='10px';
+    const msg=el('div','');
+    save.onclick=async()=>{
+      save.disabled=true; save.textContent='저장 중…';
+      const ok=await fbSet(`classNotice/${cid}/${und(date)}`,
+        {notice:ta.value.trim(),homework:hw.value.trim(),at:Date.now()});
+      msg.innerHTML=ok
+        ?'<div class="ok">저장했습니다. 원장방 → 해당 반 → 공통 수업 계획을 열면 채워져 있습니다.</div>'
+        :'<div class="warn">저장에 실패했습니다.</div>';
+      save.disabled=false; save.textContent='다시 저장';
+    };
+    box.appendChild(save); box.appendChild(msg);
+    out.appendChild(box);
+  }catch(err){
+    out.innerHTML=`<div class="warn">${err.message}</div>`;
+  }
+  btn.disabled=false; btn.textContent='공지 만들기';
+};
 
 // 발송은 서버(/api/send-sms)가 처리합니다. API 키는 브라우저에 없습니다.
 async function sendSolapi(messages){
