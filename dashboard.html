@@ -199,15 +199,23 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 #mmodal{display:none;position:fixed;inset:0;z-index:200;background:rgba(11,26,56,.45);align-items:center;justify-content:center;padding:20px;}
 #mmodal.on{display:flex;}
 .xbox.wide{width:720px;}
-/* DAILY REPORT 발송 창 — 문자 전문이 잘리지 않게 */
-#mmodal{padding:12px;}
-#mmodal .xbox{width:1120px;max-width:97vw;max-height:95vh;}
+/* DAILY REPORT 발송 창 — 화면 전체를 쓰고 문자 전문이 잘리지 않게 */
+#mmodal{padding:0;}
+#mmodal .xbox{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;
+  border-radius:0;padding:16px 20px 14px;display:flex;flex-direction:column;overflow:hidden;}
+#mmodal h3{flex:none;}
+#mmodal #mdesc{flex:none;}
+#mmodal #mprev{flex:1 1 auto;min-height:0;overflow-y:auto;}
+#mmodal .xfoot{flex:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);background:var(--card);}
+#mprev .mhead{position:sticky;top:0;z-index:2;background:var(--card);padding:6px 0 8px;}
 #mprev .xscroll{max-height:none;overflow:visible;border:none;border-radius:0;padding:0;}
-#mprev .mrow pre{max-height:none;overflow:visible;font-size:12px;line-height:1.7;}
+#mprev .mrow pre{max-height:none;overflow:visible;font-size:12.5px;line-height:1.7;}
+#mprev .mrow .mi{width:152px;}
+#mprev .mrow .mi em{display:block;margin-top:2px;}
 @media (max-width:760px){
-  #mmodal .xbox{padding:16px;}
+  #mmodal .xbox{padding:12px 14px;}
   .mrow{flex-wrap:wrap;}
-  .mrow .mi{width:auto;flex:1 1 100%;}
+  #mprev .mrow .mi{width:auto;flex:1 1 100%;}
 }
 .mrow{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line-2);align-items:flex-start;}
 .mrow:last-child{border-bottom:none;}
