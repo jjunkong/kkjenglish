@@ -1246,7 +1246,7 @@ $('nfile').onchange=e=>readMaterials([...e.target.files]);
 $('ndrop').ondragover=e=>{e.preventDefault();};
 $('ndrop').ondrop=e=>{e.preventDefault();readMaterials([...e.dataTransfer.files]);};
 
-$('ngo').onclick=async()=>{
+async function genNotice(tweak){
   const btn=$('ngo'), out=$('nprev');
   const material=$('ntext').value.trim(), memo=$('nmemo').value.trim();
   if(!material&&!memo){out.innerHTML='<div class="warn">수업자료를 올리거나 메모를 적어주세요.</div>';return;}
@@ -1258,7 +1258,7 @@ $('ngo').onclick=async()=>{
     const pw=await fbGet('pw');
     const r=await fetch('/api/write-notice',{method:'POST',
       headers:{'Content-Type':'application/json','x-admin-pw':String(pw||'')},
-      body:JSON.stringify({material,memo,className:cls?cls.name:'',dateStr:date})});
+      body:JSON.stringify({material,memo,tweak:tweak||'',className:cls?cls.name:'',dateStr:date})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(j.error||`실패 (${r.status})`);
     out.innerHTML='';
@@ -1269,8 +1269,20 @@ $('ngo').onclick=async()=>{
     box.appendChild(el('div','nlab','과제'));
     const hw=document.createElement('textarea'); hw.rows=2; hw.value=j.homework||'';
     box.appendChild(hw);
+    // 다시 뽑기
+    box.appendChild(el('div','nlab','마음에 안 드시면 — 어떻게 고칠지 적고 다시 뽑기'));
+    const tw=document.createElement('input');
+    tw.className='ntweak';
+    tw.placeholder='예: 더 짧게 / 테스트 얘기는 빼고 / 지문 주제를 더 자세히';
+    tw.style.cssText='width:100%;height:36px;border:1.5px solid var(--line);border-radius:9px;padding:0 10px;font-size:12.5px;font-family:inherit;background:var(--card);color:var(--ink);box-sizing:border-box;';
+    box.appendChild(tw);
+    const again=el('button','ghost','다시 뽑기');
+    again.style.cssText='margin-top:8px;margin-right:8px;';
+    again.onclick=()=>genNotice(tw.value.trim());
+    box.appendChild(again);
+
     const save=el('button','xgo','원장방 공통 수업 계획에 넣기');
-    save.style.marginTop='10px';
+    save.style.marginTop='8px';
     const msg=el('div','');
     save.onclick=async()=>{
       save.disabled=true; save.textContent='저장 중…';
@@ -1287,7 +1299,8 @@ $('ngo').onclick=async()=>{
     out.innerHTML=`<div class="warn">${err.message}</div>`;
   }
   btn.disabled=false; btn.textContent='공지 만들기';
-};
+}
+$('ngo').onclick=()=>genNotice('');
 
 // 발송은 서버(/api/send-sms)가 처리합니다. API 키는 브라우저에 없습니다.
 async function sendSolapi(messages){
