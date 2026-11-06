@@ -210,6 +210,11 @@ const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.co
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
 // 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
 const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
+// 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
+const exText=l=>String((l&&l.extra)||'').trim();
+const exTitle=l=>String((l&&l.extraTitle)||'').trim()||'기타';
+const exOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'extra' in o)?!!o.extra:true;};
+const exBlock=l=>(exText(l)&&exOn(l))?`<${exTitle(l)}>\n${exText(l)}\n\n`:'';
 
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{check:{r:'',m:''},core:{r:'',m:''},fix:{r:'',m:''}},vocab:{score:'',comment:''},status:'none'});
 
@@ -763,7 +768,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103v'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103w'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -811,7 +816,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103v'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103w'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1430,6 +1435,7 @@ async function aLessonView(){
       +'<CLASS 공지>\n'+classNotice+'\n\n'
       +(hwOn(lData)?('<과제 수행>\n'+hwLine(lData,hwBody)+'\n\n'):'')
       +(scores?('<TEST>\n'+scores+'\n\n'):'')
+      +exBlock(lData)
       +'최선을 다해서 지도하겠습니다. 감사합니다.\n'
       +'-김기준영어학원 드림';
   };
@@ -1460,6 +1466,35 @@ async function aLessonView(){
   paintTg();
   hwRow.appendChild(hwTg);
   sec3.appendChild(hwRow);
+
+  // 기타 항목 포함/제외 — 내용이 있을 때만 보여줍니다
+  if(exText(lData)){
+    const exRow=mks('div','display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:#f8f9ff;border:1px solid #e0e7ff;border-radius:10px;margin-bottom:8px;');
+    exRow.appendChild(mks('div','font-size:12px;font-weight:600;color:#475569;',exTitle(lData)+' 항목'));
+    const exTg=document.createElement('button');
+    const paintEx=()=>{
+      const on=exOn(lData);
+      exTg.textContent=on?'문자에 포함':'문자에서 제외';
+      exTg.style.cssText='font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;cursor:pointer;font-family:inherit;flex-shrink:0;border:1px solid '
+        +(on?'#c7d2fe;background:#eef2ff;color:#4338ca;':'#e2e8f0;background:#f1f5f9;color:#94a3b8;');
+    };
+    exTg.onclick=async()=>{
+      const v=!exOn(lData);
+      exTg.disabled=true;
+      if(!lData.on)lData.on={};
+      lData.on.extra=v;
+      if(!L.on)L.on={};
+      L.on.extra=v;
+      const fresh=await getLessonFresh(Q.aStu.id,Q.aDate);
+      fresh.on=Object.assign({},fresh.on||{},{extra:v});
+      await setLesson(Q.aStu.id,Q.aDate,fresh);
+      exTg.disabled=false;
+      paintEx();refreshSMS();
+    };
+    paintEx();
+    exRow.appendChild(exTg);
+    sec3.appendChild(exRow);
+  }
 
   const smsBox=mks('div','');
   const refreshSMS=()=>{
@@ -1612,6 +1647,28 @@ async function aGroupPlan(){
   hwTa.oninput=()=>GL.hw=hwTa.value;
   hwSb.appendChild(hwTa);body.appendChild(hwSb);
 
+  // 기타 항목 (필요할 때만)
+  let existingEx='',existingExT='';
+  if(students.length>0){
+    const fl=await getLesson(students[0].id,date);
+    existingEx=fl.extra||'';existingExT=fl.extraTitle||'';
+  }
+  if(draft&&!existingEx&&draft.extra)existingEx=String(draft.extra).trim();
+  GL.extra=existingEx;GL.extraTitle=existingExT;
+  body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin:14px 0 8px;','기타 (필요할 때만)'));
+  const exSb=mk('div','section-block');
+  const exTi=document.createElement('input');
+  exTi.className='inp';exTi.placeholder='제목 — 비우면 「기타」로 나갑니다 (예: 안내, 공지)';
+  exTi.value=existingExT;exTi.style.marginBottom='8px';
+  exTi.oninput=()=>GL.extraTitle=exTi.value;
+  exSb.appendChild(exTi);
+  const exTa=document.createElement('textarea');
+  exTa.className='section-ta';exTa.rows=3;
+  exTa.placeholder='문자 맨 아래에 덧붙일 내용을 적으세요. 비워두면 문자에 나오지 않습니다.';
+  exTa.value=existingEx;
+  exTa.oninput=()=>GL.extra=exTa.value;
+  exSb.appendChild(exTa);body.appendChild(exSb);
+
   const msg=mks('div','');body.appendChild(msg);
   const btn=mk('button','btn-primary','선택 학생에게 적용');
   btn.onclick=async()=>{
@@ -1621,7 +1678,7 @@ async function aGroupPlan(){
     let count=0;
     for(const stu of selected){
       const existing=await getLessonFresh(stu.id,date);
-      const newL={...existing,plan:{...GL.plan},hw:GL.hw,status:'planned'};
+      const newL={...existing,plan:{...GL.plan},hw:GL.hw,extra:GL.extra||'',extraTitle:GL.extraTitle||'',status:'planned'};
       await setLesson(stu.id,date,newL);count++;
     }
     msg.innerHTML=`<div class="ok-msg">✓ ${count}명에게 적용됐습니다!</div>`;

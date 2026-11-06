@@ -1019,6 +1019,11 @@ const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.co
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
 // 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
 const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
+// 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
+const exText=l=>String((l&&l.extra)||'').trim();
+const exTitle=l=>String((l&&l.extraTitle)||'').trim()||'기타';
+const exOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'extra' in o)?!!o.extra:true;};
+const exBlock=l=>(exText(l)&&exOn(l))?`<${exTitle(l)}>\n${exText(l)}\n\n`:'';
 
 function genSMS(stu,l,dateStr){
   const sc=smsTests(l);
@@ -1028,6 +1033,7 @@ function genSMS(stu,l,dateStr){
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
     +(hwOn(l)?`<과제 수행>\n${hwLine(l)}\n\n`:'')
     +(sc?`<TEST>\n${sc}\n\n`:'')
+    +exBlock(l)
     +`최선을 다해서 지도하겠습니다. 감사합니다.\n-김기준영어학원 드림`;
 }
 
@@ -1126,6 +1132,27 @@ function renderM(cfg){
         draw();
       };
       paintHb();mi.appendChild(hb);
+      // 기타 항목 — 내용이 있을 때만
+      if(exText(r.l)){
+        const eb=document.createElement('button');
+        const paintEb=()=>{
+          const on=exOn(r.l);
+          eb.textContent=on?exTitle(r.l)+' 포함':exTitle(r.l)+' 제외';
+          eb.style.cssText='margin-top:5px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;border:1px solid '
+            +(on?'#c7d2fe;background:#eef2ff;color:#4338ca;':'#e2e8f0;background:#f1f5f9;color:#94a3b8;');
+        };
+        eb.onclick=async()=>{
+          const v=!exOn(r.l);
+          eb.disabled=true;
+          if(!r.l.on)r.l.on={};
+          r.l.on.extra=v;
+          await saveLessonFlag(r.stu.id,S.date,{extra:v});
+          r.text=genSMS(r.stu,r.l,r.dateStr);
+          eb.disabled=false;
+          draw();
+        };
+        paintEb();mi.appendChild(eb);
+      }
       const pre=document.createElement('pre');pre.textContent=r.text;
       row.appendChild(cb);row.appendChild(mi);row.appendChild(pre);
       sc.appendChild(row);
