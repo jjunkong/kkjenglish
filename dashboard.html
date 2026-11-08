@@ -126,6 +126,33 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
 .card-t{font-size:12px;font-weight:800;color:var(--ink-3);letter-spacing:.04em;margin-bottom:13px;display:flex;align-items:center;gap:8px;}
 .card-t .spacer{flex:1;}
+.card-sub{font-size:11px;font-weight:600;color:var(--ink-3);letter-spacing:0;text-transform:none;}
+/* 그래프 아래 요약 */
+.csum{display:flex;flex-wrap:wrap;gap:16px;margin-top:6px;padding-top:10px;border-top:1px solid var(--line-2);}
+.csum>div{display:flex;align-items:center;gap:6px;font-size:11.5px;}
+.csum i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;}
+.csum b{font-weight:800;}
+.csum span{color:var(--ink-3);font-weight:600;}
+/* 이 달 출석 동그라미 */
+.mcal{margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2);}
+.mcal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;}
+.mcal-h b{font-weight:800;}
+.mcal-h span{display:flex;align-items:center;font-size:10.5px;color:var(--ink-3);font-weight:600;}
+.mcal-h i{width:9px;height:9px;border-radius:50%;display:inline-block;margin:0 4px 0 10px;flex:none;}
+.mcal-g{display:flex;flex-wrap:wrap;gap:6px;}
+.mcal-g .d{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);
+  font-size:11px;font-weight:700;color:var(--ink-3);cursor:pointer;font-family:inherit;padding:0;
+  display:flex;align-items:center;justify-content:center;transition:transform .08s;}
+.mcal-g .d:hover{transform:scale(1.12);}
+.mcal-g .d-off{opacity:.3;}
+.mcal-g .d-cls{border-style:dashed;border-color:#B9C6E0;color:var(--ink);}
+.d-ok{background:#0EA96B;border-color:#0EA96B;color:#fff;}
+.d-no{background:#E23D5A;border-color:#E23D5A;color:#fff;}
+.d-mk{background:#F0A714;border-color:#F0A714;color:#fff;}
+.mcal-g .d.d-ok{background:#0EA96B;border-color:#0EA96B;color:#fff;}
+.mcal-g .d.d-no{background:#E23D5A;border-color:#E23D5A;color:#fff;}
+.mcal-g .d.d-mk{background:#F0A714;border-color:#F0A714;color:#fff;}
+.mcal-g .d-sel{outline:2.5px solid var(--brand);outline-offset:2px;}
 .who{display:flex;align-items:baseline;gap:11px;margin-bottom:3px;}
 .who h2{font-size:24px;font-weight:800;letter-spacing:-.03em;}
 .who span{font-size:12.5px;color:var(--ink-3);font-weight:600;}
@@ -692,6 +719,24 @@ function paintC(){
   c1.appendChild(meta);
   box.appendChild(c1);
 
+  // 점수 추이 — 정답률(%)
+  const cG=el('div','card');
+  const gt=el('div','card-t','점수 추이');
+  gt.appendChild(el('span','card-sub','정답률 %'));
+  cG.appendChild(gt);
+  const chips=el('div','chips');
+  TESTS.forEach(t=>{
+    const b=el('button',S.chart.includes(t.k)?'on':'',t.s);
+    b.onclick=()=>{
+      S.chart=S.chart.includes(t.k)?S.chart.filter(k=>k!==t.k):[...S.chart,t.k];
+      paintC();
+    };
+    chips.appendChild(b);
+  });
+  cG.appendChild(chips);
+  cG.appendChild(chart(h.rows));
+  box.appendChild(cG);
+
   // 출석
   const c2=el('div','card');
   c2.appendChild(el('div','card-t',md(S.date)+' 출석'));
@@ -703,6 +748,40 @@ function paintC(){
     set.appendChild(b);
   });
   c2.appendChild(set);
+
+  // 이 달 출석 — 날짜별 동그라미
+  (()=>{
+    const [yy,mm]=S.date.split('-').map(Number);
+    const last=new Date(yy,mm,0).getDate();
+    const byDate={};h.rows.forEach(r=>{byDate[r.date]=r.l;});
+    const strip=el('div','mcal');
+    const head=el('div','mcal-h');
+    head.appendChild(el('b','',`${mm}월 출석`));
+    const lg=el('span','');
+    lg.innerHTML='<i class="d-ok"></i>출석 <i class="d-no"></i>결석 <i class="d-mk"></i>보강';
+    head.appendChild(lg);
+    strip.appendChild(head);
+    const grid=el('div','mcal-g');
+    for(let day=1;day<=last;day++){
+      const ds=`${yy}-${String(mm).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const wd=new Date(yy,mm-1,day).getDay();
+      const isClass=(s.days||[]).includes(wd);
+      const a=attOf(byDate[ds]);
+      let cls='d';
+      if(a==='present')cls+=' d-ok';
+      else if(a==='absent')cls+=' d-no';
+      else if(a==='makeup')cls+=' d-mk';
+      else if(isClass)cls+=' d-cls';
+      else cls+=' d-off';
+      if(ds===S.date)cls+=' d-sel';
+      const dot=el('button',cls,String(day));
+      dot.title=`${mm}/${day} ${DAYS[wd]}요일`+(a?` · ${({present:'출석',absent:'결석',makeup:'보강'})[a]}`:(isClass?' · 수업일':''));
+      dot.onclick=()=>{S.date=ds;const dsel=$('dsel');if(dsel)dsel.value=ds;paint();};
+      grid.appendChild(dot);
+    }
+    strip.appendChild(grid);
+    c2.appendChild(strip);
+  })();
 
   // 결석 → 사유
   if(cur==='absent'){
@@ -822,24 +901,6 @@ function paintC(){
   }
   box.appendChild(c4);
 
-  // 점수 추이 (진도 아래)
-  const hist=S.hist[S.sel];
-  if(hist){
-    const c5=el('div','card');
-    c5.appendChild(el('div','card-t','점수 추이'));
-    const chips=el('div','chips');
-    TESTS.forEach(t=>{
-      const b=el('button',S.chart.includes(t.k)?'on':'',t.s);
-      b.onclick=()=>{
-        S.chart=S.chart.includes(t.k)?S.chart.filter(k=>k!==t.k):[...S.chart,t.k];
-        paintC();
-      };
-      chips.appendChild(b);
-    });
-    c5.appendChild(chips);
-    c5.appendChild(chart(hist.rows));
-    box.appendChild(c5);
-  }
 }
 
 /* ============ 외부 연동: 월간 평가 (kkjgenerator) ============ */
@@ -963,17 +1024,29 @@ const smsNum=v=>{
   return `${s}점`;
 };
 // 통계용 점수 환산: "틀린/전체" → 정답률(%), 숫자는 그대로
+// 문제 수가 날마다 다르므로 정답률(%)로만 비교합니다.
+// '틀린개수/전체문제수' 만 환산하고, 분모 없는 옛 기록은 비율을 알 수 없어 제외합니다.
 const scoreVal=v=>{
   if(v===''||v==null||v===false)return null;
   const s=String(v);
-  if(s.includes('/')){
-    const p=s.split('/'),t=Number(p[1]);
-    if(!p[1]||isNaN(t)||t<=0)return null;
-    const w=(p[0]===''||isNaN(Number(p[0])))?0:Number(p[0]);
-    return Math.round(Math.max(0,(t-w))/t*100);
-  }
-  const n=Number(s);
-  return isNaN(n)?null:n;
+  if(!s.includes('/'))return null;
+  const p=s.split('/'),t=Number(p[1]);
+  if(!p[1]||isNaN(t)||t<=0)return null;
+  const w=(p[0]===''||isNaN(Number(p[0])))?0:Number(p[0]);
+  return Math.min(100,Math.max(0,Math.round((t-w)/t*100)));
+};
+// 분모가 없어 그래프에 못 쓰는 값인지
+const scoreLegacy=v=>{
+  if(v===''||v==null||v===false)return false;
+  const s=String(v);
+  return !s.includes('/') && !isNaN(Number(s));
+};
+// 원래 입력값 그대로 (툴팁용)
+const scoreRaw=v=>{
+  const s=String(v==null?'':v);
+  if(!s.includes('/'))return s;
+  const p=s.split('/');
+  return `${p[1]}문제 중 ${p[0]||0}개 오답`;
 };
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
 const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest'};
@@ -1914,38 +1987,83 @@ $('xgo').onclick=async()=>{
 
 /* ---- 추이 그래프 (SVG) ---- */
 function chart(rows){
-  const W=314,H=150,PL=26,PR=8,PT=10,PB=20;
+  const W=760,H=270,PL=38,PR=14,PT=18,PB=34;
+  const MAXN=30;
   const series=TESTS.filter(t=>S.chart.includes(t.k)).map(t=>({
     ...t,
-    pts:rows.map(r=>({d:r.date,v:scoreVal(r.l&&r.l[t.k])})).filter(p=>p.v!=null).slice(-12)
-  })).filter(s=>s.pts.length);
+    pts:rows.map(r=>({d:r.date,v:scoreVal(r.l&&r.l[t.k]),raw:scoreRaw(r.l&&r.l[t.k])}))
+            .filter(p=>p.v!=null).slice(-MAXN)
+  })).filter(x=>x.pts.length);
 
-  if(!series.length)return el('div','empty','표시할 점수가 없습니다.');
+  // 분모가 없어 비율을 못 내는 옛 기록 수
+  let skipped=0;
+  TESTS.filter(t=>S.chart.includes(t.k)).forEach(t=>{
+    rows.forEach(r=>{if(scoreLegacy(r.l&&r.l[t.k]))skipped++;});
+  });
 
-  const n=Math.max(...series.map(s=>s.pts.length));
+  const wrap=el('div');
+  if(!series.length){
+    wrap.appendChild(el('div','empty','표시할 점수가 없습니다.'));
+    if(skipped)wrap.appendChild(el('div','warn',`분모(전체 문제수)가 없는 예전 기록 ${skipped}건은 정답률을 낼 수 없어 제외했습니다.`));
+    return wrap;
+  }
+
+  // 날짜를 모아 가로축을 만든다 (선택한 항목들이 같은 눈금을 쓰도록)
+  const dates=[...new Set(series.flatMap(x=>x.pts.map(p=>p.d)))].sort().slice(-MAXN);
+  const n=dates.length;
   const X=i=>PL+(n<2?(W-PL-PR)/2:(W-PL-PR)*i/(n-1));
   const Y=v=>PT+(H-PT-PB)*(1-v/100);
 
   let g='';
-  [0,50,100].forEach(v=>{
-    g+=`<line x1="${PL}" y1="${Y(v)}" x2="${W-PR}" y2="${Y(v)}" stroke="#E3E8F4" stroke-width="1"/>`;
-    g+=`<text x="${PL-6}" y="${Y(v)+3.5}" text-anchor="end" font-size="9" fill="#8A97B4" font-weight="700">${v}</text>`;
+  // 가로 눈금 — 20점 간격
+  [0,20,40,60,80,100].forEach(v=>{
+    const major=(v===0||v===100);
+    g+=`<line x1="${PL}" y1="${Y(v)}" x2="${W-PR}" y2="${Y(v)}" stroke="${major?'#C9D3E8':'#EDF1F8'}" stroke-width="1"/>`;
+    g+=`<text x="${PL-7}" y="${Y(v)+3.5}" text-anchor="end" font-size="10" fill="#8A97B4" font-weight="700">${v}</text>`;
   });
-  series.forEach(s=>{
-    const off=n-s.pts.length;
-    const d=s.pts.map((p,i)=>`${i?'L':'M'}${X(i+off).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
-    g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    s.pts.forEach((p,i)=>{g+=`<circle cx="${X(i+off).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="#fff" stroke="${s.c}" stroke-width="2"><title>${md(p.d)} ${s.n} ${p.v}점</title></circle>`;});
-  });
-  const last=series[0].pts;
-  const off0=n-last.length;
-  last.forEach((p,i)=>{
-    if(last.length>6&&i%2)return;
-    g+=`<text x="${X(i+off0).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="#8A97B4" font-weight="600">${md(p.d)}</text>`;
+  // 세로 눈금 — 수업일마다
+  dates.forEach((d,i)=>{
+    g+=`<line x1="${X(i).toFixed(1)}" y1="${PT}" x2="${X(i).toFixed(1)}" y2="${H-PB}" stroke="#F2F5FB" stroke-width="1"/>`;
   });
 
-  const wrap=el('div');
-  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="테스트 점수 추이 그래프">${g}</svg>`;
+  series.forEach(sr=>{
+    const seg=[];let cur=[];
+    dates.forEach((d,i)=>{
+      const p=sr.pts.find(x=>x.d===d);
+      if(p)cur.push({i,...p});
+      else if(cur.length){seg.push(cur);cur=[];}
+    });
+    if(cur.length)seg.push(cur);
+    seg.forEach(sg=>{
+      if(sg.length>1){
+        const dd=sg.map((p,k)=>`${k?'L':'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+        g+=`<path d="${dd}" fill="none" stroke="${sr.c}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+      sg.forEach(p=>{
+        g+=`<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.6" fill="#fff" stroke="${sr.c}" stroke-width="2"><title>${md(p.d)} · ${sr.n} · ${p.v}% (${p.raw})</title></circle>`;
+      });
+    });
+  });
+
+  // 날짜 라벨 — 빽빽하면 건너뛴다
+  const step=Math.max(1,Math.ceil(n/10));
+  dates.forEach((d,i)=>{
+    if(i%step && i!==n-1)return;
+    g+=`<text x="${X(i).toFixed(1)}" y="${H-12}" text-anchor="middle" font-size="10" fill="#8A97B4" font-weight="600">${md(d)}</text>`;
+  });
+
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="테스트 정답률 추이 그래프">${g}</svg>`;
+  // 최근 값 요약
+  const sum=el('div','csum');
+  series.forEach(sr=>{
+    const last=sr.pts[sr.pts.length-1];
+    const avg=Math.round(sr.pts.reduce((a,p)=>a+p.v,0)/sr.pts.length);
+    const d=el('div');
+    d.innerHTML=`<i style="background:${sr.c}"></i><b>${esc(sr.n)}</b><span>최근 ${last.v}% · 평균 ${avg}%</span>`;
+    sum.appendChild(d);
+  });
+  wrap.appendChild(sum);
+  if(skipped)wrap.appendChild(el('div','warn',`분모(전체 문제수)가 없는 예전 기록 ${skipped}건은 정답률을 낼 수 없어 제외했습니다.`));
   return wrap;
 }
 })();
