@@ -822,14 +822,24 @@ function paintC(){
   }
   box.appendChild(c4);
 
-  // 개별 영상 배정
-  const c5=el('div','card');
-  c5.appendChild(el('div','card-t','시청 가능 영상 — 개별 조정'));
-  paintVideo(c5,s.videos||[],'개별',async ids=>{
-    s.videos=[...ids];
-    await saveStudents();
-  });
-  box.appendChild(c5);
+  // 점수 추이 (진도 아래)
+  const hist=S.hist[S.sel];
+  if(hist){
+    const c5=el('div','card');
+    c5.appendChild(el('div','card-t','점수 추이'));
+    const chips=el('div','chips');
+    TESTS.forEach(t=>{
+      const b=el('button',S.chart.includes(t.k)?'on':'',t.s);
+      b.onclick=()=>{
+        S.chart=S.chart.includes(t.k)?S.chart.filter(k=>k!==t.k):[...S.chart,t.k];
+        paintC();
+      };
+      chips.appendChild(b);
+    });
+    c5.appendChild(chips);
+    c5.appendChild(chart(hist.rows));
+    box.appendChild(c5);
+  }
 }
 
 /* ============ 외부 연동: 월간 평가 (kkjgenerator) ============ */
@@ -1669,23 +1679,7 @@ function paintR(){
   const h=S.hist[S.sel];
   const s=S.students.find(x=>x.id===S.sel);
 
-  // 1. 점수 추이
-  const s1=el('div','r-sec');
-  s1.appendChild(el('h3','r-t','점수 추이'));
-  const chips=el('div','chips');
-  TESTS.forEach(t=>{
-    const b=el('button',S.chart.includes(t.k)?'on':'',t.s);
-    b.onclick=()=>{
-      S.chart=S.chart.includes(t.k)?S.chart.filter(k=>k!==t.k):[...S.chart,t.k];
-      paintR();
-    };
-    chips.appendChild(b);
-  });
-  s1.appendChild(chips);
-  s1.appendChild(chart(h.rows));
-  box.appendChild(s1);
-
-  // 1-2. 월간 평가 (외부 연동)
+  // 1. 월간 평가 (외부 연동) — 점수 추이는 가운데 진도 아래로 옮겼습니다.
   paintMonthly(box,s);
 
   // 2. 출석
