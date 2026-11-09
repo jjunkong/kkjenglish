@@ -149,10 +149,14 @@ const smsNum=v=>{
   if(v===''||v==null||v===false)return '';
   const s=String(v);
   if(s.includes('/')){
-    const p=s.split('/'),w=p[0],t=p[1];
+    const p=s.split('/'),t=p[1];
+    const w=(p[0]===''||p[0]==null)?0:Number(p[0]);
     // '1/30' 을 휴대폰이 날짜(1월 30일)로 인식해 링크를 거는 것을 피합니다.
-    if(t!=='' && t!=null)return `-${w===''?0:w}개 (총 ${t}문항)`;
-    return w===''?'':`-${w}개`;
+    if(t!=='' && t!=null){
+      // 틀린 게 없으면 만점으로 적습니다.
+      return (!w||isNaN(w)) ? `만점 (총 ${t}문항)` : `-${w}개 (총 ${t}문항)`;
+    }
+    return (p[0]===''||p[0]==null) ? '' : ((!w||isNaN(w)) ? '만점' : `-${w}개`);
   }
   return `${s}점`;
 };
@@ -768,7 +772,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103w'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103x'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -816,7 +820,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103w'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103x'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);

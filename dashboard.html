@@ -197,6 +197,13 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 
 /* ---------- 우: 통계 ---------- */
 .r-t{font-size:12px;font-weight:800;color:var(--ink-3);letter-spacing:.04em;margin:0 0 11px;}
+.r-th{display:flex;align-items:center;justify-content:space-between;}
+.r-th .r-t{margin-bottom:11px;}
+.mnav{display:flex;gap:4px;margin-bottom:11px;}
+.mnav button{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink-3);font-size:13px;font-weight:800;line-height:1;cursor:pointer;font-family:inherit;padding:0;}
+.mnav button:hover{background:var(--line-2);color:var(--ink);}
+.r-note{margin-top:8px;font-size:11px;color:var(--ink-3);font-weight:600;line-height:1.5;}
 .r-sec{margin-bottom:24px;}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px;}
 .chips button{height:25px;padding:0 9px;border-radius:13px;font-size:11px;font-weight:700;background:var(--line-2);color:var(--ink-3);}
@@ -579,7 +586,7 @@ $('gpw').onkeydown=e=>{if(e.key==='Enter')$('gbtn').click();};
 /* ============ 기초 데이터 ============ */
 async function boot(){
   $('dsel').value=S.date;
-  $('dsel').onchange=()=>{S.date=$('dsel').value;S.sel=null;paint();};
+  $('dsel').onchange=()=>{S.date=$('dsel').value;S.attYM=null;S.sel=null;paint();};
   $('reload').onclick=async()=>{S.hist={};await loadBase();paint();};
   $('toadmin').onclick=()=>{location.href='/admin.html';};
   $('extbtn').onclick=cfgExt;
@@ -1016,10 +1023,14 @@ const smsNum=v=>{
   if(v===''||v==null||v===false)return '';
   const s=String(v);
   if(s.includes('/')){
-    const p=s.split('/'),w=p[0],t=p[1];
+    const p=s.split('/'),t=p[1];
+    const w=(p[0]===''||p[0]==null)?0:Number(p[0]);
     // '1/30' 을 휴대폰이 날짜(1월 30일)로 인식해 링크를 거는 것을 피합니다.
-    if(t!=='' && t!=null)return `-${w===''?0:w}개 (총 ${t}문항)`;
-    return w===''?'':`-${w}개`;
+    if(t!=='' && t!=null){
+      // 틀린 게 없으면 만점으로 적습니다.
+      return (!w||isNaN(w)) ? `만점 (총 ${t}문항)` : `-${w}개 (총 ${t}문항)`;
+    }
+    return (p[0]===''||p[0]==null) ? '' : ((!w||isNaN(w)) ? '만점' : `-${w}개`);
   }
   return `${s}점`;
 };
@@ -1757,9 +1768,27 @@ function paintR(){
 
   // 2. 출석
   const s2=el('div','r-sec');
-  s2.appendChild(el('h3','r-t','출석 현황'));
+  // 보고 있는 달 기준으로 끊어서 셉니다. ‹ › 로 달을 넘길 수 있습니다.
+  const ym=(S.attYM||S.date.slice(0,7));
+  const [yy,mo]=ym.split('-').map(Number);
+  const shift=n=>{
+    const d=new Date(yy,mo-1+n,1);
+    S.attYM=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    paintR();
+  };
+  const hd=el('div','r-th');
+  hd.appendChild(el('h3','r-t',`${mo}월 출석`));
+  const nav=el('div','mnav');
+  const bp=el('button','','‹');bp.title='이전 달';bp.onclick=()=>shift(-1);
+  const bn=el('button','','›');bn.title='다음 달';bn.onclick=()=>shift(1);
+  nav.appendChild(bp);nav.appendChild(bn);
+  hd.appendChild(nav);
+  s2.appendChild(hd);
+
   let ok=0,no=0,mk=0;
-  h.rows.forEach(r=>{const a=attOf(r.l);if(a==='present')ok++;else if(a==='absent')no++;else if(a==='makeup')mk++;});
+  h.rows.filter(r=>r.date.slice(0,7)===ym).forEach(r=>{
+    const a=attOf(r.l);if(a==='present')ok++;else if(a==='absent')no++;else if(a==='makeup')mk++;
+  });
   const st=el('div','att-stat');
   [['s-ok',ok,'출석'],['s-no',no,'결석'],['s-mk',mk,'보강']].forEach(([c,v,t])=>{
     const d=el('div',c);d.appendChild(el('b','',v));d.appendChild(el('span','',t));st.appendChild(d);
@@ -1768,8 +1797,15 @@ function paintR(){
   const tot=ok+no+mk;
   const rate=tot?Math.round(ok/tot*100):0;
   const bank=el('div','bank');
-  bank.appendChild(el('span','',`전체 출석률 ${rate}%`));
+  bank.appendChild(el('span','',tot?`${mo}월 출석률 ${rate}%`:'이 달 기록이 없습니다'));
   s2.appendChild(bank);
+
+  // 전체 누계도 작게 함께
+  let aok=0,ano=0,amk=0;
+  h.rows.forEach(r=>{const a=attOf(r.l);if(a==='present')aok++;else if(a==='absent')ano++;else if(a==='makeup')amk++;});
+  const atot=aok+ano+amk;
+  s2.appendChild(el('div','r-note',
+    atot?`누계 ${atot}일 · 출석 ${aok} · 결석 ${ano} · 보강 ${amk} (${Math.round(aok/atot*100)}%)`:''));
   box.appendChild(s2);
 
   // 2-2. 이번 결제주기 보강 정산
