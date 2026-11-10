@@ -772,7 +772,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103x'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103y'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -820,7 +820,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103x'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103y'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1427,6 +1427,8 @@ async function aLessonView(){
 
   // SMS 생성 함수
   const genSMS=()=>{
+    // 대시보드에서 직접 고친 문자가 있으면 그것을 씁니다.
+    if(lData&&typeof lData.smsText==='string'&&lData.smsText.trim())return lData.smsText;
     const name=Q.aStu.name;
     const d=new Date(Q.aDate);
     const dateStr=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
@@ -1503,10 +1505,41 @@ async function aLessonView(){
   const smsBox=mks('div','');
   const refreshSMS=()=>{
     smsBox.innerHTML='';
-    const pre=document.createElement('pre');
-    pre.style.cssText='font-size:12px;color:#333;line-height:1.7;white-space:pre-wrap;word-break:break-all;padding:12px;background:#f8f9ff;border-radius:10px;border:1px solid #e0e7ff;margin:0;';
-    pre.textContent=genSMS();
-    smsBox.appendChild(pre);
+    const edited=!!(lData&&typeof lData.smsText==='string'&&lData.smsText.trim());
+    // 여기서 바로 고칠 수 있고, 고친 내용은 대시보드와 같은 곳에 저장됩니다.
+    const ta=document.createElement('textarea');
+    ta.spellcheck=false;
+    ta.style.cssText='width:100%;box-sizing:border-box;font-size:12px;color:#333;line-height:1.7;padding:12px;background:#f8f9ff;border-radius:10px;border:1px solid #e0e7ff;font-family:inherit;resize:none;overflow:hidden;display:block;';
+    ta.value=genSMS();
+    const fit=()=>{ta.style.height='auto';ta.style.height=(ta.scrollHeight+2)+'px';};
+    const note=mks('div','font-size:11px;font-weight:700;margin-top:6px;color:#8aa;','');
+    const say=(t,c)=>{note.textContent=t;note.style.color=c||'#8aa';};
+    if(edited)say('직접 고친 문자입니다','#0EA96B');
+    ta.onblur=async()=>{
+      const v=ta.value;
+      if(v===genSMS())return;
+      say('저장 중…');
+      const fresh=await getLessonFresh(Q.aStu.id,Q.aDate);
+      fresh.smsText=v;
+      const ok=await setLesson(Q.aStu.id,Q.aDate,fresh);
+      if(ok!==false){lData.smsText=v;say('저장했습니다 · 대시보드에도 반영됩니다','#0EA96B');}
+      else say('저장하지 못했습니다','#E23D5A');
+    };
+    smsBox.appendChild(ta);
+    const tools=mks('div','display:flex;align-items:center;gap:9px;margin-top:6px;');
+    const undo=mks('button','font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;font-family:inherit;','원래대로');
+    undo.title='고친 내용을 지우고 자동 생성 문자로 되돌립니다';
+    undo.onclick=async()=>{
+      say('되돌리는 중…');
+      const fresh=await getLessonFresh(Q.aStu.id,Q.aDate);
+      fresh.smsText='';
+      const ok=await setLesson(Q.aStu.id,Q.aDate,fresh);
+      if(ok!==false){lData.smsText='';refreshSMS();}
+      else say('되돌리지 못했습니다','#E23D5A');
+    };
+    tools.appendChild(undo);tools.appendChild(note);
+    smsBox.appendChild(tools);
+    requestAnimationFrame(fit);
   };
   refreshSMS();
   copyBtn.onclick=()=>{

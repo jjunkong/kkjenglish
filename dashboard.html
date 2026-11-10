@@ -254,6 +254,18 @@ table.avg td:first-child{text-align:left;color:var(--ink-3);font-weight:700;}
 #mprev .mhead{position:sticky;top:0;z-index:2;background:var(--card);padding:6px 0 8px;}
 #mprev .xscroll{max-height:none;overflow:visible;border:none;border-radius:0;padding:0;}
 #mprev .mrow pre{max-height:none;overflow:visible;font-size:12.5px;line-height:1.7;}
+#mprev .mtext{flex:1;min-width:0;}
+#mprev .mtext textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;
+  padding:11px 12px;font-size:12.5px;line-height:1.7;font-family:inherit;color:var(--ink);background:var(--bg-2);
+  resize:none;overflow:hidden;display:block;}
+#mprev .mtext textarea:focus{outline:none;border-color:var(--brand);background:var(--card);}
+#mprev .mtools{display:flex;align-items:center;gap:9px;margin-top:5px;}
+#mprev .mtools button{font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-3);cursor:pointer;font-family:inherit;}
+#mprev .mtools button:hover{background:var(--line-2);color:var(--ink);}
+#mprev .msave{font-size:11px;font-weight:700;color:var(--ink-3);}
+#mprev .msave.on{color:#0EA96B;}
+#mprev .msave.bad{color:var(--no);}
 #mprev .mrow .mi{width:152px;}
 #mprev .mrow .mi em{display:block;margin-top:2px;}
 @media (max-width:760px){
@@ -1120,6 +1132,8 @@ const exOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'extra' in o)?!!o
 const exBlock=l=>(exText(l)&&exOn(l))?`<${exTitle(l)}>\n${exText(l)}\n\n`:'';
 
 function genSMS(stu,l,dateStr){
+  // 원장이 직접 고친 문자가 있으면 그것을 씁니다.
+  if(l&&typeof l.smsText==='string'&&l.smsText.trim())return l.smsText;
   const sc=smsTests(l);
   return `[${stu.name} DAILY REPORT]\n`
     +`안녕하세요. 김기준영어학원입니다.\n`
@@ -1247,8 +1261,45 @@ function renderM(cfg){
         };
         paintEb();mi.appendChild(eb);
       }
-      const pre=document.createElement('pre');pre.textContent=r.text;
-      row.appendChild(cb);row.appendChild(mi);row.appendChild(pre);
+      // 문자 본문 — 바로 고칠 수 있습니다
+      const box=document.createElement('div');box.className='mtext';
+      const ta=document.createElement('textarea');
+      ta.value=r.text;ta.spellcheck=false;
+      const fit=()=>{ta.style.height='auto';ta.style.height=(ta.scrollHeight+2)+'px';};
+      const note=el('div','msave');
+      const edited=!!(r.l&&typeof r.l.smsText==='string'&&r.l.smsText.trim());
+      const paintNote=(txt,cls)=>{note.className='msave'+(cls?' '+cls:'');note.textContent=txt;};
+      if(edited)paintNote('직접 고친 문자입니다','on');
+      ta.onblur=async()=>{
+        const v=ta.value;
+        if(v===r.text)return;
+        paintNote('저장 중…');
+        const ok=await saveLessonPatch(r.stu.id,S.date,{smsText:v});
+        if(ok){
+          r.text=v;
+          if(!r.l)r.l={};
+          r.l.smsText=v;
+          paintNote('저장했습니다 · 원장방에도 반영됩니다','on');
+        }else paintNote('저장하지 못했습니다','bad');
+      };
+      box.appendChild(ta);
+      const tools=el('div','mtools');
+      const undo=el('button','','원래대로');
+      undo.title='고친 내용을 지우고 자동 생성 문자로 되돌립니다';
+      undo.onclick=async()=>{
+        paintNote('되돌리는 중…');
+        const ok=await saveLessonPatch(r.stu.id,S.date,{smsText:''});
+        if(ok){
+          if(r.l)r.l.smsText='';
+          r.text=genSMS(r.stu,r.l,r.dateStr);
+          ta.value=r.text;fit();
+          paintNote('');
+        }else paintNote('되돌리지 못했습니다','bad');
+      };
+      tools.appendChild(undo);tools.appendChild(note);
+      box.appendChild(tools);
+      row.appendChild(cb);row.appendChild(mi);row.appendChild(box);
+      requestAnimationFrame(fit);
       sc.appendChild(row);
     });
     upd();
@@ -1259,6 +1310,15 @@ function renderM(cfg){
 }
 
 // 수업기록의 on 플래그만 안전하게 갱신합니다. (다른 항목을 덮어쓰지 않도록 서버값을 읽어 병합)
+// 수업기록의 항목을 서버값과 병합해 갱신합니다.
+async function saveLessonPatch(sid,date,patch){
+  const key=date.replace(/-/g,'_');
+  const cur=await fbReadTry(`lessons/${sid}/${key}`);
+  if(!cur.ok){alert('서버 상태를 확인할 수 없어 저장하지 않았습니다.');return false;}
+  const base=(cur.val&&typeof cur.val==='object')?cur.val:{};
+  return await fbSet(`lessons/${sid}/${key}`,{...base,...patch});
+}
+
 async function saveLessonFlag(sid,date,patch){
   const key=date.replace(/-/g,'_');
   const cur=await fbReadTry(`lessons/${sid}/${key}`);
