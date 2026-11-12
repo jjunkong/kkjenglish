@@ -1072,7 +1072,7 @@ const scoreRaw=v=>{
   return `${p[1]}문제 중 ${p[0]||0}개 오답`;
 };
 // 실시한 시험만 문자에 표기 (구 데이터는 점수가 있으면 실시로 간주)
-const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest'};
+const TKMAP={B:'bTest',O:'oTest',D:'dTest',word:'wordTest',wb:'wbTest',write:'writeTest',habang:'habangTest',mock:'mockTest',mb:'mbTest'};
 // 완료 / 수정 완료 / 미완료
 const dLab=v=>(v==='fixed')?'수정 완료':((v==='done'||v===true)?'완료':'미완료');
 const testOn=(l,k)=>{
@@ -1106,6 +1106,7 @@ const smsTests=l=>{
     r.push(`영작시험 : ${t}`);
   }
   if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
+  if(testOn(l,'mb'))r.push(`독해-문뽀[문장 구조 분석] : ${dLab(l.mbTest)}`);
   if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
