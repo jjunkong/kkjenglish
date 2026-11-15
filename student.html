@@ -91,6 +91,7 @@ const fbGet=async path=>{try{const r=await fetch(`${FB}/${path}.json`);if(!r.ok)
 
 const MEM={cprog:{},stu:[],lessons:{},videos:[],classes:[]};
 const mks=(tag,css,html='')=>{const e=document.createElement(tag);if(css)e.style.cssText=css;e.innerHTML=html;return e;};
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const emL=()=>({plan:{check:'',core:'',fix:''},res:{},vocab:{},status:'none'});
 const getLesson=async(sid,date)=>{
   const k=`${sid}__${date}`;
@@ -432,129 +433,173 @@ const cleanUnit=t=>{
   if(parts.length===2)return parts[1];
   return x;
 };
-const TRACK={
-  gr:{n:'문법',sub:'GRAMMAR TREE',ic:'🌳',c:'#2E63E8',bg:'#EAF0FF'},
-  rd:{n:'독해',sub:'문장뽀개기',ic:'📖',c:'#0EA96B',bg:'#E6F7F0'},
-  exam:{n:'월간평가',sub:'월평',ic:'📝',c:'#E08A00',bg:'#FFF6E4'},
-  off:{n:'휴강',sub:'',ic:'🌴',c:'#8A97B4',bg:'#F0F3FA'},
-  etc:{n:'수업',sub:'',ic:'📚',c:'#8B5CF6',bg:'#F3EEFF'},
+// ───────── 커리큘럼 로드맵 (게시물 자료 기준) ─────────
+// 4단계 모두 다시 배우는 핵심 단원 — 색으로 구분합니다.
+const CORE={'시제':'#E0540E','비교':'#0EA96B','문장형식':'#8B5CF6'};
+const STEPS={
+  s1:{no:1,name:'초등 스타터',sub:'초등 · 화목 3–5시',weeks:11,next:'STEP 2',
+    u:[['be동사 & 인칭대명사','be동사·인칭대명사 문장 해석'],['일반동사','일반동사 문장 해석'],
+       ['시제','시제 구문 해석','시제'],['명사와 관사','명사구 해석'],['대명사','대명사 지칭 해석'],
+       ['형용사 / 부사 / 비교','수식어·비교 구문 해석','비교'],['조동사','조동사 문장 해석'],
+       ['문장의 형식','목적어·보어 찾기','문장형식'],['to부정사 & 동명사','to부정사 수식어구 해석'],
+       ['접속사','접속사 문장 해석'],['전치사','전치사구 해석']]},
+  s2:{no:2,name:'중등 도전',sub:'중1 – 중2',weeks:10,next:'STEP 3',
+    u:[['비교','비교 구문 해석','비교'],['접속사','접속사 문장 해석'],['관계사','관계사절 해석'],
+       ['가정법','가정법 구문 해석'],['일치와 화법','시제일치·화법 문장 해석'],
+       ['문장구조','주어·목적어·보어 찾기','문장형식'],['시제','시제 구문 해석','시제'],
+       ['조동사','조동사 문장 해석'],['수동태','수동태 구문 해석'],['대명사','대명사 지칭 해석']]},
+  s3:{no:3,name:'중등 중급',sub:'중2 – 중3',weeks:12,next:'STEP 4',
+    u:[['문장형식','문장성분·형식 분석','문장형식'],['시제','시제 구문 해석','시제'],
+       ['조동사','조동사 문장 해석'],['수동태','수동태 구문 해석'],['to부정사','to부정사 구문 해석'],
+       ['동명사','동명사 구문 해석'],['분사','분사 수식 해석'],['형용사 & 부사','수식어 해석'],
+       ['비교','비교 구문 해석','비교'],['접속사','구·절 구분 해석'],['가정법','가정법 구문 해석'],
+       ['특수구문','도치·강조·생략 해석']]},
+  s4:{no:4,name:'고등',sub:'고등반 (고급)',weeks:9,next:'고등 내신',
+    u:[['문장형식 & 수일치','주어·동사·목적어·보어 분석','문장형식'],['시제','시제 구문 해석','시제'],
+       ['수동태','수동태 구문 해석'],['분사','분사 수식 해석'],['to부정사','to부정사 구문 해석'],
+       ['동명사','동명사 구문 해석'],['형용사 & 부사','수식어 해석'],['비교','비교 구문 해석','비교'],
+       ['관계사','관계사절 해석']]},
 };
 
-function myLessons(stu){
-  const map=(MEM.cprog||{})[stu.classId]||{};
-  const days=stu.days||[];
-  const out=[];
-  Object.keys(map).forEach(k=>{
-    const date=k.replace(/_/g,'-');
-    const [y,m,d]=date.split('-').map(Number);
-    if(!y)return;
-    const dw=new Date(y,m-1,d).getDay();
-    if(days.length&&!days.includes(dw))return;   // 내 수업 요일만
-    const v=map[k];
-    const raw=(v&&(v.unit||v.title))||'';
-    if(!raw)return;
-    String(raw).split(' / ').filter(Boolean).forEach(t=>{
-      out.push({date,dw,raw:t,unit:cleanUnit(t),tr:trackOf(t,dw)});
-    });
-  });
-  return out.sort((a,b)=>a.date.localeCompare(b.date));
+// 반 이름으로 단계를 찾습니다.
+function stepOf(stu){
+  const cls=(MEM.classes||[]).find(c=>String(c.id)===String(stu.classId));
+  const t=((cls&&cls.name)||'')+' '+(stu.level||'');
+  if(/스타터|초등/.test(t))return 's1';
+  if(/도전/.test(t))return 's2';
+  if(/중급/.test(t))return 's3';
+  if(/고등|고급/.test(t))return 's4';
+  return null;
+}
+
+// 영상 제목에서 날짜 [1106] 와 주차(3주차 / 3주 / W3) 를 읽습니다.
+function vidDate(t){
+  const m=String(t||'').match(/\[(\d{2})(\d{2})\]/);
+  if(!m)return '';
+  const yy=new Date().getFullYear();
+  return `${yy}-${m[1]}-${m[2]}`;
+}
+function vidWeek(t){
+  const s=String(t||'');
+  let m=s.match(/(\d{1,2})\s*주\s*차/)||s.match(/(\d{1,2})\s*주(?![가-힣])/)||s.match(/\bW\s*(\d{1,2})\b/i);
+  return m?Number(m[1]):0;
+}
+// 오늘 올라온 영상 / 주차
+function todayVideos(stu){
+  const ids=stu.videos||[];
+  return (MEM.videos||[]).filter(v=>ids.includes(v.id)&&vidDate(v.title)===TODAY);
+}
+function curWeek(stu){
+  const ids=stu.videos||[];
+  const mine=(MEM.videos||[]).filter(v=>ids.includes(v.id));
+  // 오늘 영상 → 가장 최근 지난 영상 순으로 주차를 찾습니다.
+  const dated=mine.map(v=>({d:vidDate(v.title),w:vidWeek(v.title)}))
+                  .filter(x=>x.d&&x.w&&x.d<=TODAY).sort((a,b)=>a.d.localeCompare(b.d));
+  return dated.length?dated[dated.length-1].w:0;
 }
 
 function renderMap(bg,stu){
-  const rows=myLessons(stu);
-  const T=TODAY;
+  const key=stepOf(stu);
+  const todays=todayVideos(stu);
+  const wk=curWeek(stu);
 
-  if(!rows.length){
-    const e=mks('div','background:rgba(255,255,255,0.75);border-radius:16px;padding:34px 20px;text-align:center;');
-    e.appendChild(mks('div','font-size:38px;margin-bottom:10px;','🗺️'));
-    e.appendChild(mks('div',`font-size:14px;font-weight:700;color:#41527A;font-family:${CF};`,'아직 진도표가 준비되지 않았어요'));
-    e.appendChild(mks('div',`font-size:12px;color:#8A97B4;margin-top:6px;font-family:${CF};`,'선생님이 등록하면 여기에 보여요'));
+  // ── 오늘의 영상 ───────────────────────────
+  const tv=mks('div','background:rgba(255,255,255,0.85);border-radius:18px;padding:15px 16px;margin-bottom:14px;');
+  const th=mks('div','display:flex;align-items:center;gap:8px;margin-bottom:11px;');
+  th.appendChild(mks('div','font-size:19px;','▶️'));
+  th.appendChild(mks('div',`font-size:14.5px;font-weight:800;color:#0B1A38;font-family:${CF};`,'오늘의 영상'));
+  const dd=new Date(TODAY+'T00:00:00');
+  th.appendChild(mks('div',`margin-left:auto;font-size:11.5px;font-weight:700;color:#8A97B4;font-family:${CF};`,
+    `${dd.getMonth()+1}/${dd.getDate()} (${DOWK[dd.getDay()]})`));
+  tv.appendChild(th);
+  if(todays.length){
+    todays.forEach(v=>{
+      const row=mks('button','');
+      row.style.cssText=`display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:12px 13px;border-radius:14px;background:linear-gradient(135deg,#EAF0FF,#DCE6FF);border:2px solid #2E63E8;cursor:pointer;margin-bottom:7px;font-family:${CF};`;
+      row.appendChild(mks('div','font-size:22px;flex:none;','🎬'));
+      const c=mks('div','flex:1;min-width:0;');
+      const w=vidWeek(v.title);
+      if(w)c.appendChild(mks('div',`font-size:10.5px;font-weight:800;color:#2E63E8;margin-bottom:2px;font-family:${CF};`,`${w}주차`));
+      c.appendChild(mks('div',`font-size:14px;font-weight:800;color:#0B1A38;font-family:${CF};line-height:1.35;`,
+        esc(String(v.title||'').replace(/^\[\d{4}\]\s*/,'').replace(/^\d{1,2}\s*주\s*차?\s*/,''))));
+      row.appendChild(c);
+      row.appendChild(mks('div','font-size:16px;color:#2E63E8;flex:none;','▶'));
+      row.onclick=()=>{Q.tab='video';Q._playVideo=v.id;render();};
+      tv.appendChild(row);
+    });
+  }else{
+    tv.appendChild(mks('div',`text-align:center;padding:16px 10px;font-size:13px;font-weight:700;color:#8A97B4;font-family:${CF};`,
+      '오늘 올라온 영상이 없어요'));
+  }
+  bg.appendChild(tv);
+
+  // ── 커리큘럼 로드맵 ───────────────────────
+  if(!key){
+    const e=mks('div','background:rgba(255,255,255,0.75);border-radius:16px;padding:30px 20px;text-align:center;');
+    e.appendChild(mks('div','font-size:36px;margin-bottom:9px;','🗺️'));
+    e.appendChild(mks('div',`font-size:14px;font-weight:700;color:#41527A;font-family:${CF};`,'진도표를 준비 중이에요'));
+    e.appendChild(mks('div',`font-size:12px;color:#8A97B4;margin-top:6px;font-family:${CF};`,'선생님이 반을 정하면 여기에 보여요'));
     bg.appendChild(e);return;
   }
 
-  const past=rows.filter(r=>r.date<T);
-  const todayRows=rows.filter(r=>r.date===T);
-  const future=rows.filter(r=>r.date>T);
-  const prev=past.slice(-1)[0];
-  const next=future[0];
+  const st=STEPS[key];
+  const card=mks('div','background:rgba(255,255,255,0.85);border-radius:18px;padding:16px;');
 
-  // ── 지난 / 오늘 / 다음 요약
-  const hero=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:16px;margin-bottom:14px;');
-  const mkLine=(tag,r,strong)=>{
-    const tk=r?TRACK[r.tr]:null;
-    const w=mks('div',`display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:13px;margin-bottom:7px;background:${strong?(tk?tk.bg:'#F0F3FA'):'rgba(255,255,255,0.55)'};${strong&&tk?`border:2px solid ${tk.c};`:'border:1.5px solid rgba(220,228,245,0.9);'}`);
-    w.appendChild(mks('div','font-size:22px;flex:none;',tk?tk.ic:'·'));
+  const hd=mks('div','display:flex;align-items:flex-start;gap:11px;margin-bottom:5px;');
+  const badge=mks('div','flex:none;text-align:center;padding:7px 11px;border-radius:13px;background:linear-gradient(135deg,#2E63E8,#1B47B4);');
+  badge.appendChild(mks('div',`font-size:9px;font-weight:800;color:rgba(255,255,255,0.75);letter-spacing:.08em;font-family:${CF};`,'STEP'));
+  badge.appendChild(mks('div',`font-size:19px;font-weight:800;color:#fff;line-height:1.1;font-family:${CF};`,String(st.no)));
+  hd.appendChild(badge);
+  const hc=mks('div','flex:1;min-width:0;');
+  hc.appendChild(mks('div',`font-size:17px;font-weight:800;color:#0B1A38;font-family:${CF};`,st.name));
+  hc.appendChild(mks('div',`font-size:11.5px;color:#8A97B4;font-weight:600;margin-top:2px;font-family:${CF};`,
+    `${st.sub} · ${st.weeks}주 · 약 3개월`));
+  hd.appendChild(hc);
+  card.appendChild(hd);
+
+  // 진행 막대
+  const done=Math.min(wk,st.weeks);
+  const pct=Math.round(done/st.weeks*100);
+  const barw=mks('div','margin:12px 0 4px;');
+  const bar=mks('div','height:9px;border-radius:20px;background:rgba(200,210,230,0.45);overflow:hidden;');
+  bar.appendChild(mks('div',`height:100%;width:${pct}%;border-radius:20px;background:linear-gradient(90deg,#4F82FF,#2E63E8);`));
+  barw.appendChild(bar);
+  barw.appendChild(mks('div',`display:flex;justify-content:space-between;margin-top:6px;font-size:11px;font-weight:700;color:#8A97B4;font-family:${CF};`,
+    `<span>${wk?`${wk}주차 진행 중`:'아직 시작 전'}</span><span>${done} / ${st.weeks}주</span>`));
+  card.appendChild(barw);
+
+  // 주차 목록
+  const list=mks('div','margin-top:12px;');
+  st.u.forEach((u,i)=>{
+    const n=i+1, core=u[2], cc=core?CORE[core]:'';
+    const state=wk? (n<wk?'past':(n===wk?'now':'future')) : 'future';
+    const row=mks('div','display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-radius:13px;margin-bottom:6px;');
+    row.style.cssText+= state==='now'
+      ? `background:${cc?cc+'1a':'#EAF0FF'};border:2px solid ${cc||'#2E63E8'};`
+      : (state==='past' ? 'background:rgba(240,243,250,0.75);border:1.5px solid rgba(220,228,245,0.9);opacity:.72;'
+                        : 'background:rgba(255,255,255,0.6);border:1.5px solid rgba(220,228,245,0.9);');
+    const num=mks('div','flex:none;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;');
+    num.style.cssText+= state==='past'
+      ? `background:#CBD5E8;color:#fff;font-family:${CF};`
+      : `background:${cc||(state==='now'?'#2E63E8':'#E3E8F4')};color:${(cc||state==='now')?'#fff':'#8A97B4'};font-family:${CF};`;
+    num.textContent = state==='past' ? '✓' : String(n);
+    row.appendChild(num);
     const c=mks('div','flex:1;min-width:0;');
-    c.appendChild(mks('div',`font-size:10.5px;font-weight:800;color:${strong&&tk?tk.c:'#8A97B4'};margin-bottom:2px;font-family:${CF};`,
-      tag+(r?`  ${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`:'')));
-    c.appendChild(mks('div',`font-size:${strong?15:13.5}px;font-weight:800;color:#0B1A38;font-family:${CF};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`,
-      r?r.unit:'예정된 수업이 없어요'));
-    if(r&&tk&&tk.sub)c.appendChild(mks('div',`font-size:11px;color:#8A97B4;font-weight:600;margin-top:1px;font-family:${CF};`,tk.n+' · '+tk.sub));
-    w.appendChild(c);
-    return w;
-  };
-  hero.appendChild(mkLine('지난 시간',prev,false));
-  if(todayRows.length)todayRows.forEach(r=>hero.appendChild(mkLine('오늘',r,true)));
-  else hero.appendChild(mkLine('오늘',null,true));
-  hero.appendChild(mkLine('다음 시간',next,false));
-  bg.appendChild(hero);
-
-  // ── 트랙별 진행 막대
-  ['gr','rd'].forEach(key=>{
-    const tk=TRACK[key];
-    const list=rows.filter(r=>r.tr===key);
-    if(!list.length)return;
-    const done=list.filter(r=>r.date<=T).length;
-    const pct=Math.round(done/list.length*100);
-
-    const card=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:16px;margin-bottom:14px;');
-    const hd=mks('div','display:flex;align-items:center;gap:9px;margin-bottom:12px;');
-    hd.appendChild(mks('div','font-size:20px;',tk.ic));
-    const hc=mks('div','flex:1;');
-    hc.appendChild(mks('div',`font-size:14.5px;font-weight:800;color:#0B1A38;font-family:${CF};`,tk.n));
-    hc.appendChild(mks('div',`font-size:11px;color:#8A97B4;font-weight:600;font-family:${CF};`,tk.sub));
-    hd.appendChild(hc);
-    hd.appendChild(mks('div',`font-size:12px;font-weight:800;color:${tk.c};background:${tk.bg};padding:4px 10px;border-radius:20px;font-family:${CF};`,`${done}/${list.length}`));
-    card.appendChild(hd);
-
-    const bar=mks('div','height:8px;border-radius:20px;background:rgba(200,210,230,0.45);overflow:hidden;margin-bottom:14px;');
-    bar.appendChild(mks('div',`height:100%;width:${pct}%;border-radius:20px;background:linear-gradient(90deg,${tk.c},${tk.c}bb);`));
-    card.appendChild(bar);
-
-    // 세로 경로
-    const path=mks('div','position:relative;padding-left:26px;');
-    path.appendChild(mks('div',`position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:rgba(200,210,230,0.6);border-radius:2px;`));
-    list.forEach(r=>{
-      const isToday=r.date===T, isPast=r.date<T;
-      const row=mks('div','position:relative;padding:7px 0;');
-      const dot=mks('div',`position:absolute;left:-22px;top:9px;width:12px;height:12px;border-radius:50%;border:2.5px solid ${isPast||isToday?tk.c:'#cfd8ea'};background:${isPast?tk.c:'#fff'};${isToday?`box-shadow:0 0 0 5px ${tk.c}33;`:''}`);
-      row.appendChild(dot);
-      const tx=mks('div',`font-size:${isToday?14:13}px;font-weight:${isToday?800:600};color:${isToday?'#0B1A38':(isPast?'#41527A':'#9aa5bd')};font-family:${CF};`,r.unit);
-      row.appendChild(tx);
-      const sb=mks('div',`font-size:10.5px;font-weight:700;color:${isToday?tk.c:'#a8b2c8'};margin-top:1px;font-family:${CF};`,
-        `${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`+(isToday?' · 오늘':(isPast?' · 완료':'')));
-      row.appendChild(sb);
-      path.appendChild(row);
-    });
-    card.appendChild(path);
-    bg.appendChild(card);
+    const t1=mks('div',`font-size:13.5px;font-weight:800;color:#0B1A38;font-family:${CF};line-height:1.3;`,esc(u[0]));
+    c.appendChild(t1);
+    c.appendChild(mks('div',`font-size:11.5px;color:#8A97B4;font-weight:600;margin-top:2px;font-family:${CF};line-height:1.35;`,esc(u[1])));
+    row.appendChild(c);
+    if(state==='now')row.appendChild(mks('div',`flex:none;font-size:10.5px;font-weight:800;color:${cc||'#2E63E8'};background:#fff;padding:3px 8px;border-radius:20px;font-family:${CF};`,'이번 주'));
+    else if(core)row.appendChild(mks('div',`flex:none;font-size:10px;font-weight:800;color:${cc};font-family:${CF};padding-top:4px;`,'핵심'));
+    list.appendChild(row);
   });
+  card.appendChild(list);
 
-  // ── 월간평가 / 휴강
-  const sp=rows.filter(r=>r.tr==='exam'||r.tr==='off').filter(r=>r.date>=T).slice(0,3);
-  if(sp.length){
-    const c=mks('div','background:rgba(255,255,255,0.8);border-radius:18px;padding:14px 16px;');
-    c.appendChild(mks('div',`font-size:12px;font-weight:800;color:#8A97B4;margin-bottom:9px;font-family:${CF};`,'다가오는 일정'));
-    sp.forEach(r=>{
-      const tk=TRACK[r.tr];
-      const w=mks('div','display:flex;align-items:center;gap:9px;padding:7px 0;');
-      w.appendChild(mks('div','font-size:17px;',tk.ic));
-      w.appendChild(mks('div',`flex:1;font-size:13px;font-weight:700;color:#0B1A38;font-family:${CF};`,tk.n));
-      w.appendChild(mks('div',`font-size:11.5px;font-weight:700;color:${tk.c};font-family:${CF};`,`${+r.date.slice(5,7)}/${+r.date.slice(8)} (${DOWK[r.dw]})`));
-      c.appendChild(w);
-    });
-    bg.appendChild(c);
-  }
+  card.appendChild(mks('div',`margin-top:4px;text-align:center;font-size:11.5px;font-weight:700;color:#8A97B4;font-family:${CF};`,
+    `다 하면 → ${st.next}`));
+  card.appendChild(mks('div',`margin-top:10px;font-size:10.5px;color:#A6B2CC;font-weight:600;line-height:1.5;font-family:${CF};`,
+    '※ 내신 대비 기간에는 커리큘럼을 잠시 멈추고 시험 대비 수업으로 진행합니다.'));
+  bg.appendChild(card);
 }
 
 // ── 비메오 인앱 플레이어 ─────────────────
