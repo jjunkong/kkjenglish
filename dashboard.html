@@ -127,6 +127,32 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .card-t{font-size:12px;font-weight:800;color:var(--ink-3);letter-spacing:.04em;margin-bottom:13px;display:flex;align-items:center;gap:8px;}
 .card-t .spacer{flex:1;}
 .card-sub{font-size:11px;font-weight:600;color:var(--ink-3);letter-spacing:0;text-transform:none;}
+/* 커리큘럼 편집 */
+.chint{font-size:11.5px;color:var(--ink-3);font-weight:600;margin:10px 0 9px;}
+.clab{font-size:11.5px;font-weight:800;color:var(--ink-3);margin-right:4px;}
+.clab2{font-size:11.5px;font-weight:800;color:var(--ink-3);margin-bottom:8px;}
+.curri-step{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.curri-step button{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink-3);cursor:pointer;font-family:inherit;}
+.curri-step button.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+.curri-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px;}
+.curri-g .wk{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 9px;border-radius:10px;
+  border:1.5px solid var(--line);background:var(--card);cursor:pointer;font-family:inherit;text-align:left;min-width:0;}
+.curri-g .wk b{font-size:12px;font-weight:800;color:var(--ink-3);}
+.curri-g .wk span{font-size:11px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}
+.curri-g .wk.done{background:#EAF0FF;border-color:#2E63E8;}
+.curri-g .wk.done b,.curri-g .wk.done span{color:#2E63E8;}
+.curri-g .wk.miss{background:#FDECEF;border-color:#E23D5A;}
+.curri-g .wk.miss b,.curri-g .wk.miss span{color:#E23D5A;}
+.curri-ex{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2);}
+.curri-ex .exrow{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+.curri-ex input{height:34px;border:1.5px solid var(--line);border-radius:9px;padding:0 10px;font-size:12.5px;
+  font-family:inherit;background:var(--card);color:var(--ink);box-sizing:border-box;}
+.curri-ex .exrow input{flex:1;min-width:0;}
+.curri-ex>input{width:100%;}
+.curri-ex .tilde{color:var(--ink-3);font-weight:700;flex:none;}
+.curri-ex .exrow2{display:flex;align-items:center;gap:9px;margin-top:8px;}
+.exmsg{font-size:11px;font-weight:700;color:#0EA96B;}
 /* 그래프 아래 요약 */
 .csum{display:flex;flex-wrap:wrap;gap:16px;margin-top:6px;padding-top:10px;border-top:1px solid var(--line-2);}
 .csum>div{display:flex;align-items:center;gap:6px;font-size:11.5px;}
@@ -480,6 +506,36 @@ const curGrade=info=>{if(!info||!info.grade)return '';const b=Number(info.gradeY
 const normGrades=list=>{const y=schoolYear();(list||[]).forEach(s=>{if(!s||!s.info||!s.info.grade)return;s.info.grade=curGrade(s.info);s.info.gradeY=y;});};
 
 const DAYS=['일','월','화','수','목','금','토'];
+// 커리큘럼 로드맵 — 학생앱(student.html)과 같은 표입니다.
+const STEPS={
+  s1:{no:1,name:'초등 스타터',weeks:11,u:['be동사 & 인칭대명사','일반동사','시제','명사와 관사','대명사','형용사 / 부사 / 비교','조동사','문장의 형식','to부정사 & 동명사','접속사','전치사']},
+  s2:{no:2,name:'중등 도전',weeks:10,u:['비교','접속사','관계사','가정법','일치와 화법','문장구조','시제','조동사','수동태','대명사']},
+  s3:{no:3,name:'중등 중급',weeks:12,u:['문장형식','시제','조동사','수동태','to부정사','동명사','분사','형용사 & 부사','비교','접속사','가정법','특수구문']},
+  s4:{no:4,name:'고등',weeks:9,u:['문장형식 & 수일치','시제','수동태','분사','to부정사','동명사','형용사 & 부사','비교','관계사']},
+};
+const stepOfClass=(name,level)=>{
+  const t=(name||'')+' '+(level||'');
+  if(/스타터|초등/.test(t))return 's1';
+  if(/도전/.test(t))return 's2';
+  if(/중급/.test(t))return 's3';
+  if(/고등|고급/.test(t))return 's4';
+  return '';
+};
+// 반 정보를 서버값과 병합해 저장합니다.
+async function saveClassPatch(cid,patch){
+  const cur=await fbReadTry('classes');
+  if(!cur.ok){alert('서버 상태를 확인할 수 없어 저장하지 않았습니다.');return false;}
+  const raw=cur.val;
+  const list=Array.isArray(raw)?raw.filter(Boolean):Object.values(toMap(raw));
+  const next=list.map(c=>String(c.id)===String(cid)?{...c,...patch}:c);
+  const ok=await fbSet('classes',next);
+  if(ok){
+    S.classes=next;
+    const i=S.classes.findIndex(c=>String(c.id)===String(cid));
+    if(i>=0)Object.assign(S.classes[i],patch);
+  }
+  return ok;
+}
 const pad=n=>String(n).padStart(2,'0');
 const today=()=>{const n=new Date();return`${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}`;};
 const dow=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getDay();};
@@ -920,6 +976,77 @@ function paintC(){
   }
   box.appendChild(c4);
 
+  // ── 커리큘럼 (수강 이력 · 내신 기간) ─────────────
+  const kls=S.classes.find(c=>String(c.id)===String(s.classId));
+  const c6=el('div','card');
+  const c6t=el('div','card-t','커리큘럼');
+  c6t.appendChild(el('span','card-sub','학생앱 진도표에 그대로 보입니다'));
+  c6.appendChild(c6t);
+
+  // 단계 고르기
+  const autoStep=stepOfClass(kls?kls.name:'' ,s.level);
+  const stepNow=(s.curri&&s.curri.step)||autoStep;
+  const sr=el('div','curri-step');
+  sr.appendChild(el('span','clab','단계'));
+  Object.keys(STEPS).forEach(k=>{
+    const b=el('button',stepNow===k?'on':'',`STEP ${STEPS[k].no} ${STEPS[k].name}`);
+    b.onclick=async()=>{
+      if(!s.curri)s.curri={};
+      s.curri.step=(stepNow===k&&!autoStep)?'':k;
+      if(stepNow===k&&k===autoStep)s.curri.step='';
+      await saveStudents();paintC();
+    };
+    sr.appendChild(b);
+  });
+  c6.appendChild(sr);
+  if(!stepNow){
+    c6.appendChild(el('div','warn','반 이름으로 단계를 찾지 못했습니다. 위에서 직접 골라주세요.'));
+  }else{
+    const stp=STEPS[stepNow];
+    c6.appendChild(el('div','chint','주차를 누르면 "들음 → 못 들음 → 미정" 순으로 바뀝니다.'));
+    const grid=el('div','curri-g');
+    const W=(s.curri&&s.curri.w)||{};
+    for(let n=1;n<=stp.weeks;n++){
+      const v=W[String(n)]||'';
+      const b=el('button','wk'+(v?' '+v:''));
+      b.innerHTML=`<b>${n}</b><span>${esc(stp.u[n-1]||'')}</span>`;
+      b.title=v==='done'?'들었음':(v==='miss'?'못 들었음':'미정');
+      b.onclick=async()=>{
+        if(!s.curri)s.curri={};
+        if(!s.curri.w)s.curri.w={};
+        const nx=v===''?'done':(v==='done'?'miss':'');
+        if(nx)s.curri.w[String(n)]=nx; else delete s.curri.w[String(n)];
+        await saveStudents();paintC();
+      };
+      grid.appendChild(b);
+    }
+    c6.appendChild(grid);
+  }
+
+  // 내신 기간 (반 전체)
+  if(kls){
+    const ex=el('div','curri-ex');
+    ex.appendChild(el('div','clab2',`내신 기간 — ${kls.name} 반 전체에 적용됩니다`));
+    const r=el('div','exrow');
+    const f=document.createElement('input');f.type='date';f.value=kls.examFrom||'';
+    const t2=document.createElement('input');t2.type='date';t2.value=kls.examTo||'';
+    const lb=document.createElement('input');lb.type='text';lb.placeholder='표시 문구 (예: 기말고사 대비)';lb.value=kls.examLabel||'';
+    r.appendChild(f);r.appendChild(el('span','tilde','~'));r.appendChild(t2);
+    ex.appendChild(r);ex.appendChild(lb);
+    const sv=el('button','mini p','저장');
+    const msg=el('span','exmsg');
+    sv.onclick=async()=>{
+      sv.disabled=true;msg.textContent='저장 중…';
+      const ok=await saveClassPatch(kls.id,{examFrom:f.value||'',examTo:t2.value||'',examLabel:lb.value.trim()});
+      msg.textContent=ok?'저장했습니다':'저장하지 못했습니다';
+      sv.disabled=false;
+      setTimeout(()=>{msg.textContent='';},2500);
+    };
+    const row2=el('div','exrow2');row2.appendChild(sv);row2.appendChild(msg);
+    ex.appendChild(row2);
+    c6.appendChild(ex);
+  }
+  box.appendChild(c6);
 }
 
 /* ============ 외부 연동: 월간 평가 (kkjgenerator) ============ */
@@ -1106,7 +1233,7 @@ const smsTests=l=>{
     r.push(`영작시험 : ${t}`);
   }
   if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
-  if(testOn(l,'mb'))r.push(`독해-문뽀[문장 구조 분석] : ${dLab(l.mbTest)}`);
+  if(testOn(l,'mb'))r.push(`문뽀(문장 구조 분석테스트) : ${dLab(l.mbTest)}`);
   if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
