@@ -154,9 +154,9 @@ document.addEventListener('visibilitychange',()=>{
 function pushGuard(){history.pushState({boda:1},'');}
 function bodaBack(){
   // 1) 영상 재생 중 → 영상 목록으로
-  if(Q._playVideo){Q._playVideo=null;Q.tab='video';render();return true;}
+  if(Q._playVideo){Q._playVideo=null;render();return true;}
   // 2) 평가 탭 → 홈(영상 탭)으로
-  if(Q.scr==='main'&&Q.tab!=='map'){Q.tab='map';render();return true;}
+  
   // 3) 홈 → 로그인 화면으로
   if(Q.scr==='main'){doLogout();return true;}
   // 4) 로그인 화면 → 앱 종료
@@ -212,7 +212,7 @@ function loginScreen(){
       setTimeout(()=>{codeInp.style.borderColor='rgba(180,200,255,0.6)';errMsg.textContent='';},2000);
       return;
     }
-    Q.stu=stu;Q.scr='main';Q.tab='map';Q._playVideo=null;sesSave(stu.id);render();
+    Q.stu=stu;Q.scr='main';Q._playVideo=null;sesSave(stu.id);render();
   };
   codeInp.onkeydown=e=>{if(e.key==='Enter')btn.onclick();};
 
@@ -255,88 +255,7 @@ async function mainScreen(){
   infoCard.appendChild(tagRow);
   bg.appendChild(infoCard);
 
-  // 탭 2개 (동영상 / 평가)
-  const tabRow=mks('div','display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;');
-  [['map','🗺️','진도'],['video','▶️','강의영상']].forEach(([id,icon,label])=>{
-    const active=Q.tab===id;
-    const btn=mks('div',`border-radius:14px;padding:12px 4px;text-align:center;cursor:pointer;background:${active?'linear-gradient(160deg,rgba(255,255,255,0.75),rgba(255,255,255,0.5))':'rgba(255,255,255,0.25)'};border:1.5px solid ${active?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)'};${active?'box-shadow:0 4px 14px rgba(80,100,200,0.15);':''}`);
-    const ic=mks('div','font-size:20px;margin-bottom:3px;',icon);
-    const lb=mks('div','font-size:11px;font-weight:700;',label);lb.style.cssText+=`color:${active?'#2E63E8':'#0B1A38'};font-family:${CF};`;
-    btn.appendChild(ic);btn.appendChild(lb);
-    btn.onclick=()=>{Q.tab=id;Q._playVideo=null;render();};
-    tabRow.appendChild(btn);
-  });
-  bg.appendChild(tabRow);
-
-  // ── 진도 탭 ───────────────────────────────
-  if(Q.tab==='map'){
-    renderMap(bg,stu);
-  }
-
-  // ── 동영상 탭 ─────────────────────────────
-  else if(Q.tab==='video'){
-    const stuVids=stu.videos||[];
-    const myVids=(MEM.videos||[]).filter(v=>stuVids.includes(v.id));
-
-    if(!myVids.length){
-      const empty=mks('div','border-radius:16px;background:rgba(255,255,255,0.4);border:1.5px solid rgba(255,255,255,0.7);padding:40px;text-align:center;');
-      empty.appendChild(mks('div','font-size:32px;margin-bottom:10px;','▶️'));
-      const et=mks('div','font-size:14px;color:#0B1A38;','등록된 강의가 없어요');et.style.fontFamily=CF;
-      empty.appendChild(et);
-      bg.appendChild(empty);
-    } else {
-      myVids.forEach(v=>{
-        const card=mks('div','border-radius:14px;background:linear-gradient(160deg,rgba(255,255,255,0.6),rgba(255,255,255,0.35));border:1.5px solid rgba(255,255,255,0.8);margin-bottom:12px;overflow:hidden;');
-
-        // 썸네일
-        const thumb=mks('div','position:relative;cursor:pointer;background:#000;');
-        if(v.vimeoId){
-          // 비메오 썸네일
-          const img=document.createElement('img');
-          img.src=`https://vumbnail.com/${String(v.vimeoId).split('/')[0]}.jpg`;
-          img.style.cssText='width:100%;display:block;opacity:0.85;';
-          img.onerror=()=>{img.style.display='none';thumb.style.minHeight='150px';};
-          thumb.appendChild(img);
-        } else if(v.ytId){
-          const img=document.createElement('img');
-          img.src=`https://img.youtube.com/vi/${v.ytId}/mqdefault.jpg`;
-          img.style.cssText='width:100%;display:block;';
-          thumb.appendChild(img);
-        }
-        // 재생 오버레이
-        const playOver=mks('div','position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;');
-        const playBtn=mks('div','width:60px;height:60px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.8);');
-        playBtn.innerHTML='<svg viewBox="0 0 24 24" width="28" height="28" fill="white"><polygon points="6,3 20,12 6,21"/></svg>';
-        playOver.appendChild(playBtn);
-        thumb.appendChild(playOver);
-        card.appendChild(thumb);
-
-        // 정보
-        const info=mks('div','padding:12px 14px;');
-        const title=mks('div','font-size:15px;font-weight:700;color:#0B1A38;margin-bottom:4px;',v.title||'강의');title.style.fontFamily=CF;
-        if(v.desc){const desc=mks('div','font-size:11px;color:rgba(10,26,92,0.5);margin-bottom:8px;',v.desc);desc.style.fontFamily=CF;info.appendChild(title);info.appendChild(desc);}
-        else info.appendChild(title);
-
-        const watchBtn=mks('button','','▶ 강의 시청하기');
-        watchBtn.style.cssText=`width:100%;height:40px;border-radius:10px;background:linear-gradient(135deg,#5b9ef8,#2060e8);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:${CF};`;
-        watchBtn.onclick=()=>{
-          if(v.vimeoId){
-            Q._playVideo=v;renderPlayer(bg,v);
-          } else if(v.ytId){
-            window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');
-          } else if(v.url){
-            window.open(v.url,'_blank');
-          }
-        };
-        thumb.onclick=watchBtn.onclick;
-        info.appendChild(watchBtn);
-        card.appendChild(info);
-        bg.appendChild(card);
-      });
-    }
-  }
-
-  // ── 평가 탭 ──────────────────────────────
+  renderMap(bg,stu);
 }
 
 // ── 전체화면 진입 시 가로 자동 회전 ───────
@@ -466,6 +385,13 @@ function examNow(stu){
   return {from:cls.examFrom,to:cls.examTo,label:cls.examLabel||'내신 대비 기간'};
 }
 
+// 영상 재생 — 비메오는 앱 안에서, 나머지는 새 창
+function playVid(bg,v){
+  if(v.vimeoId){Q._playVideo=v;renderPlayer(bg,v);}
+  else if(v.ytId)window.open(`https://www.youtube.com/watch?v=${v.ytId}`,'_blank');
+  else if(v.url)window.open(v.url,'_blank');
+}
+
 function renderMap(bg,stu){
   const key=myStep(stu);
   const todays=todayVideos(stu);
@@ -504,13 +430,37 @@ function renderMap(bg,stu){
       c.appendChild(mks('div',`font-size:14px;font-weight:800;color:#0B1A38;font-family:${CF};line-height:1.35;`,
         esc(String(v.title||'').replace(/^\[\d{4}\]\s*/,'').replace(/^\d{1,2}\s*주\s*차?\s*/,''))));
       row.appendChild(c);
-      row.appendChild(mks('div','font-size:16px;color:#2E63E8;flex:none;','▶'));
-      row.onclick=()=>{Q.tab='video';Q._playVideo=v.id;render();};
+      row.appendChild(mks('div',`flex:none;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(135deg,#5b9ef8,#2060e8);padding:8px 15px;border-radius:20px;font-family:${CF};`,'▶ 시작'));
+      row.onclick=()=>playVid(bg,v);
       tv.appendChild(row);
     });
   }else{
     tv.appendChild(mks('div',`text-align:center;padding:16px 10px;font-size:13px;font-weight:700;color:#8A97B4;font-family:${CF};`,
       '오늘 올라온 영상이 없어요'));
+  }
+  // 지난 강의 다시 보기
+  const ids=stu.videos||[];
+  const todayIds=todays.map(v=>v.id);
+  const past=(MEM.videos||[]).filter(v=>ids.includes(v.id)&&!todayIds.includes(v.id)).reverse();
+  if(past.length){
+    const det=document.createElement('details');
+    det.style.cssText='margin-top:4px;border-top:1px solid rgba(214,222,239,0.9);padding-top:11px;';
+    const sm=document.createElement('summary');
+    sm.style.cssText=`font-size:12px;font-weight:800;color:#8A97B4;cursor:pointer;font-family:${CF};`;
+    sm.textContent=`지난 강의 다시 보기 (${past.length})`;
+    det.appendChild(sm);
+    past.forEach(v=>{
+      const r=mks('button','');
+      r.style.cssText=`display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 11px;border-radius:12px;background:rgba(255,255,255,0.55);border:1.5px solid rgba(220,228,245,0.9);cursor:pointer;margin-top:7px;font-family:${CF};`;
+      r.appendChild(mks('div','font-size:17px;flex:none;','🎞️'));
+      const c=mks('div','flex:1;min-width:0;');
+      c.appendChild(mks('div',`font-size:12.5px;font-weight:700;color:#41527A;font-family:${CF};line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`,esc(v.title||'강의')));
+      r.appendChild(c);
+      r.appendChild(mks('div','font-size:13px;color:#8A97B4;flex:none;','▶'));
+      r.onclick=()=>playVid(bg,v);
+      det.appendChild(r);
+    });
+    tv.appendChild(det);
   }
   bg.appendChild(tv);
 
@@ -607,7 +557,7 @@ function renderPlayer(bg,v){
   const wrap=mks('div','background:#000;width:100%;');
   // 뒤로가기
   const backBtn=mks('button','position:absolute;top:10px;left:10px;z-index:10;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px;','← 뒤로');
-  backBtn.onclick=()=>{Q._playVideo=null;Q.tab='video';render();};
+  backBtn.onclick=()=>{Q._playVideo=null;render();};
   wrap.style.position='relative';
   wrap.appendChild(backBtn);
 
@@ -650,7 +600,7 @@ function renderPlayer(bg,v){
   try{const vids=await fbGet('videos');if(vids)MEM.videos=Array.isArray(vids)?vids:Object.values(vids);}catch(e){}
   try{const cp=await fbGet('classProgress');if(cp)MEM.cprog=cp;}catch(e){}
   const sid=sesLoad();
-  if(sid){const st=MEM.stu.find(x=>x.id===sid);if(st){Q.stu=st;Q.scr='main';Q.tab='video';}else sesClear();}
+  if(sid){const st=MEM.stu.find(x=>x.id===sid);if(st){Q.stu=st;Q.scr='main';}else sesClear();}
   render();
 })();
 
