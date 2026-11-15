@@ -166,6 +166,8 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .mtx em{font-style:normal;font-size:11px;font-weight:700;color:#B6C1D8;}
 .mstop.done .mtx b{color:#2E63E8;}
 .mstop.miss .mtx b{color:#E23D5A;}
+.mstop.now .mtx b{color:#B47400;}
+.mnow{flex:none;font-size:10px;font-weight:800;color:#fff;background:#F0A714;padding:2px 8px;border-radius:20px;}
 .mstop:hover .mtx b{text-decoration:underline;}
 .mend{display:flex;align-items:center;min-height:34px;font-size:11.5px;font-weight:800;color:var(--ink-3);}
 .mend .mrail2{position:relative;flex:none;width:40px;height:34px;}
@@ -536,10 +538,14 @@ const normGrades=list=>{const y=schoolYear();(list||[]).forEach(s=>{if(!s||!s.in
 const DAYS=['일','월','화','수','목','금','토'];
 // 커리큘럼 로드맵 — 학생앱(student.html)과 같은 표입니다.
 const STEPS={
-  s1:{no:1,name:'초등 스타터',weeks:11,u:['be동사 & 인칭대명사','일반동사','시제','명사와 관사','대명사','형용사 / 부사 / 비교','조동사','문장의 형식','to부정사 & 동명사','접속사','전치사']},
-  s2:{no:2,name:'중등 도전',weeks:10,u:['비교','접속사','관계사','가정법','일치와 화법','문장구조','시제','조동사','수동태','대명사']},
-  s3:{no:3,name:'중등 중급',weeks:12,u:['문장형식','시제','조동사','수동태','to부정사','동명사','분사','형용사 & 부사','비교','접속사','가정법','특수구문']},
-  s4:{no:4,name:'고등',weeks:9,u:['문장형식 & 수일치','시제','수동태','분사','to부정사','동명사','형용사 & 부사','비교','관계사']},
+  s1:{no:1,name:'초등 스타터',weeks:11,u:['be동사 & 인칭대명사','일반동사','시제','명사와 관사','대명사','형용사 / 부사 / 비교','조동사','문장의 형식','to부정사 & 동명사','접속사','전치사'],
+      core:{3:'시제',6:'비교',8:'문장형식'}},
+  s2:{no:2,name:'중등 도전',weeks:10,u:['비교','접속사','관계사','가정법','일치와 화법','문장구조','시제','조동사','수동태','대명사'],
+      core:{1:'비교',6:'문장형식',7:'시제'}},
+  s3:{no:3,name:'중등 중급',weeks:12,u:['문장형식','시제','조동사','수동태','to부정사','동명사','분사','형용사 & 부사','비교','접속사','가정법','특수구문'],
+      core:{1:'문장형식',2:'시제',9:'비교'}},
+  s4:{no:4,name:'고등',weeks:9,u:['문장형식 & 수일치','시제','수동태','분사','to부정사','동명사','형용사 & 부사','비교','관계사'],
+      core:{1:'문장형식',2:'시제',8:'비교'}},
 };
 // 영상 제목 앞의 [MMDD] 로 그날 영상을 찾습니다. (학생앱과 같은 규칙)
 const vidDate=t=>{
@@ -1031,18 +1037,23 @@ function paintC(){
     const stp=STEPS[stepNow];
     c6.appendChild(el('div','chint','역을 누르면 "들음 → 못 들음 → 미정" 순으로 바뀝니다.'));
     const W=(s.curri&&s.curri.w)||{};
-    const COL={done:'#2E63E8',miss:'#E23D5A',future:'#D6DEEF'};
-    const CORE={'시제':'#E0540E','비교':'#0EA96B','문장형식':'#8B5CF6'};
+    const COL={done:'#2E63E8',miss:'#E23D5A',future:'#D6DEEF',now:'#F0A714'};
+    // 현재 단원 — 배정된 영상 중 오늘까지 올라온 것의 주차
+    const nowWeek=(()=>{
+      const ids=new Set(s.videos||[]);
+      const d=(S.videos||[]).filter(v=>ids.has(v.id))
+        .map(v=>({d:vidDate(v.title),w:vidWeek(v.title)}))
+        .filter(x=>x.d&&x.w&&x.d<=S.date).sort((a,b)=>a.d.localeCompare(b.d));
+      return d.length?d[d.length-1].w:0;
+    })();
     const map=el('div','metro');
     for(let n=1;n<=stp.weeks;n++){
       const v=W[String(n)]||'';
       const nm=stp.u[n-1]||'';
-      const core=Object.keys(CORE).find(k=>nm.replace(/\s/g,'').includes(k));
-      const cc=core?CORE[core]:'';
+      const isNow=(n===nowWeek);
       const col=x=>x==='done'?COL.done:(x==='miss'?COL.miss:COL.future);
-      const nv=W[String(n+1)]||'';
 
-      const row=el('div','mstop'+(v?' '+v:''));
+      const row=el('div','mstop'+(v?' '+v:'')+(isNow?' now':''));
       row.title=v==='done'?'들었음':(v==='miss'?'못 들었음':'미정');
       const rail=el('span','mrail');
       if(n>1){const up=el('i','mseg up');up.style.background=col(W[String(n-1)]||'');rail.appendChild(up);}
@@ -1050,13 +1061,15 @@ function paintC(){
       const dot=el('i','mdot');
       if(v==='done'){dot.style.cssText=`background:${COL.done};border-color:${COL.done};`;dot.textContent='✓';}
       else if(v==='miss'){dot.style.cssText=`background:${COL.miss};border-color:${COL.miss};`;dot.textContent='✕';}
+      else if(isNow){dot.style.cssText=`background:${COL.now};border-color:${COL.now};`;dot.textContent='';}
       else {dot.style.cssText=`background:#fff;border-color:${COL.future};`;dot.textContent='';}
       rail.appendChild(dot);
-      if(cc){const rg=el('i','mring');rg.style.borderColor=v?cc:cc+'66';rail.appendChild(rg);}
+      if(isNow){const rg=el('i','mring');rg.style.borderColor=COL.now;rail.appendChild(rg);}
       row.appendChild(rail);
       const tx=el('span','mtx');
       tx.appendChild(el('b','',nm));
       tx.appendChild(el('em','',`${n}주차`));
+      if(isNow)tx.appendChild(el('span','mnow','현재'));
       row.appendChild(tx);
       row.onclick=async()=>{
         if(!s.curri)s.curri={};
