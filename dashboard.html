@@ -167,6 +167,8 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
 .mstop.done .mtx b{color:#2E63E8;}
 .mstop.miss .mtx b{color:#E23D5A;}
 .mstop.now .mtx b{color:#B47400;}
+
+.mdot.big{width:20px;height:20px;border-width:0;font-size:10px;}
 .mnow{flex:none;font-size:10px;font-weight:800;color:#fff;background:#F0A714;padding:2px 8px;border-radius:20px;}
 .mstop:hover .mtx b{text-decoration:underline;}
 .mend{display:flex;align-items:center;min-height:34px;font-size:11.5px;font-weight:800;color:var(--ink-3);}
@@ -1044,7 +1046,9 @@ function paintC(){
       const d=(S.videos||[]).filter(v=>ids.has(v.id))
         .map(v=>({d:vidDate(v.title),w:vidWeek(v.title)}))
         .filter(x=>x.d&&x.w&&x.d<=S.date).sort((a,b)=>a.d.localeCompare(b.d));
-      return d.length?d[d.length-1].w:0;
+      if(d.length)return d[d.length-1].w;
+      let mx=0;Object.keys(W).forEach(k=>{if(W[k])mx=Math.max(mx,Number(k));});
+      return mx?Math.min(mx+1,stp.weeks):0;
     })();
     const map=el('div','metro');
     for(let n=1;n<=stp.weeks;n++){
@@ -1059,12 +1063,15 @@ function paintC(){
       if(n>1){const up=el('i','mseg up');up.style.background=col(W[String(n-1)]||'');rail.appendChild(up);}
       if(n<stp.weeks){const dn=el('i','mseg dn');dn.style.background=col(v);rail.appendChild(dn);}
       const dot=el('i','mdot');
-      if(v==='done'){dot.style.cssText=`background:${COL.done};border-color:${COL.done};`;dot.textContent='✓';}
+      if(isNow){
+        dot.classList.add('big');
+        dot.style.cssText=`background:${COL.now};border-color:${COL.now};box-shadow:0 0 0 4px ${COL.now}33;`;
+        dot.textContent=v==='done'?'✓':(v==='miss'?'✕':'');
+      }
+      else if(v==='done'){dot.style.cssText=`background:${COL.done};border-color:${COL.done};`;dot.textContent='✓';}
       else if(v==='miss'){dot.style.cssText=`background:${COL.miss};border-color:${COL.miss};`;dot.textContent='✕';}
-      else if(isNow){dot.style.cssText=`background:${COL.now};border-color:${COL.now};`;dot.textContent='';}
       else {dot.style.cssText=`background:#fff;border-color:${COL.future};`;dot.textContent='';}
       rail.appendChild(dot);
-      if(isNow){const rg=el('i','mring');rg.style.borderColor=COL.now;rail.appendChild(rg);}
       row.appendChild(rail);
       const tx=el('span','mtx');
       tx.appendChild(el('b','',nm));
