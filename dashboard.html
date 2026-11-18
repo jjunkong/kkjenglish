@@ -1014,7 +1014,7 @@ function paintC(){
   const kls=S.classes.find(c=>String(c.id)===String(s.classId));
   const c6=el('div','card');
   const c6t=el('div','card-t','커리큘럼');
-  c6t.appendChild(el('span','card-sub','학생앱 진도표에 그대로 보입니다 · v1115b'));
+  c6t.appendChild(el('span','card-sub','학생앱 진도표에 그대로 보입니다 · v1118b'));
   c6.appendChild(c6t);
 
   // 단계 고르기
@@ -1324,13 +1324,78 @@ const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.co
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
 // 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
 const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
+// 과제 — 내신용 / 평소용 (학습리더 입력)
+const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문장분석'],['dr','문풀(실전문제)']];
+const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
+const HW_TAIL='틀린 문제는 수정 및 첨삭지도하였습니다.';
+const HW_WARN='미완료된 과제는 다음 시간까지 마무리하도록 안내했습니다.';
+const HW_MISS_LINE=n=>`※ 이번 달 과제 미완료 ${n}회입니다. 가정에서 한 번 챙겨봐 주시면 큰 도움이 됩니다.`;
+// 그날 과제에 미완료가 하나라도 있으면 1회로 셉니다.
+const hwMissDay=l=>{
+  const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
+  if(x){
+    let hit=false;
+    if(x.ex&&x.ex.on)HW_EX.forEach(([k])=>{if(x.ex[k]==='none')hit=true;});
+    if(x.dy&&x.dy.on&&Array.isArray(x.dy.list))x.dy.list.forEach(it=>{if(it&&it.s==='none'&&String(it.n||'').trim())hit=true;});
+    return hit;
+  }
+  return hwStat(l)==='x';
+};
+// 그 달 미완료 횟수 — rows:[{date,l}]
+const hwMissMonth=(rows,ym)=>{
+  let n=0;
+  (rows||[]).forEach(r=>{if(r&&r.date&&String(r.date).slice(0,7)===ym&&hwMissDay(r.l))n++;});
+  return n;
+};
+const hwXLines=l=>{
+  const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
+  if(!x)return null;
+  const ex=(x.ex&&x.ex.on)?x.ex:null, dy=(x.dy&&x.dy.on)?x.dy:null;
+  const r=[];let warn=false;
+  if(ex){
+    const rows=[];
+    HW_EX.forEach(([k,t])=>{
+      const s=hwStLab(ex[k]);
+      if(!s)return;
+      rows.push(`· ${t} : ${s}`);
+      if(ex[k]==='part'||ex[k]==='none')warn=true;
+    });
+    if(rows.length){r.push('[내신 자체교재]');r.push(...rows);}
+  }
+  if(dy){
+    const rows=[];
+    (Array.isArray(dy.list)?dy.list:[]).forEach(it=>{
+      const n=String((it&&it.n)||'').trim();
+      if(!n)return;
+      const s=hwStLab(it&&it.s);
+      rows.push(`· ${n}${s?' : '+s:''}`);
+      if(it&&(it.s==='part'||it.s==='none'))warn=true;
+    });
+    if(rows.length){r.push('[외부교재]');r.push(...rows);}
+  }
+  if(!r.length)return null;
+  r.push('',HW_TAIL);
+  if(warn)r.push(HW_WARN);
+  return r.join('\n');
+};
+// 문자에 들어갈 <과제 수행> 본문
+const hwBlock=(l,txt,miss)=>{
+  const n=Number(miss)||0;
+  const add=s=>s+(n>=2?('\n'+HW_MISS_LINE(n)):'');
+  const nx=hwXLines(l);
+  if(nx)return add(nx);
+  const base=hwLine(l,txt);
+  if(!base)return '';
+  const warn=(hwStat(l)==='x')||((l&&l.hwNote)==='partial');
+  return add(base+'\n\n'+HW_TAIL+(warn?'\n'+HW_WARN:''));
+};
 // 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
 const exText=l=>String((l&&l.extra)||'').trim();
 const exTitle=l=>String((l&&l.extraTitle)||'').trim()||'기타';
 const exOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'extra' in o)?!!o.extra:true;};
 const exBlock=l=>(exText(l)&&exOn(l))?`<${exTitle(l)}>\n${exText(l)}\n\n`:'';
 
-function genSMS(stu,l,dateStr){
+function genSMS(stu,l,dateStr,miss){
   // 원장이 직접 고친 문자가 있으면 그것을 씁니다.
   if(l&&typeof l.smsText==='string'&&l.smsText.trim())return l.smsText;
   const sc=smsTests(l);
@@ -1338,7 +1403,7 @@ function genSMS(stu,l,dateStr){
     +`안녕하세요. 김기준영어학원입니다.\n`
     +`${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
-    +(hwOn(l)?`<과제 수행>\n${hwLine(l)}\n\n`:'')
+    +(hwOn(l)?`<과제 수행>\n${hwBlock(l,null,miss)}\n\n`:'')
     +(sc?`<TEST>\n${sc}\n\n`:'')
     +exBlock(l)
     +`최선을 다해서 지도하겠습니다. 감사합니다.\n-김기준영어학원 드림`;
@@ -1376,7 +1441,8 @@ $('smsbtn').onclick=async()=>{
     if(!phone)warn='연락처 없음';
     else if(att==='absent')warn='결석';
     else if(!rec)warn='기록 없음';
-    MROWS.push({stu:st,l,dateStr,phone:String(phone).replace(/[^\d]/g,''),text:genSMS(st,l,dateStr),
+    const miss=hwMissMonth(h.rows,S.date.slice(0,7));
+    MROWS.push({stu:st,l,dateStr,miss,phone:String(phone).replace(/[^\d]/g,''),text:genSMS(st,l,dateStr,miss),
                 warn,on:!!phone&&att!=='absent'});
   }
   renderM(cfg);
@@ -1434,7 +1500,7 @@ function renderM(cfg){
         if(!r.l.on)r.l.on={};
         r.l.on.hw=v;
         await saveLessonFlag(r.stu.id,S.date,{hw:v});
-        r.text=genSMS(r.stu,r.l,r.dateStr);
+        r.text=genSMS(r.stu,r.l,r.dateStr,r.miss);
         hb.disabled=false;
         draw();
       };
@@ -1454,7 +1520,7 @@ function renderM(cfg){
           if(!r.l.on)r.l.on={};
           r.l.on.extra=v;
           await saveLessonFlag(r.stu.id,S.date,{extra:v});
-          r.text=genSMS(r.stu,r.l,r.dateStr);
+          r.text=genSMS(r.stu,r.l,r.dateStr,r.miss);
           eb.disabled=false;
           draw();
         };
@@ -1490,7 +1556,7 @@ function renderM(cfg){
         const ok=await saveLessonPatch(r.stu.id,S.date,{smsText:''});
         if(ok){
           if(r.l)r.l.smsText='';
-          r.text=genSMS(r.stu,r.l,r.dateStr);
+          r.text=genSMS(r.stu,r.l,r.dateStr,r.miss);
           ta.value=r.text;fit();
           paintNote('');
         }else paintNote('되돌리지 못했습니다','bad');

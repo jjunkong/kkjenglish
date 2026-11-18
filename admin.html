@@ -195,7 +195,7 @@ const smsTests=l=>{
     r.push(`영작시험 : ${t}`);
   }
   if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
-  if(testOn(l,'mb'))r.push(`독해-문뽀[문장 구조 분석] : ${dLab(l.mbTest)}`);
+  if(testOn(l,'mb'))r.push(`문뽀(문장 구조 분석테스트) : ${dLab(l.mbTest)}`);
   if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
@@ -215,6 +215,74 @@ const hwText=l=>(l&&typeof l.hw==='string'&&l.hw.trim())||((l&&l.plan&&l.plan.co
 const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].filter(Boolean).join(' - ');
 // 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
 const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
+// 과제 — 내신용 / 평소용 (학습리더 입력)
+const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문장분석'],['dr','문풀(실전문제)']];
+const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
+const HW_TAIL='틀린 문제는 수정 및 첨삭지도하였습니다.';
+const HW_WARN='미완료된 과제는 다음 시간까지 마무리하도록 안내했습니다.';
+const HW_MISS_LINE=n=>`※ 이번 달 과제 미완료 ${n}회입니다. 가정에서 한 번 챙겨봐 주시면 큰 도움이 됩니다.`;
+// 그날 과제에 미완료가 하나라도 있으면 1회로 셉니다.
+const hwMissDay=l=>{
+  const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
+  if(x){
+    let hit=false;
+    if(x.ex&&x.ex.on)HW_EX.forEach(([k])=>{if(x.ex[k]==='none')hit=true;});
+    if(x.dy&&x.dy.on&&Array.isArray(x.dy.list))x.dy.list.forEach(it=>{if(it&&it.s==='none'&&String(it.n||'').trim())hit=true;});
+    return hit;
+  }
+  return hwStat(l)==='x';
+};
+// 그 달 미완료 횟수 — raw: {YYYY_MM_DD: lesson}
+const hwMissMonthRaw=(raw,ym)=>{
+  let n=0;
+  Object.keys(raw||{}).forEach(k=>{
+    if(String(k).replace(/_/g,'-').slice(0,7)!==ym)return;
+    if(hwMissDay(raw[k]))n++;
+  });
+  return n;
+};
+const hwXLines=l=>{
+  const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
+  if(!x)return null;
+  const ex=(x.ex&&x.ex.on)?x.ex:null, dy=(x.dy&&x.dy.on)?x.dy:null;
+  const r=[];let warn=false;
+  if(ex){
+    const rows=[];
+    HW_EX.forEach(([k,t])=>{
+      const s=hwStLab(ex[k]);
+      if(!s)return;
+      rows.push(`· ${t} : ${s}`);
+      if(ex[k]==='part'||ex[k]==='none')warn=true;
+    });
+    if(rows.length){r.push('[내신 자체교재]');r.push(...rows);}
+  }
+  if(dy){
+    const rows=[];
+    (Array.isArray(dy.list)?dy.list:[]).forEach(it=>{
+      const n=String((it&&it.n)||'').trim();
+      if(!n)return;
+      const s=hwStLab(it&&it.s);
+      rows.push(`· ${n}${s?' : '+s:''}`);
+      if(it&&(it.s==='part'||it.s==='none'))warn=true;
+    });
+    if(rows.length){r.push('[외부교재]');r.push(...rows);}
+  }
+  if(!r.length)return null;
+  r.push('',HW_TAIL);
+  if(warn)r.push(HW_WARN);
+  return r.join('\n');
+};
+// 문자에 들어갈 <과제 수행> 본문
+const hwBlock=(l,txt,miss)=>{
+  const n=Number(miss)||0;
+  const add=s=>s+(n>=2?('\n'+HW_MISS_LINE(n)):'');
+  const nx=hwXLines(l);
+  if(nx)return add(nx);
+  const base=hwLine(l,txt);
+  if(!base)return '';
+  const warn=(hwStat(l)==='x')||((l&&l.hwNote)==='partial');
+  return add(base+'\n\n'+HW_TAIL+(warn?'\n'+HW_WARN:''));
+};
 // 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
 const exText=l=>String((l&&l.extra)||'').trim();
 const exTitle=l=>String((l&&l.extraTitle)||'').trim()||'기타';
@@ -773,7 +841,7 @@ function aLogin(){
   const w=mks('div','');A.appendChild(w);
   const hdr=mk('div','page-header');
   hdr.appendChild(mks('div','font-size:18px;font-weight:700;color:#fff;font-family:GmarketSans,sans-serif;','학원관리자'));
-  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1103z'));
+  hdr.appendChild(mks('div','font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;','수업 계획 및 완성도 입력 · v1104a'));
   w.appendChild(hdr);
   const body=mk('div','page-body');w.appendChild(body);
   const c=mk('div','card');body.appendChild(c);
@@ -821,7 +889,7 @@ async function aList(){
   dashBtn.title='PC 전용 통합 화면 (진도·성적·출석 누적)';
   dashBtn.onclick=()=>{location.href='/dashboard.html';};
   rightBtns.appendChild(dashBtn);
-  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1103z'));
+  rightBtns.appendChild(mks('span','font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);align-self:center;margin-right:2px;','v1104a'));
   const settingsBtn=mk('button','btn-ghost-inv','⚙ 설정');settingsBtn.onclick=()=>{Q.scr='aSettings';Q.err='';render();};rightBtns.appendChild(settingsBtn);
   topRow.appendChild(rightBtns);
   hdr.appendChild(topRow);
@@ -1426,6 +1494,9 @@ async function aLessonView(){
   s3hdr.appendChild(copyBtn);
   sec3.appendChild(s3hdr);
 
+  // 이번 달 과제 미완료 횟수 (2회 이상일 때만 문자에 한 줄 붙습니다)
+  const hwMiss=hwMissMonthRaw(await fbGet(`lessons/${Q.aStu.id}`)||{},String(Q.aDate).slice(0,7));
+
   // SMS 생성 함수
   const genSMS=()=>{
     // 대시보드에서 직접 고친 문자가 있으면 그것을 씁니다.
@@ -1440,7 +1511,7 @@ async function aLessonView(){
       +'안녕하세요. 김기준영어학원입니다.\n'
       +dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
       +'<CLASS 공지>\n'+classNotice+'\n\n'
-      +(hwOn(lData)?('<과제 수행>\n'+hwLine(lData,hwBody)+'\n\n'):'')
+      +(hwOn(lData)?('<과제 수행>\n'+hwBlock(lData,hwBody,hwMiss)+'\n\n'):'')
       +(scores?('<TEST>\n'+scores+'\n\n'):'')
       +exBlock(lData)
       +'최선을 다해서 지도하겠습니다. 감사합니다.\n'
@@ -1680,10 +1751,12 @@ async function aGroupPlan(){
   const hwSb=mk('div','section-block');
   hwSb.appendChild(mk('div','section-tag','HOMEWORK'));
   const hwTa=document.createElement('textarea');
-  hwTa.className='section-ta';hwTa.rows=3;hwTa.placeholder='과제 내용을 입력하세요...';
+  hwTa.className='section-ta';hwTa.rows=3;hwTa.placeholder='한 줄에 교재 하나씩 적어주세요.\n예) 그래머인사이드3 p.40-45\n    워마 DAY 12';
   hwTa.value=existingHw;
   hwTa.oninput=()=>GL.hw=hwTa.value;
-  hwSb.appendChild(hwTa);body.appendChild(hwSb);
+  hwSb.appendChild(hwTa);
+  hwSb.appendChild(mks('div','font-size:10.5px;color:#64748b;font-weight:600;margin-top:6px;line-height:1.5;','한 줄에 한 권씩 적으면 학습리더 앱 「외부교재」 칸에 그대로 들어갑니다. (학습리더는 완료 / 부분완료 / 미완료만 찍습니다)'));
+  body.appendChild(hwSb);
 
   // 기타 항목 (필요할 때만)
   let existingEx='',existingExT='';
