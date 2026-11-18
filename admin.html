@@ -1750,12 +1750,34 @@ async function aGroupPlan(){
   body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin:14px 0 8px;','과제'));
   const hwSb=mk('div','section-block');
   hwSb.appendChild(mk('div','section-tag','HOMEWORK'));
-  const hwTa=document.createElement('textarea');
-  hwTa.className='section-ta';hwTa.rows=3;hwTa.placeholder='한 줄에 교재 하나씩 적어주세요.\n예) 그래머인사이드3 p.40-45\n    워마 DAY 12';
-  hwTa.value=existingHw;
-  hwTa.oninput=()=>GL.hw=hwTa.value;
-  hwSb.appendChild(hwTa);
-  hwSb.appendChild(mks('div','font-size:10.5px;color:#64748b;font-weight:600;margin-top:6px;line-height:1.5;','한 줄에 한 권씩 적으면 학습리더 앱 「외부교재」 칸에 그대로 들어갑니다. (학습리더는 완료 / 부분완료 / 미완료만 찍습니다)'));
+  // 교재 한 권 = 한 칸. 학습리더 앱 「외부교재」 칸에 반 전체로 내려갑니다.
+  let hwBookList=String(existingHw||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!hwBookList.length)hwBookList=[''];
+  const hwList=mks('div','');
+  const syncHw=()=>{GL.hw=hwBookList.map(s=>String(s).trim()).filter(Boolean).join('\n');};
+  const paintHw=()=>{
+    hwList.innerHTML='';
+    hwBookList.forEach((v,i)=>{
+      const r=mks('div','display:flex;gap:6px;align-items:center;margin-bottom:6px;');
+      const ip=document.createElement('input');
+      ip.className='inp';ip.value=v;ip.placeholder='교재명 · 범위 (예: 그래머인사이드3 p.40-45)';
+      ip.style.cssText+='flex:1 1 0;min-width:0;margin:0;';
+      ip.oninput=()=>{hwBookList[i]=ip.value;syncHw();};
+      r.appendChild(ip);
+      const del=mks('button','','✕');
+      del.style.cssText='flex:0 0 34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:12px;font-weight:800;cursor:pointer;';
+      del.onclick=()=>{hwBookList.splice(i,1);if(!hwBookList.length)hwBookList=[''];syncHw();paintHw();};
+      r.appendChild(del);
+      hwList.appendChild(r);
+    });
+    const add=mks('button','','+ 교재 추가');
+    add.style.cssText='width:100%;height:33px;border-radius:8px;border:1px dashed #c7d2fe;background:#f8f9ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;';
+    add.onclick=()=>{hwBookList.push('');paintHw();};
+    hwList.appendChild(add);
+  };
+  paintHw();syncHw();
+  hwSb.appendChild(hwList);
+  hwSb.appendChild(mks('div','font-size:10.5px;color:#64748b;font-weight:600;margin-top:8px;line-height:1.5;','여기 적은 교재가 학습리더 앱 「외부교재」 칸에 반 전체로 들어갑니다. (학습리더는 완료 / 부분완료 / 미완료만 찍습니다)'));
   body.appendChild(hwSb);
 
   // 기타 항목 (필요할 때만)
