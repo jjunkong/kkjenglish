@@ -216,7 +216,7 @@ const hwLine=(l,txt)=>[((txt==null?hwText(l):String(txt)).trim()),hwLabel(l)].fi
 // 과제 수행 항목을 문자에 넣을지 여부 (기본 포함)
 const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw:true;};
 // 과제 — 내신용 / 평소용 (학습리더 입력)
-const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문장분석'],['dr','문풀(실전문제)']];
+const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문뽀(문장분석)'],['dr','문풀(실전문제)']];
 const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
 const HW_TAIL='틀린 문제는 수정 및 첨삭지도하였습니다.';
 const HW_WARN='미완료된 과제는 다음 시간까지 마무리하도록 안내했습니다.';
