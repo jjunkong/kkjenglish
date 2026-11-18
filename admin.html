@@ -173,30 +173,30 @@ const testOn=(l,k)=>{
 };
 const smsTests=l=>{
   const r=[];
-  if(testOn(l,'B'))r.push(`복테[복습테스트] : ${smsNum(l.bTest)}`);
-  if(testOn(l,'O'))r.push(`확테[확인테스트] : ${smsNum(l.oTest)}`);
-  if(testOn(l,'D'))r.push(`개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
+  if(testOn(l,'B'))r.push(`· 복테[복습테스트] : ${smsNum(l.bTest)}`);
+  if(testOn(l,'O'))r.push(`· 확테[확인테스트] : ${smsNum(l.oTest)}`);
+  if(testOn(l,'D'))r.push(`· 개테[개념테스트] : ${l.dTest==='done'?(l.dNote==='fixed'?'수정 완료':'완료'):'미완료'}`);
   if(testOn(l,'word')){
     const w=l.wordTest;
     const t=(w==='done'||w===true)?'완료':((w===''||w==null||w===false)?'미완료':smsNum(w));
-    r.push(`단어시험 : ${t}`);
+    r.push(`· 단어시험 : ${t}`);
   }
   if(testOn(l,'wb')){
     const w=l.wbTest;
     const done=(w==='done'||w===true||l.wbDone==='done'||l.wbDone===true);
     const t=done?'완료':((w===''||w==null||w===false)?'미완료':smsNum(w));
-    r.push(`단어워크북 : ${t}`);
+    r.push(`· 단어워크북 : ${t}`);
   }
   if(testOn(l,'write')){
     const w=l.writeTest;
     const t=(w==='fixed')?'수정 완료'
       :((w==='done'||w===true)?(l.writeNote==='fixed'?'수정 완료':'완료')
       :((w===''||w==null||w===false)?'미완료':smsNum(w)));
-    r.push(`영작시험 : ${t}`);
+    r.push(`· 영작시험 : ${t}`);
   }
-  if(testOn(l,'habang'))r.push(`하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
-  if(testOn(l,'mb'))r.push(`문뽀(문장 구조 분석테스트) : ${dLab(l.mbTest)}`);
-  if(testOn(l,'mock'))r.push(`동형모의고사&문풀 : ${dLab(l.mockTest)}`);
+  if(testOn(l,'habang'))r.push(`· 하빵[내신범위 빈칸테스트] : ${dLab(l.habangTest)}`);
+  if(testOn(l,'mb'))r.push(`· 문뽀(문장 구조 분석테스트) : ${dLab(l.mbTest)}`);
+  if(testOn(l,'mock'))r.push(`· 동형모의고사&문풀 : ${dLab(l.mockTest)}`);
   return r.join('\n');
 };
 // 과제 수행 상태 (구 boolean hw 호환)
@@ -218,70 +218,55 @@ const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw
 // 과제 — 내신용 / 평소용 (학습리더 입력)
 const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문뽀(문장분석)'],['dr','문풀(실전문제)']];
 const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
-const HW_TAIL='틀린 문제는 수정 및 첨삭지도하였습니다.';
-const HW_WARN='미완료 과제는 다음 수업까지 해 오도록 안내했습니다.\n반복될 경우 남아서 마무리하며, 미리 연락드리겠습니다.';
-const HW_MISS_LINE=n=>`※ 이번 달 과제 미완료 ${n}회입니다. 가정에서 한 번 챙겨봐 주시면 큰 도움이 됩니다.`;
-// 그날 과제에 미완료가 하나라도 있으면 1회로 셉니다.
-const hwMissDay=l=>{
-  const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
-  if(x){
-    let hit=false;
-    if(x.ex&&x.ex.on)HW_EX.forEach(([k])=>{if(x.ex[k]==='none')hit=true;});
-    if(x.dy&&x.dy.on&&Array.isArray(x.dy.list))x.dy.list.forEach(it=>{if(it&&it.s==='none'&&String(it.n||'').trim())hit=true;});
-    return hit;
-  }
-  return hwStat(l)==='x';
+const HW_TAIL='*과제와 테스트에서 틀린 문제는 수정 및 첨삭지도하였습니다.';
+
+// 원장방 과제 칸(HOMEWORK)에 적힌 교재 — 줄마다 한 권
+const hwBooksOf=l=>String((l&&typeof l.hw==='string')?l.hw:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+// 외부교재 칸이 켜져 있는지 — 학습리더가 직접 끄지 않았다면 원장방 교재가 있을 때 자동으로 켜집니다.
+const hwDyOn=l=>{
+  const d=l&&l.hwX&&l.hwX.dy;
+  if(!d)return false;
+  return !!d.on||(!d.off&&hwBooksOf(l).length>0);
 };
-// 그 달 미완료 횟수 — raw: {YYYY_MM_DD: lesson}
-const hwMissMonthRaw=(raw,ym)=>{
-  let n=0;
-  Object.keys(raw||{}).forEach(k=>{
-    if(String(k).replace(/_/g,'-').slice(0,7)!==ym)return;
-    if(hwMissDay(raw[k]))n++;
-  });
-  return n;
+// 외부교재 목록 — 원장방 교재 + 학습리더가 직접 추가한 것, 상태는 저장된 값에서 가져옵니다.
+const hwDyRows=l=>{
+  const d=(l&&l.hwX&&l.hwX.dy)||{};
+  const stored=Array.isArray(d.list)?d.list:[];
+  const st={};stored.forEach(it=>{const n=String((it&&it.n)||'').trim();if(n)st[n]=(it&&it.s)||'';});
+  const books=hwBooksOf(l);
+  const mine=stored.filter(it=>it&&it.x&&String(it.n||'').trim()&&books.indexOf(String(it.n).trim())<0);
+  return books.map(n=>({n,s:st[n]||''})).concat(mine.map(it=>({n:String(it.n).trim(),s:it.s||''})));
 };
 const hwXLines=l=>{
   const x=(l&&l.hwX&&typeof l.hwX==='object')?l.hwX:null;
   if(!x)return null;
-  const ex=(x.ex&&x.ex.on)?x.ex:null, dy=(x.dy&&x.dy.on)?x.dy:null;
-  const r=[];let warn=false;
+  const ex=(x.ex&&x.ex.on)?x.ex:null, dy=hwDyOn(l);
+  const r=[];
   if(ex){
     const rows=[];
     HW_EX.forEach(([k,t])=>{
       const s=hwStLab(ex[k]);
       if(!s)return;
       rows.push(`· ${t} : ${s}`);
-      if(ex[k]==='none')warn=true;
     });
     if(rows.length){r.push('[내신 자체교재]');r.push(...rows);}
   }
   if(dy){
     const rows=[];
-    (Array.isArray(dy.list)?dy.list:[]).forEach(it=>{
-      const n=String((it&&it.n)||'').trim();
-      if(!n)return;
-      const s=hwStLab(it&&it.s);
-      rows.push(`· ${n}${s?' : '+s:''}`);
-      if(it&&it.s==='none')warn=true;
+    hwDyRows(l).forEach(it=>{
+      const s=hwStLab(it.s);
+      rows.push(`· ${it.n}${s?' : '+s:''}`);
     });
     if(rows.length){r.push('[외부교재]');r.push(...rows);}
   }
   if(!r.length)return null;
-  r.push(HW_TAIL);
-  if(warn)r.push(HW_WARN);
   return r.join('\n');
 };
 // 문자에 들어갈 <과제 수행> 본문
-const hwBlock=(l,txt,miss)=>{
-  const n=Number(miss)||0;
-  const add=s=>s+(n>=2?('\n'+HW_MISS_LINE(n)):'');
+const hwBlock=(l,txt)=>{
   const nx=hwXLines(l);
-  if(nx)return add(nx);
-  const base=hwLine(l,txt);
-  if(!base)return '';
-  const warn=(hwStat(l)==='x');
-  return add(base+'\n'+HW_TAIL+(warn?'\n'+HW_WARN:''));
+  if(nx)return nx;
+  return hwLine(l,txt);
 };
 // 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
 const exText=l=>String((l&&l.extra)||'').trim();
@@ -1494,9 +1479,6 @@ async function aLessonView(){
   s3hdr.appendChild(copyBtn);
   sec3.appendChild(s3hdr);
 
-  // 이번 달 과제 미완료 횟수 (2회 이상일 때만 문자에 한 줄 붙습니다)
-  const hwMiss=hwMissMonthRaw(await fbGet(`lessons/${Q.aStu.id}`)||{},String(Q.aDate).slice(0,7));
-
   // SMS 생성 함수
   const genSMS=()=>{
     // 대시보드에서 직접 고친 문자가 있으면 그것을 씁니다.
@@ -1511,9 +1493,10 @@ async function aLessonView(){
       +'안녕하세요. 김기준영어학원입니다.\n'
       +dateStr+' '+name+' 학생 DAILY REPORT 전달드립니다.\n\n'
       +'<CLASS 공지>\n'+classNotice+'\n\n'
-      +(hwOn(lData)?('<과제 수행>\n'+hwBlock(lData,hwBody,hwMiss)+'\n\n'):'')
+      +(hwOn(lData)?('<과제 수행>\n'+hwBlock(lData,hwBody)+'\n\n'):'')
       +(scores?('<TEST>\n'+scores+'\n\n'):'')
       +exBlock(lData)
+      +HW_TAIL+'\n'
       +'최선을 다해서 지도하겠습니다. 감사합니다.\n'
       +'-김기준영어학원 드림';
   };
