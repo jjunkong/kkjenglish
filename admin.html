@@ -219,7 +219,7 @@ const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw
 const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문뽀(문장분석)'],['dr','문풀(실전문제)']];
 const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
 const HW_TAIL='틀린 문제는 수정 및 첨삭지도하였습니다.';
-const HW_WARN='미완료된 과제는 다음 시간까지 마무리하도록 안내했습니다.';
+const HW_WARN='미완료 과제는 다음 수업까지 해 오도록 안내했습니다.\n반복될 경우 남아서 마무리하며, 미리 연락드리겠습니다.';
 const HW_MISS_LINE=n=>`※ 이번 달 과제 미완료 ${n}회입니다. 가정에서 한 번 챙겨봐 주시면 큰 도움이 됩니다.`;
 // 그날 과제에 미완료가 하나라도 있으면 1회로 셉니다.
 const hwMissDay=l=>{
@@ -252,7 +252,7 @@ const hwXLines=l=>{
       const s=hwStLab(ex[k]);
       if(!s)return;
       rows.push(`· ${t} : ${s}`);
-      if(ex[k]==='part'||ex[k]==='none')warn=true;
+      if(ex[k]==='none')warn=true;
     });
     if(rows.length){r.push('[내신 자체교재]');r.push(...rows);}
   }
@@ -263,12 +263,12 @@ const hwXLines=l=>{
       if(!n)return;
       const s=hwStLab(it&&it.s);
       rows.push(`· ${n}${s?' : '+s:''}`);
-      if(it&&(it.s==='part'||it.s==='none'))warn=true;
+      if(it&&it.s==='none')warn=true;
     });
     if(rows.length){r.push('[외부교재]');r.push(...rows);}
   }
   if(!r.length)return null;
-  r.push('',HW_TAIL);
+  r.push(HW_TAIL);
   if(warn)r.push(HW_WARN);
   return r.join('\n');
 };
@@ -280,8 +280,8 @@ const hwBlock=(l,txt,miss)=>{
   if(nx)return add(nx);
   const base=hwLine(l,txt);
   if(!base)return '';
-  const warn=(hwStat(l)==='x')||((l&&l.hwNote)==='partial');
-  return add(base+'\n\n'+HW_TAIL+(warn?'\n'+HW_WARN:''));
+  const warn=(hwStat(l)==='x');
+  return add(base+'\n'+HW_TAIL+(warn?'\n'+HW_WARN:''));
 };
 // 기타 항목 — 내용이 있을 때만 문자에 들어갑니다. (기본 포함)
 const exText=l=>String((l&&l.extra)||'').trim();
