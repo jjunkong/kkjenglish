@@ -1391,11 +1391,10 @@ function genSMS(stu,l,dateStr){
     +`안녕하세요. 김기준영어학원입니다.\n`
     +`${dateStr} ${stu.name} 학생 DAILY REPORT 전달드립니다.\n\n`
     +`<CLASS 공지>\n${(l.plan&&l.plan.check)||''}\n\n`
-    +(hwOn(l)?`<과제 수행>\n${hwBlock(l)}\n\n`:'')
-    +(sc?`<TEST>\n${sc}\n\n`:'')
+    +(hwOn(l)?`<과제 수행>\n${hwBlock(l)}`+(sc?'\n\n':'\n'+HW_TAIL+'\n\n'):'')
+    +(sc?`<TEST>\n${sc}\n`+HW_TAIL+'\n\n':'')
     +exBlock(l)
-    +HW_TAIL+'\n'
-    +`오늘 내용은 다음 수업에서 한 번 더 확인하겠습니다. 감사합니다.\n-김기준영어학원 드림`;
+    +`늘 세심하게 살피며 지도하겠습니다. 감사합니다.\n-김기준영어학원 드림`;
 }
 
 $('smsbtn').onclick=async()=>{
