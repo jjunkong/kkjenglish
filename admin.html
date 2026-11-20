@@ -225,7 +225,17 @@ const HW_UNSUB='*제출하도록 지도하였고, 다음 시간에 재확인하�
 const hwBooksOf=l=>String((l&&typeof l.hw==='string')?l.hw:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
 // 원장방 내신교재 칸 — 문자 제목에만 쓰입니다.
 const hwExBooks=l=>String((l&&typeof l.hwEx==='string')?l.hwEx:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-const hwExTitle=l=>{const b=hwExBooks(l);return b.length?`[내신 자체교재 - ${b.join(', ')}]`:'[내신 자체교재]';};
+// 학습리더가 학생별로 적은 교재명이 있으면 그것을 먼저 씁니다.
+const hwExNames=l=>{
+  const bk=l&&l.hwX&&l.hwX.ex&&l.hwX.ex.bk;
+  if(Array.isArray(bk)){
+    const v=bk.map(x=>String(x||'').trim()).filter(Boolean);
+    if(v.length)return v;
+    return [];
+  }
+  return hwExBooks(l);
+};
+const hwExTitle=l=>{const b=hwExNames(l);return b.length?`[내신 자체교재 - ${b.join(', ')}]`:'[내신 자체교재]';};
 // 외부교재 칸이 켜져 있는지 — 학습리더가 직접 끄지 않았다면 원장방 교재가 있을 때 자동으로 켜집니다.
 const hwDyOn=l=>{
   const d=l&&l.hwX&&l.hwX.dy;

@@ -114,12 +114,17 @@ const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className
 const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문뽀(문장분석)'],['dr','문풀(실전문제)']];
 // 원장방 과제 칸(HOMEWORK)에 적힌 교재 — 줄마다 한 권으로 봅니다.
 const hwBooks=l=>String((l&&typeof l.hw==='string')?l.hw:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+// 원장방 내신교재 칸 — 반 전체 기본값. 학생별로 다르면 학습리더가 여기서 고칩니다.
+const hwExBooks=l=>String((l&&typeof l.hwEx==='string')?l.hwEx:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
 const normHwX=x=>{
   const o=(x&&typeof x==='object')?x:{};
   const ex=Object.assign({on:false,hb:'',bm:'',sa:'',dr:''},(o.ex&&typeof o.ex==='object')?o.ex:{});
   ex.on=!!ex.on;
-  const dy=Object.assign({on:false,list:[]},(o.dy&&typeof o.dy==='object')?o.dy:{});
+  // bk = 학습리더가 직접 적은 내신 교재명 (없으면 원장방 값을 씁니다)
+  if(Array.isArray(ex.bk))ex.bk=ex.bk.map(x=>String(x||'')); else delete ex.bk;
+  const dy=Object.assign({on:false,off:0,list:[]},(o.dy&&typeof o.dy==='object')?o.dy:{});
   dy.on=!!dy.on;
+  dy.off=dy.off?1:0;   // off:1 = 학습리더가 직접 끈 것 (원장방 교재가 생겨도 자동으로 켜지지 않습니다)
   // x:1 = 학습리더가 직접 추가한 교재 (원장방 과제 칸에서 내려온 것이 아님)
   dy.list=Array.isArray(dy.list)?dy.list.map(it=>{
     const o={n:String((it&&it.n)||''),s:String((it&&it.s)||'')};
@@ -332,11 +337,9 @@ async function mainScreen(){
         attend:(l.attend===true?'present':(l.attend||'')),hwDone:(l.hwDone||(l.hw===true?'o':'')),hwNote:l.hwNote||'',
         hwX:(()=>{
           const x=normHwX(l.hwX);
-          // 처음 여는 수업이면 원장방 과제 칸의 교재를 자동으로 채웁니다.
-          if(!l.hwX){
-            const bs=hwBooks(l);
-            if(bs.length){x.dy.on=true;x.dy.list=bs.map(n=>({n,s:''}));}
-          }
+          // 원장방 과제 칸에 교재가 있으면 외부교재 칸이 자동으로 켜집니다.
+          // (학습리더가 직접 끈 경우 off:1 이 남아 다시 켜지지 않습니다)
+          if(!x.dy.off&&hwBooks(l).length)x.dy.on=true;
           return x;
         })(),
         on:(l.on&&typeof l.on==='object')?Object.assign({},l.on):null,
@@ -548,6 +551,7 @@ async function mainScreen(){
         b.style.cssText=`flex:1;height:32px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:${CF};border:2px solid ${on?'#f59e0b':'rgba(180,200,255,0.5)'};background:${on?'linear-gradient(135deg,#fde68a,#f59e0b)':'rgba(255,255,255,0.6)'};color:${on?'#fff':'#8A97B4'};`;
         b.onclick=async()=>{
           sc.hwX[k].on=!sc.hwX[k].on;
+          if(k==='dy')sc.hwX.dy.off=sc.hwX.dy.on?0:1;
           await hwSave();refreshBody();
         };
         hwHd.appendChild(b);
@@ -557,6 +561,29 @@ async function mainScreen(){
       if(sc.hwX.ex.on){
         const exBox=mks('div','border-radius:10px;background:rgba(255,251,235,0.7);border:1.5px solid rgba(245,158,11,0.3);padding:8px 9px;margin-bottom:7px;');
         exBox.appendChild(mks('div',`font-size:10.5px;font-weight:800;color:#92400e;margin-bottom:6px;font-family:${CF};`,'내신 자체교재'));
+        // 교재명 — 원장방 값이 기본, 학생마다 다르면 여기서 고칩니다.
+        const own=Array.isArray(sc.hwX.ex.bk);
+        const exBk=own?sc.hwX.ex.bk.slice():hwExBooks(l);
+        if(!exBk.length)exBk.push('');
+        const setBk=async(arr)=>{sc.hwX.ex.bk=arr.map(x=>String(x||''));await hwSave();};
+        exBk.forEach((nm,i)=>{
+          const r=mks('div','display:flex;gap:5px;align-items:center;margin-bottom:5px;min-width:0;');
+          const ip=document.createElement('input');
+          ip.type='text';ip.value=nm;ip.placeholder='내신 교재명 · 범위';
+          ip.style.cssText=`flex:1 1 0;min-width:0;width:100%;height:28px;box-sizing:border-box;border-radius:8px;border:1.5px solid rgba(245,158,11,0.45);background:rgba(255,255,255,0.85);padding:0 8px;font-size:11px;font-weight:600;color:#0B1A38;font-family:${CF};`;
+          const put=async()=>{if(exBk[i]!==ip.value){exBk[i]=ip.value;await setBk(exBk);}};
+          ip.onchange=put;ip.onblur=put;
+          r.appendChild(ip);
+          const del=mks('button','','✕');
+          del.style.cssText=`flex:0 0 26px;height:28px;padding:0;border-radius:8px;border:1.5px solid rgba(245,158,11,0.35);background:rgba(255,255,255,0.6);color:#b08968;font-size:11px;font-weight:800;cursor:pointer;font-family:${CF};`;
+          del.onclick=async()=>{exBk.splice(i,1);await setBk(exBk);refreshBody();};
+          r.appendChild(del);
+          exBox.appendChild(r);
+        });
+        const addBk=mks('button','','+ 교재 추가');
+        addBk.style.cssText=`width:100%;height:26px;margin-bottom:8px;border-radius:8px;border:1.5px dashed rgba(245,158,11,0.5);background:rgba(255,255,255,0.5);color:#92400e;font-size:10.5px;font-weight:700;cursor:pointer;font-family:${CF};`;
+        addBk.onclick=async()=>{exBk.push('');await setBk(exBk);refreshBody();};
+        exBox.appendChild(addBk);
         HW_EX.forEach(([k,t])=>{
           const r=mks('div','display:flex;gap:5px;align-items:center;margin-bottom:5px;min-width:0;');
           r.appendChild(mks('div',`font-size:10.5px;font-weight:700;color:#0B1A38;flex:0 0 86px;line-height:1.25;font-family:${CF};`,t));
