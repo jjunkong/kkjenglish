@@ -219,6 +219,7 @@ const hwOn=l=>{const o=l&&l.on;return (o&&typeof o==='object'&&'hw' in o)?!!o.hw
 const HW_EX=[['hb','하빵'],['bm','본문암기'],['sa','문뽀(문장분석)'],['dr','문풀(실전문제)']];
 const hwStLab=v=>v==='done'?'완료':(v==='part'?'부분 완료':(v==='none'?'미완료':''));
 const HW_TAIL='*과제와 테스트에서 틀린 문제는 수정 및 첨삭지도하였습니다.';
+const HW_UNSUB='*제출하도록 지도하였고, 다음 시간에 재확인하겠습니다.';
 
 // 원장방 과제 칸(HOMEWORK)에 적힌 교재 — 줄마다 한 권
 const hwBooksOf=l=>String((l&&typeof l.hw==='string')?l.hw:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -242,24 +243,31 @@ const hwXLines=l=>{
   if(!x)return null;
   const ex=(x.ex&&x.ex.on)?x.ex:null, dy=hwDyOn(l);
   const r=[];
+  let unsub=false;
   if(ex){
+    // 하빵·본문암기·문뽀·문풀은 한 묶음입니다. 하나도 안 눌렸으면 통째로 미제출.
     const rows=[];
     HW_EX.forEach(([k,t])=>{
       const s=hwStLab(ex[k]);
       if(!s)return;
       rows.push(`· ${t} : ${s}`);
     });
-    if(rows.length){r.push('[내신 자체교재]');r.push(...rows);}
+    r.push('[내신 자체교재]');
+    if(rows.length)r.push(...rows);
+    else {r.push('· 미제출');unsub=true;}
   }
   if(dy){
     const rows=[];
     hwDyRows(l).forEach(it=>{
-      const s=hwStLab(it.s);
-      rows.push(`· ${it.n}${s?' : '+s:''}`);
+      // 학습리더가 아무것도 체크하지 않았으면 미제출로 나갑니다.
+      const s=hwStLab(it.s)||'미제출';
+      if(!hwStLab(it.s))unsub=true;
+      rows.push(`· ${it.n} : ${s}`);
     });
     if(rows.length){r.push('[외부교재]');r.push(...rows);}
   }
   if(!r.length)return null;
+  if(unsub)r.push(HW_UNSUB);
   return r.join('\n');
 };
 // 문자에 들어갈 <과제 수행> 본문
