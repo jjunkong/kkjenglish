@@ -223,6 +223,9 @@ const HW_UNSUB='*제출하도록 지도하였고, 다음 시간에 재확인하�
 
 // 원장방 과제 칸(HOMEWORK)에 적힌 교재 — 줄마다 한 권
 const hwBooksOf=l=>String((l&&typeof l.hw==='string')?l.hw:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+// 원장방 내신교재 칸 — 문자 제목에만 쓰입니다.
+const hwExBooks=l=>String((l&&typeof l.hwEx==='string')?l.hwEx:'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+const hwExTitle=l=>{const b=hwExBooks(l);return b.length?`[내신 자체교재 - ${b.join(', ')}]`:'[내신 자체교재]';};
 // 외부교재 칸이 켜져 있는지 — 학습리더가 직접 끄지 않았다면 원장방 교재가 있을 때 자동으로 켜집니다.
 const hwDyOn=l=>{
   const d=l&&l.hwX&&l.hwX.dy;
@@ -252,7 +255,7 @@ const hwXLines=l=>{
       if(!s)return;
       rows.push(`· ${t} : ${s}`);
     });
-    r.push('[내신 자체교재]');
+    r.push(hwExTitle(l));
     if(rows.length)r.push(...rows);
     else {r.push('· 미제출');unsub=true;}
   }
@@ -1704,11 +1707,12 @@ async function aGroupPlan(){
   body.appendChild(stuWrap);
 
   // 기존 데이터 불러오기 (첫번째 학생 기준)
-  let existingPlan='';let existingHw='';
+  let existingPlan='';let existingHw='';let existingHwEx='';
   if(students.length>0){
     const firstLesson=await getLesson(students[0].id,date);
     existingPlan=firstLesson.plan?.check||firstLesson.plan?.core||'';
     existingHw=firstLesson.hw||firstLesson.plan?.core||'';
+    existingHwEx=firstLesson.hwEx||'';
     // plan.check가 없으면 core에서 가져오기
     if(!existingPlan&&firstLesson.plan?.core)existingPlan=firstLesson.plan.core;
   }
@@ -1727,7 +1731,7 @@ async function aGroupPlan(){
     body.appendChild(mks('div','font-size:11px;color:#1d4ed8;background:#eef2ff;border:1px solid #c7d2fe;padding:8px 10px;border-radius:8px;margin-bottom:8px;',
       '대시보드에서 만든 공지 초안입니다. 확인하고 고친 뒤 적용해 주세요.'));
   }
-  const GL={plan:{check:existingPlan,core:'',fix:''},hw:existingHw};
+  const GL={plan:{check:existingPlan,core:'',fix:''},hw:existingHw,hwEx:existingHwEx};
   const sb=mk('div','section-block');
   sb.appendChild(mk('div','section-tag','수업내용'));
   const ta=document.createElement('textarea');
@@ -1740,34 +1744,41 @@ async function aGroupPlan(){
   body.appendChild(mks('div','font-size:12px;font-weight:700;color:#111;margin:14px 0 8px;','과제'));
   const hwSb=mk('div','section-block');
   hwSb.appendChild(mk('div','section-tag','HOMEWORK'));
-  // 교재 한 권 = 한 칸. 학습리더 앱 「외부교재」 칸에 반 전체로 내려갑니다.
-  let hwBookList=String(existingHw||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  if(!hwBookList.length)hwBookList=[''];
-  const hwList=mks('div','');
-  const syncHw=()=>{GL.hw=hwBookList.map(s=>String(s).trim()).filter(Boolean).join('\n');};
-  const paintHw=()=>{
-    hwList.innerHTML='';
-    hwBookList.forEach((v,i)=>{
-      const r=mks('div','display:flex;gap:6px;align-items:center;margin-bottom:6px;');
-      const ip=document.createElement('input');
-      ip.className='inp';ip.value=v;ip.placeholder='교재명 · 범위 (예: 그래머인사이드3 p.40-45)';
-      ip.style.cssText+='flex:1 1 0;min-width:0;margin:0;';
-      ip.oninput=()=>{hwBookList[i]=ip.value;syncHw();};
-      r.appendChild(ip);
-      const del=mks('button','','✕');
-      del.style.cssText='flex:0 0 34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:12px;font-weight:800;cursor:pointer;';
-      del.onclick=()=>{hwBookList.splice(i,1);if(!hwBookList.length)hwBookList=[''];syncHw();paintHw();};
-      r.appendChild(del);
-      hwList.appendChild(r);
-    });
-    const add=mks('button','','+ 교재 추가');
-    add.style.cssText='width:100%;height:33px;border-radius:8px;border:1px dashed #c7d2fe;background:#f8f9ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;';
-    add.onclick=()=>{hwBookList.push('');paintHw();};
-    hwList.appendChild(add);
+  // 교재 한 권 = 한 칸. 내신교재 / 외부교재를 따로 적습니다.
+  const mkBookBox=(title,hint,initial,onChange)=>{
+    let list=String(initial||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(!list.length)list=[''];
+    const wrap=mks('div','margin-bottom:12px;');
+    wrap.appendChild(mks('div','font-size:11px;font-weight:800;color:#3730a3;margin-bottom:6px;',title));
+    const rows=mks('div','');
+    const sync=()=>onChange(list.map(x=>String(x).trim()).filter(Boolean).join('\n'));
+    const paint=()=>{
+      rows.innerHTML='';
+      list.forEach((v,i)=>{
+        const r=mks('div','display:flex;gap:6px;align-items:center;margin-bottom:6px;');
+        const ip=document.createElement('input');
+        ip.className='inp';ip.value=v;ip.placeholder=hint;
+        ip.style.cssText+='flex:1 1 0;min-width:0;margin:0;';
+        ip.oninput=()=>{list[i]=ip.value;sync();};
+        r.appendChild(ip);
+        const del=mks('button','','✕');
+        del.style.cssText='flex:0 0 34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:12px;font-weight:800;cursor:pointer;';
+        del.onclick=()=>{list.splice(i,1);if(!list.length)list=[''];sync();paint();};
+        r.appendChild(del);
+        rows.appendChild(r);
+      });
+      const add=mks('button','','+ 교재 추가');
+      add.style.cssText='width:100%;height:33px;border-radius:8px;border:1px dashed #c7d2fe;background:#f8f9ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;';
+      add.onclick=()=>{list.push('');paint();};
+      rows.appendChild(add);
+    };
+    paint();sync();
+    wrap.appendChild(rows);
+    return wrap;
   };
-  paintHw();syncHw();
-  hwSb.appendChild(hwList);
-  hwSb.appendChild(mks('div','font-size:10.5px;color:#64748b;font-weight:600;margin-top:8px;line-height:1.5;','여기 적은 교재가 학습리더 앱 「외부교재」 칸에 반 전체로 들어갑니다. (학습리더는 완료 / 부분완료 / 미완료만 찍습니다)'));
+  hwSb.appendChild(mkBookBox('내신교재','교재명 · 범위 (예: 미사고1 기말 자체교재)',existingHwEx,v=>{GL.hwEx=v;}));
+  hwSb.appendChild(mkBookBox('외부교재','교재명 · 범위 (예: 그래머인사이드3 p.40-45)',existingHw,v=>{GL.hw=v;}));
+  hwSb.appendChild(mks('div','font-size:10.5px;color:#64748b;font-weight:600;margin-top:2px;line-height:1.5;','외부교재는 학습리더 앱 「외부교재」 칸에 반 전체로 들어갑니다. 내신교재 이름은 문자에만 나갑니다.'));
   body.appendChild(hwSb);
 
   // 기타 항목 (필요할 때만)
@@ -1801,7 +1812,7 @@ async function aGroupPlan(){
     let count=0;
     for(const stu of selected){
       const existing=await getLessonFresh(stu.id,date);
-      const newL={...existing,plan:{...GL.plan},hw:GL.hw,extra:GL.extra||'',extraTitle:GL.extraTitle||'',status:'planned'};
+      const newL={...existing,plan:{...GL.plan},hw:GL.hw,hwEx:GL.hwEx||'',extra:GL.extra||'',extraTitle:GL.extraTitle||'',status:'planned'};
       await setLesson(stu.id,date,newL);count++;
     }
     msg.innerHTML=`<div class="ok-msg">✓ ${count}명에게 적용됐습니다!</div>`;
